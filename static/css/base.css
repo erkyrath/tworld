@@ -32,6 +32,11 @@ body {
   margin-left: 40px;
 }
 
+#header h1 a {
+  color: #DD8;
+  text-decoration: none;
+}
+
 .HeadControls {
   margin: 0px;
   position: absolute;

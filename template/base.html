@@ -4,13 +4,20 @@
 <title>{{ tworld_app_title() }}: {% block page_title %}Welcome{% end %}</title>
 <meta name="viewport" content="width=device-width, user-scalable=no">
 <link rel="stylesheet" href="{{ static_url('css/base.css') }}" type="text/css">
+{% set suppress_banner_link = False %}
 {% block head_ext %}{% end %}
 </head>
 <body>
 
 <div id="header">
 <div id="subheader">
-{% raw tworld_app_banner() %}
+<h1>
+ {% if suppress_banner_link %}
+  {% raw tworld_app_banner() %}
+ {% else %}
+  <a href="/">{% raw tworld_app_banner() %}</a>
+ {% end %}
+</h1>
 <div class="HeadControls">Sign in</div>
 </div>
 </div>

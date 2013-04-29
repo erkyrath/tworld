@@ -23,8 +23,8 @@ tornado.options.define(
     'app_title', type=str, default='Tworld',
     help='name of app (plain text, appears in <title>)')
 tornado.options.define(
-    'app_banner', type=str, default='<h1>Tworld</h1>',
-    help='name of app (html, appears in page header)')
+    'app_banner', type=str, default='Tworld',
+    help='name of app (html, appears in page header <h1>)')
 
 tornado.options.define(
     'top_pages', type=str, multiple=True,
