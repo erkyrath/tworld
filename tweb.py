@@ -31,14 +31,19 @@ tornado.options.define(
     help='additional pages served from templates')
 
 tornado.options.define(
+    'port', type=int, default=4000,
+    help='port number to listen on')
+tornado.options.define(
     'debug', type=bool,
     help='application debugging (see Tornado docs)')
 
 tornado.options.parse_command_line()
 opts = tornado.options.options
 
-# Pull out some of the options to pass along to the application.
-appoptions = { }
+# Define application options which are always set.
+appoptions = { 'xsrf_cookies': True }
+
+# Pull out some of the config-file options to pass along to the application.
 for key in [ 'debug', 'template_path', 'static_path' ]:
     val = getattr(opts, key)
     if val is not None:
@@ -100,5 +105,5 @@ application = tornado.web.Application(
         },
     **appoptions)
 
-application.listen(4000)
+application.listen(opts.port)
 tornado.ioloop.IOLoop.instance().start()
