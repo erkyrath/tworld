@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block page_title %}
+Welcome
+{% end %}
+
+{% block head_ext %}
+<link rel="stylesheet" href="{{ static_url('css/form.css') }}" type="text/css">
+{% end %}
+
+{% block body %}
+
+<h2>Main Page</h2>
+
+<p>
+Welcome to {{ tworld_app_title() }}.
+Please sign in.
+</p>
+
+<div class="AuthForm">
+<form method="post">
+ <div class="FormSection">
+  <input class="FormInput" autocapitalize="off" autofocus="autofocus" id="login_field" name="login" type="text" placeholder="Name or email">
+ </div>
+ <div class="FormSection">
+  <input class="FormInput" autocomplete="disabled" id="password" name="password" type="password" placeholder="Password">
+ </div>
+ <div class="FormSection">
+  <input class="FormButton FloatRight" name="commit" type="submit" value="Sign in">
+  <a href="recover">(Forgot your password?)</a>
+ </div>
+ <div class="FormSection FormError" style="color:#A00; display:none;">
+  That address did not match the password.
+ </div>
+ <div class="FormDivider">
+ </div>
+ <div class="FormSection">
+  <input class="FormButton" name="register" type="submit" value="Register new account">
+  &nbsp; ...if this is your first visit.
+ </div>
+</form>
+</div>
+
+<p>
+<a href="about">What is Tworld?</a>
+</p>
+
+{% end %}

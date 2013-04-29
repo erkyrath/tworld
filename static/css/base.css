@@ -1,0 +1,113 @@
+body {
+  top: 0px;
+  bottom: 0px;
+  width: 100%;
+  margin: 0px;
+  background: #AAA;
+}
+
+#header {
+  position: absolute;
+  top: 0px;
+  height: 80px;
+  width: 100%;
+  margin: 0px;
+  background: #400;
+  background-release: repeat-x;
+}
+
+#subheader {
+  position: relative;
+  max-width: 900px;
+  height: 100%;
+  margin: auto;
+}
+
+#header h1 {
+  font-family: Palatino, Georgia, serif;
+  font-size: 3.0em;
+  font-weight: normal;
+  color: #DD8;
+  margin-top: 10px;
+  margin-left: 40px;
+}
+
+.HeadControls {
+  margin: 0px;
+  position: absolute;
+  top: 0px;
+  right: 20px;
+  text-align: right;
+
+  font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
+  font-weight: 100;
+  font-size: 1.10em;
+  line-height: 1.25em;
+  color: #DD8;
+
+  border: 1px solid rgba(208, 208, 128, 0.33);
+  border-radius: 8px;
+  background-color: #662;
+  background-color: rgba(208, 208, 128, 0.33);
+  padding: 6px 12px;
+}
+
+#main {
+  position: absolute;
+  width: 100%;
+  top: 80px;
+  bottom: 0px;
+  margin: 0px;
+  background: #FFFFF4;
+}
+
+#submain {
+  position: relative;
+  max-width: 900px;
+  height: 100%;
+  margin: 0px auto;
+
+  font-family: Palatino, Georgia, serif;
+  font-size: 1em;
+  line-height: 1.35em;
+}
+
+#localepane {
+  height: 100%;
+  overflow: auto;
+}
+
+#localepane p {
+  margin-left: 20px;
+  margin-right: 20px;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  text-indent: 1.5em;
+}
+
+#localepane h2 {
+  margin-left: 20px;
+  margin-right: 20px;
+  margin-top: 20px;
+  text-align: center;
+  font-size: 1.2em;
+}
+
+#localepane a {
+  color: #A30;
+}
+
+.InvisibleAbovePara {
+  height: 0px;
+  margin-bottom: 1em;
+}
+
+.InvisibleBelowPara {
+  height: 0px;
+  margin-top: 1em;
+}
+
+.FloatRight {
+  float: right;
+}
+

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block page_title %}
+Error {{ status_code }}
+{% end %}
+
+{% block body %}
+
+<h2>Error {{ status_code }}</h2>
+
+{% if exception %}
+<pre style="margin-left: 20px;">
+{% raw exception %}
+</pre>
+{% end %}
+
+{% end %}

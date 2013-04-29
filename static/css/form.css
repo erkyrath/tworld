@@ -1,0 +1,56 @@
+.AuthForm {
+  width: 50%;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 30px;
+  margin-bottom: 30px;
+  border: 1px solid #BBB;
+  border-radius: 8px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  background: #EED;
+
+  font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
+}
+
+.FormSection {
+  margin: 15px 20px;
+  color: #666;
+}
+
+.FormDivider {
+  clear: both;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  background: #BBB;
+  border-bottom: 1px solid white;
+  height: 1px;
+}
+
+.FormInput {
+  background: #FFFFF4;
+  font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
+  width: 100%;
+  margin: 0px;
+  border: 1px solid #CCC;
+  padding: 4px 0px;
+  font-size: 1.2em;
+  line-height: 1.25em;  
+  border-radius: 3px;
+  text-indent: 10px;
+}
+
+input.FormButton {
+  font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
+  font-size: 1.0em;
+  margin: 0px;
+
+  padding: 4px 12px;
+
+  -webkit-appearance: none;
+  cursor: pointer;
+  background: #D8C296;
+  color: #600;
+  border: 1px solid #AAA;
+  border-radius: 6px;
+}

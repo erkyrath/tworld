@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>{{ tworld_app_title() }}: {% block page_title %}Welcome{% end %}</title>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+<link rel="stylesheet" href="{{ static_url('css/base.css') }}" type="text/css">
+{% block head_ext %}{% end %}
+</head>
+<body>
+
+<div id="header">
+<div id="subheader">
+{% raw tworld_app_banner() %}
+<div class="HeadControls">Sign in</div>
+</div>
+</div>
+
+<div id="main">
+<div id="submain">
+
+ <div id="localepane">
+  {% block body %}<p>BODY</p>{% end %}
+ </div>
+
+</div>
+</div>
+
+</body>
+</html>
