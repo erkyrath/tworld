@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 
 import traceback
+import logging
 
 import tornado.ioloop
 import tornado.web
 import tornado.options
 import tornado.template
 import tornado.escape
+
+import motor
 
 import twlib.session
 
@@ -46,8 +49,6 @@ tornado.options.define(
 tornado.options.parse_command_line()
 opts = tornado.options.options
 
-sessionmgr = twlib.session.SessionMgr()
-
 # Define application options which are always set.
 appoptions = { 'xsrf_cookies': True }
 
@@ -81,7 +82,7 @@ class MyRequestHandler(MyWriteErrorHandler, tornado.web.RequestHandler):
     
     def get_current_user(self):
         # Find the current session, based on the sessionid cookie.
-        sess = sessionmgr.find_session(self)
+        sess = self.application.twsession.find_session(self)
         if sess:
             return sess['userid']
 
@@ -116,7 +117,7 @@ class MainHandler(MyRequestHandler):
         self.set_cookie('tworld_name', tornado.escape.url_escape(name),
                         expires_days=14)
         ### convert name to email address
-        sessionmgr.create_session(self, name)
+        self.application.twsession.create_session(self, name)
         self.redirect('/')
 
     def get_template_namespace(self):
@@ -127,7 +128,7 @@ class MainHandler(MyRequestHandler):
 
 class LogOutHandler(MyRequestHandler):
     def get(self):
-        sessionmgr.remove_session(self)
+        self.application.twsession.remove_session(self)
         self.render('logout.html')
 
 class TopPageHandler(MyRequestHandler):
@@ -153,8 +154,31 @@ for val in opts.top_pages:
 
 # Fallback 404 handler for everything else.
 handlers.append( (r'.*', MyErrorHandler, {'status_code': 404}) )
+
+class TworldApplication(tornado.web.Application):
+    def init_tworld(self):
+        # Set up a Motor (MongoDB) connection. But don't open it yet.
+        self.mongo = motor.MotorClient()
         
-application = tornado.web.Application(
+        # Set up a session manager.
+        self.twsession = twlib.session.SessionMgr()
+
+        # Grab the same logger that tornado uses.
+        self.twlog = logging.getLogger("tornado.general")
+
+        # When the IOLoop starts, we'll set up periodic tasks.
+        tornado.ioloop.IOLoop.instance().add_callback(self.init_timers)
+
+    @tornado.gen.coroutine
+    def init_timers(self):
+        self.twlog.info('Launching timers')
+        try:
+            res = yield motor.Op(self.mongo.open)
+            self.twlog.info('Mongo client open')
+        except Exception as ex:
+            self.twlog.error('Mongo client not open: %s' % ex)
+
+application = TworldApplication(
     handlers,
     ui_methods={
         'tworld_app_title': lambda handler:opts.app_title,
@@ -162,5 +186,6 @@ application = tornado.web.Application(
         },
     **appoptions)
 
+application.init_tworld()
 application.listen(opts.port)
 tornado.ioloop.IOLoop.instance().start()
