@@ -6,6 +6,9 @@ import tornado.ioloop
 import tornado.web
 import tornado.options
 import tornado.template
+import tornado.escape
+
+import twlib.session
 
 tornado.options.define(
     'config', type=str,
@@ -34,17 +37,22 @@ tornado.options.define(
     'port', type=int, default=4000,
     help='port number to listen on')
 tornado.options.define(
+    'cookie_secret', type=str,
+    help='cookie secret key (see Tornado docs)')
+tornado.options.define(
     'debug', type=bool,
     help='application debugging (see Tornado docs)')
 
 tornado.options.parse_command_line()
 opts = tornado.options.options
 
+sessionmgr = twlib.session.SessionMgr()
+
 # Define application options which are always set.
 appoptions = { 'xsrf_cookies': True }
 
 # Pull out some of the config-file options to pass along to the application.
-for key in [ 'debug', 'template_path', 'static_path' ]:
+for key in [ 'debug', 'template_path', 'static_path', 'cookie_secret' ]:
     val = getattr(opts, key)
     if val is not None:
         appoptions[key] = val
@@ -72,7 +80,49 @@ class MyRequestHandler(MyWriteErrorHandler, tornado.web.RequestHandler):
 
 class MainHandler(MyRequestHandler):
     def get(self):
-        self.render('main.html')
+        if not self.current_user:
+            try:
+                name = self.get_cookie('tworld_name', None)
+                name = tornado.escape.url_unescape(name)
+            except:
+                name = None
+            self.render('main.html', init_name=name)
+        else:
+            self.render('main_auth.html')
+        
+    def post(self):
+        name = self.get_argument('name', '')
+        name = tornado.escape.squeeze(name.strip())
+        password = self.get_argument('password', '')
+        formerror = None
+        if (not name):
+            formerror = 'You must enter your user name or email address.'
+        elif (not password):
+            formerror = 'You must enter your password.'
+        elif (password != 'x'): ### check password...
+            formerror = 'That name and password do not match.'
+        if formerror:
+            self.render('main.html', formerror=formerror, init_name=name)
+            return
+
+        # Set a name cookie, for future form fill-in
+        self.set_cookie('tworld_name', tornado.escape.url_escape(name),
+                        expires_days=14)
+        ### convert name to email address
+        sessionmgr.create_session(self, name)
+        self.redirect('/')
+
+    def get_current_user(self):
+        # Find the current session, based on the sessionid cookie.
+        sess = sessionmgr.find_session(self)
+        if sess:
+            return sess['userid']
+        
+    def get_template_namespace(self):
+        map = MyRequestHandler.get_template_namespace(self)
+        map['formerror'] = None
+        map['init_name'] = None
+        return map
 
 class TopPageHandler(MyRequestHandler):
     def initialize(self, page):

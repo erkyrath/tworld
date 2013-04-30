@@ -19,20 +19,27 @@ Please sign in.
 </p>
 
 <div class="AuthForm">
-<form method="post">
+<form method="post" action="/">
+ {% module xsrf_form_html() %}
  <div class="FormSection">
-  <input class="FormInput" autocapitalize="off" autofocus="autofocus" id="login_field" name="login" type="text" placeholder="Name or email">
+  <input class="FormInput" autocapitalize="off" autofocus="autofocus"
+   id="login_field" name="name" type="text" placeholder="Name or email"
+   {% if init_name %} value="{{init_name}}" {% end %}
+   >
  </div>
  <div class="FormSection">
-  <input class="FormInput" autocomplete="disabled" id="password" name="password" type="password" placeholder="Password">
+  <input class="FormInput" autocomplete="disabled"
+   id="password_field" name="password" type="password" placeholder="Password">
  </div>
  <div class="FormSection">
   <input class="FormButton FloatRight" name="commit" type="submit" value="Sign in">
   <a href="recover">(Forgot your password?)</a>
  </div>
- <div class="FormSection FormError" style="color:#A00; display:none;">
-  That address did not match the password.
+{% if formerror %}
+ <div class="FormSection FormError">
+  {{ formerror }}
  </div>
+{% end %}
  <div class="FormDivider">
  </div>
  <div class="FormSection">
