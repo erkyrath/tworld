@@ -30,5 +30,11 @@ class SessionMgr(object):
             return None
         sess = self.sessionmap.get(sessionid, None)
         return sess
+
+    def remove_session(self, handler):
+        sessionid = handler.get_secure_cookie('sessionid')
+        if (sessionid):
+            self.sessionmap.pop(sessionid)
+        handler.clear_cookie('sessionid')
     
     ### occasionally expire sessions

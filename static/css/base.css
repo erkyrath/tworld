@@ -32,9 +32,13 @@ body {
   margin-left: 40px;
 }
 
-#header h1 a {
+#header a {
   color: #DD8;
   text-decoration: none;
+}
+
+#header a:hover {
+  text-decoration: underline;
 }
 
 .HeadControls {

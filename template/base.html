@@ -18,7 +18,14 @@
   <a href="/">{% raw tworld_app_banner() %}</a>
  {% end %}
 </h1>
-<div class="HeadControls">Sign in</div>
+<div class="HeadControls">
+ {% if current_user %}
+  Welcome, {{current_user}}<br>
+  <a href="/logout">Sign out</a>
+ {% else %}
+  <a href="/">Sign in</a>
+ {% end %}
+</div>
 </div>
 </div>
 

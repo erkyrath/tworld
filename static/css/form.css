@@ -18,6 +18,10 @@
   color: #666;
 }
 
+.FormError {
+  color: #A00;
+}
+
 .FormDivider {
   clear: both;
   margin-top: 20px;
