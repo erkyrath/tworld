@@ -76,7 +76,14 @@ class MyErrorHandler(MyWriteErrorHandler, tornado.web.ErrorHandler):
 
 class MyRequestHandler(MyWriteErrorHandler, tornado.web.RequestHandler):
     def head(self):
+        # Always permit HEAD requests.
         pass
+    
+    def get_current_user(self):
+        # Find the current session, based on the sessionid cookie.
+        sess = sessionmgr.find_session(self)
+        if sess:
+            return sess['userid']
 
 class MainHandler(MyRequestHandler):
     def get(self):
@@ -112,17 +119,16 @@ class MainHandler(MyRequestHandler):
         sessionmgr.create_session(self, name)
         self.redirect('/')
 
-    def get_current_user(self):
-        # Find the current session, based on the sessionid cookie.
-        sess = sessionmgr.find_session(self)
-        if sess:
-            return sess['userid']
-        
     def get_template_namespace(self):
         map = MyRequestHandler.get_template_namespace(self)
         map['formerror'] = None
         map['init_name'] = None
         return map
+
+class LogOutHandler(MyRequestHandler):
+    def get(self):
+        sessionmgr.remove_session(self)
+        self.render('logout.html')
 
 class TopPageHandler(MyRequestHandler):
     def initialize(self, page):
@@ -137,6 +143,7 @@ class TestHandler(MyRequestHandler):
 # Core handlers.
 handlers = [
     (r'/', MainHandler),
+    (r'/logout', LogOutHandler),
     (r'/test', TestHandler),
     ]
 

@@ -4,16 +4,20 @@
 Welcome
 {% end %}
 
+{% block head_ext %}
+{% set suppress_banner_link = True %}
+{% end %}
+
 {% block body %}
 
-<h2>Main Page</h2>
+<h2>Welcome Back</h2>
 
 <p>
 You are signed in as {{current_user}}.
 </p>
 
 <p>
-<a href="about">What is Tworld?</a>
+<a href="/about">What is {{ tworld_app_title() }}?</a>
 </p>
 
 {% end %}
