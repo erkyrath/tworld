@@ -49,8 +49,12 @@ Javascript, but you will not be able to play.)
   {{ formerror }}
  </div>
 {% end %}
+</form>
  <div class="FormDivider">
  </div>
+<form method="post" action="/">
+ {% module xsrf_form_html() %}
+ <input type="hidden" name="register" value="true">
  <div class="FormSection">
   <input class="FormButton" name="register" type="submit" value="Register new account">
   &nbsp; ...if this is your first visit.

@@ -67,6 +67,7 @@ for key in [ 'debug', 'template_path', 'static_path', 'cookie_secret' ]:
 # Core handlers.
 handlers = [
     (r'/', twlib.handlers.MainHandler),
+    (r'/register', twlib.handlers.RegisterHandler),
     (r'/logout', twlib.handlers.LogOutHandler),
     (r'/test', twlib.handlers.TestHandler),
     ]

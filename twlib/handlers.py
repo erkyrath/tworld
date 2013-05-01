@@ -59,7 +59,10 @@ class MyHandlerMixin:
             self.render('404.html')
             return
         if (status_code == 403):
-            self.render('error.html', status_code=403, exception='Not permitted')
+            error_text = 'Not permitted'
+            if (exc_info):
+                error_text = str(exc_info[1])
+            self.render('error.html', status_code=403, exception=error_text)
             return
         exception = ''
         if (error_text):
@@ -129,6 +132,11 @@ class MainHandler(MyRequestHandler):
     def post(self):
         yield tornado.gen.Task(self.find_current_session)
 
+        # If the "register" form was submitted, jump to the other page.
+        if (self.get_argument('register', None)):
+            self.redirect('/register')
+            return
+
         # Apply canonicalizations to the name and password.
         name = self.get_argument('name', '')
         name = unicodedata.normalize('NFKC', name)
@@ -179,6 +187,23 @@ class MainHandler(MyRequestHandler):
         # these Nones.
         map['formerror'] = None
         map['init_name'] = None
+        return map
+
+class RegisterHandler(MyRequestHandler):
+    """The page for registering a new account.
+    """
+    @tornado.web.asynchronous
+    @tornado.gen.coroutine
+    def get(self):
+        yield tornado.gen.Task(self.find_current_session)
+        self.render('register.html')
+
+    def get_template_namespace(self):
+        # Call super.
+        map = MyRequestHandler.get_template_namespace(self)
+        # Add a couple of default values. The handlers may or may not override
+        # these Nones.
+        map['formerror'] = None
         return map
 
 class LogOutHandler(MyRequestHandler):

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block page_title %}
+Register
+{% end %}
+
+{% block head_ext %}
+<link rel="stylesheet" href="{{ static_url('css/form.css') }}" type="text/css">
+{% end %}
+
+{% block body %}
+
+<h2>Register New Account</h2>
+
+<noscript>
+<div class="BlockError">
+This service requires Javascript. (You may sign into the web site without
+Javascript, but you will not be able to play.)
+</div>
+</noscript>
+
+<div class="AuthForm">
+<form method="post" action="/register">
+ {% module xsrf_form_html() %}
+ <div class="FormSection">
+  <input class="FormInput" autocapitalize="off" autofocus="autofocus"
+   id="login_field" name="name" type="text" placeholder="Name"
+   >
+ </div>
+ <div class="FormSection">
+  <input class="FormInput" autocapitalize="off"
+   id="email_field" name="email" type="text" placeholder="Email"
+   >
+ </div>
+ <div class="FormSection">
+  <input class="FormInput" autocomplete="disabled"
+   id="password_field" name="password" type="password" placeholder="Password"
+   >
+ </div>
+ <div class="FormSection">
+  <input class="FormInput" autocomplete="disabled"
+   id="password2_field" name="password2" type="password" placeholder="Password again"
+   >
+ </div>
+ <div class="FormSection">
+  <input class="FormButton" name="commit" type="submit" value="Register">
+ </div>
+{% if formerror %}
+ <div class="FormSection FormError">
+  {{ formerror }}
+ </div>
+{% end %}
+</form>
+</div>
+
+<p>
+We will not give your email address to anybody.
+</p>
+
+{% end %}
