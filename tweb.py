@@ -5,6 +5,7 @@ import logging
 
 import tornado.ioloop
 import tornado.web
+import tornado.gen
 import tornado.options
 import tornado.template
 import tornado.escape
@@ -58,15 +59,21 @@ for key in [ 'debug', 'template_path', 'static_path', 'cookie_secret' ]:
     if val is not None:
         appoptions[key] = val
 
+# Mix-in class to render a custom error page. This is invoked if a
+# handler throws an exception. We also call it manually, in some places.
 class MyWriteErrorHandler:
-    def write_error(self, status_code, exc_info=None):
+    def write_error(self, status_code, exc_info=None, error_text=None):
         if (status_code == 404):
             self.render('404.html')
             return
-        exception = None
+        exception = ''
+        if (error_text):
+            exception = error_text
         if (exc_info):
-            ls = [ tornado.escape.xhtml_escape(ln) for ln in traceback.format_exception(*exc_info) ]
-            exception = ''.join(ls)
+            ls = [ ln for ln in traceback.format_exception(*exc_info) ]
+            if (exception):
+                exception = exception + '\n'
+            exception = exception + ''.join(ls)
         self.render('error.html', status_code=status_code, exception=exception)
 
 class MyStaticFileHandler(MyWriteErrorHandler, tornado.web.StaticFileHandler):
@@ -97,7 +104,8 @@ class MainHandler(MyRequestHandler):
             self.render('main.html', init_name=name)
         else:
             self.render('main_auth.html')
-        
+
+    @tornado.web.asynchronous
     def post(self):
         name = self.get_argument('name', '')
         name = tornado.escape.squeeze(name.strip())
@@ -116,12 +124,24 @@ class MainHandler(MyRequestHandler):
         # Set a name cookie, for future form fill-in
         self.set_cookie('tworld_name', tornado.escape.url_escape(name),
                         expires_days=14)
-        ### convert name to email address
-        self.application.twsession.create_session(self, name)
+        ### convert name to email address; get userid
+        self.application.twlog.info('### creating session')
+        self.application.twsession.create_session(self, name, callback=self.callback_create_session)
+        self.application.twlog.info('### called create_session')
+
+    def callback_create_session(self, result, error):
+        if (error):
+            self.write_error(500, error_text=str(error))
+            return
+            
+        self.application.twlog.info('### created session, about to redir')
         self.redirect('/')
 
     def get_template_namespace(self):
+        # Call super.
         map = MyRequestHandler.get_template_namespace(self)
+        # Add a couple of default values. The handlers may or may not override
+        # these Nones.
         map['formerror'] = None
         map['init_name'] = None
         return map
@@ -161,7 +181,7 @@ class TworldApplication(tornado.web.Application):
         self.mongo = motor.MotorClient()
         
         # Set up a session manager.
-        self.twsession = twlib.session.SessionMgr()
+        self.twsession = twlib.session.SessionMgr(self)
 
         # Grab the same logger that tornado uses.
         self.twlog = logging.getLogger("tornado.general")
