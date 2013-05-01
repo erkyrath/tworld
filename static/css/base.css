@@ -106,6 +106,17 @@ body {
   color: #A30;
 }
 
+.BlockError {
+  font-size: 1.1em;
+  font-style: italic;
+  background: #FCA;
+  padding: 10px 20px;
+  border: 1px solid #FA8;
+  border-radius: 8px;
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
 .InvisibleAbovePara {
   height: 0px;
   margin-bottom: 1em;

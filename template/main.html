@@ -18,6 +18,13 @@ Welcome to {{ tworld_app_title() }}.
 Please sign in.
 </p>
 
+<noscript>
+<div class="BlockError">
+This service requires Javascript. (You may sign into the web site without
+Javascript, but you will not be able to play.)
+</div>
+</noscript>
+
 <div class="AuthForm">
 <form method="post" action="/">
  {% module xsrf_form_html() %}
