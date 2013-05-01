@@ -56,10 +56,12 @@ class SessionMgr(object):
             return ('unauth', None)
         return ('auth', res)
 
+    @tornado.gen.coroutine
     def remove_session(self, handler):
         sessionid = handler.get_secure_cookie('sessionid')
-        if (sessionid):
-            pass ###
         handler.clear_cookie('sessionid')
+        if (sessionid):
+            yield motor.Op(self.app.mongo.mydb.sessions.remove,
+                           { 'sid': sessionid })
     
     ### occasionally expire sessions

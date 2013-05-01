@@ -149,7 +149,12 @@ class LogOutHandler(MyRequestHandler):
     def get(self):
         yield tornado.gen.Task(self.find_current_session)
         self.application.twsessionmgr.remove_session(self)
-        self.render('logout.html')
+        # Now reload the session status. Also override the out-of-date
+        # get_template_namespace entries.
+        yield tornado.gen.Task(self.find_current_session)
+        self.render('logout.html',
+                    twsessionstatus=self.twsessionstatus,
+                    twsession=self.twsession)
 
 class TopPageHandler(MyRequestHandler):
     def initialize(self, page):
