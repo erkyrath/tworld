@@ -18,14 +18,18 @@
   <a href="/">{% raw tworld_app_banner() %}</a>
  {% end %}
 </h1>
-<div class="HeadControls">
- {% if current_user %}
-  Welcome, {{current_user}}<br>
-  <a href="/logout">Sign out</a>
- {% else %}
-  <a href="/">Sign in</a>
- {% end %}
-</div>
+{% if twsessionstatus %}
+ <div class="HeadControls">
+  {% if twsessionstatus == 'auth' %}
+   Welcome, {{ twsession.name }}<br>
+   <a href="/logout">Sign out</a>
+  {% elif twsessionstatus == 'unauth' %}
+   <a href="/">Sign in</a>
+  {% elif twsessionstatus == 'unknown' %}
+   Not available
+  {% end %}
+ </div>
+{% end %}
 </div>
 </div>
 
