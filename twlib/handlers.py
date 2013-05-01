@@ -117,7 +117,7 @@ class MainHandler(MyRequestHandler):
     @tornado.gen.coroutine
     def get(self):
         yield tornado.gen.Task(self.find_current_session)
-        if not self.current_user:
+        if not self.twsession:
             try:
                 name = self.get_cookie('tworld_name', None)
                 name = tornado.escape.url_unescape(name)
@@ -196,6 +196,9 @@ class RegisterHandler(MyRequestHandler):
     @tornado.gen.coroutine
     def get(self):
         yield tornado.gen.Task(self.find_current_session)
+        if self.twsession:
+            self.redirect('/')
+            return
         self.render('register.html')
 
     def get_template_namespace(self):
