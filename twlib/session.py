@@ -23,10 +23,11 @@ class SessionMgr(object):
     @tornado.gen.coroutine
     def create_session(self, handler, email):
         """
-        Create a session from the request parameters.
+        Create a session from the request parameters. Return it (as
+        a dict, with _id).
         """
-        if (not self.app.mongo.connected):
-            raise Exception('mongodb not connected')
+        if (not self.app.mongoavailable):
+            raise Exception('Database not available')
         
         # Generate a random sessionid.
         byt = os.urandom(24)
@@ -52,6 +53,8 @@ class SessionMgr(object):
         (status, session). The status is 'auth', 'unauth', or 'unknown'
         (if the auth server is unavailable).
         """
+        if (not self.app.mongoavailable):
+            return ('unknown', None)
         sessionid = handler.get_secure_cookie('sessionid')
         self.app.twlog.info('### sessionid cookie: %s', sessionid)
         if not sessionid:

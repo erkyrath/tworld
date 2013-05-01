@@ -80,8 +80,11 @@ handlers.append( (r'.*', twlib.handlers.MyErrorHandler, {'status_code': 404}) )
 
 class TworldApplication(tornado.web.Application):
     def init_tworld(self):
-        # Set up a Motor (MongoDB) connection. But don't open it yet.
-        self.mongo = motor.MotorClient()
+        # This will be the Motor (MongoDB) connection. We'll open it in the
+        # first monitor_mongo_status call.
+        self.mongo = None
+        self.mongoavailable = False  # true if self.mongo exists and is open
+        self.mongotimerbusy = False  # true while monitor_mongo_status runs
         
         # Set up a session manager.
         self.twsessionmgr = twlib.session.SessionMgr(self)
@@ -92,14 +95,48 @@ class TworldApplication(tornado.web.Application):
         # When the IOLoop starts, we'll set up periodic tasks.
         tornado.ioloop.IOLoop.instance().add_callback(self.init_timers)
 
-    @tornado.gen.coroutine
     def init_timers(self):
         self.twlog.info('Launching timers')
-        try:
-            res = yield motor.Op(self.mongo.open)
-            self.twlog.info('Mongo client open')
-        except Exception as ex:
-            self.twlog.error('Mongo client not open: %s' % ex)
+
+        # The mongo status monitor. We set up one call immediately, and then
+        # try again every two seconds.
+        tornado.ioloop.IOLoop.instance().add_callback(self.monitor_mongo_status)
+        res = tornado.ioloop.PeriodicCallback(self.monitor_mongo_status, 2000)
+        res.start()
+
+    @tornado.gen.coroutine
+    def monitor_mongo_status(self):
+        if (self.mongotimerbusy):
+            self.twlog.warning('monitor_mongo_status: already in flight; did a previous call jam?')
+            return
+        self.twlog.info('### checking mongo status...')
+        self.mongotimerbusy = True
+        
+        if (self.mongoavailable):
+            try:
+                res = yield motor.Op(self.mongo.alive)
+                if (not res):
+                    self.twlog.error('monitor_mongo_status: Mongo client not alive')
+                    self.mongoavailable = False
+            except Exception as ex:
+                self.twlog.error('monitor_mongo_status: Mongo client not alive: %s' % ex)
+                self.mongoavailable = False
+            if (not self.mongoavailable):
+                self.mongo.disconnect()
+                self.mongo = None
+            
+        if (not self.mongoavailable):
+            try:
+                self.mongo = motor.MotorClient()
+                res = yield motor.Op(self.mongo.open)
+                ### maybe authenticate to a database?
+                self.mongoavailable = True
+                self.twlog.info('monitor_mongo_status: Mongo client open')
+            except Exception as ex:
+                self.mongoavailable = False
+                self.twlog.error('monitor_mongo_status: Mongo client not open: %s' % ex)
+        
+        self.mongotimerbusy = False
 
 
 application = TworldApplication(
