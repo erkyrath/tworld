@@ -89,7 +89,7 @@ class MyRequestHandler(MyWriteErrorHandler, tornado.web.RequestHandler):
     
     def get_current_user(self):
         # Find the current session, based on the sessionid cookie.
-        sess = self.application.twsession.find_session(self)
+        sess = self.application.twsessionmgr.find_session(self)
         if sess:
             return sess['userid']
 
@@ -126,7 +126,7 @@ class MainHandler(MyRequestHandler):
         self.set_cookie('tworld_name', tornado.escape.url_escape(name),
                         expires_days=14)
         ### convert name to email address; get userid
-        res = yield tornado.gen.Task(self.application.twsession.create_session, self, name)
+        res = yield tornado.gen.Task(self.application.twsessionmgr.create_session, self, name)
         self.application.twlog.info('User signed in: %s (session %s)', name, res)
         self.redirect('/')
 
@@ -141,7 +141,7 @@ class MainHandler(MyRequestHandler):
 
 class LogOutHandler(MyRequestHandler):
     def get(self):
-        self.application.twsession.remove_session(self)
+        self.application.twsessionmgr.remove_session(self)
         self.render('logout.html')
 
 class TopPageHandler(MyRequestHandler):
@@ -174,7 +174,7 @@ class TworldApplication(tornado.web.Application):
         self.mongo = motor.MotorClient()
         
         # Set up a session manager.
-        self.twsession = twlib.session.SessionMgr(self)
+        self.twsessionmgr = twlib.session.SessionMgr(self)
 
         # Grab the same logger that tornado uses.
         self.twlog = logging.getLogger("tornado.general")
