@@ -126,10 +126,8 @@ class MainHandler(MyRequestHandler):
         self.set_cookie('tworld_name', tornado.escape.url_escape(name),
                         expires_days=14)
         ### convert name to email address; get userid
-        self.application.twlog.info('### creating session')
-        res = yield motor.Op(self.application.twsession.create_session, self, name)
-        self.application.twlog.info('### called create_session, res=' + str(res))
-        self.application.twlog.info('### created session, about to redir')
+        res = yield tornado.gen.Task(self.application.twsession.create_session, self, name)
+        self.application.twlog.info('User signed in: %s (session %s)', name, res)
         self.redirect('/')
 
     def get_template_namespace(self):

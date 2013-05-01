@@ -12,10 +12,10 @@ class SessionMgr(object):
         # Keep a link to the owning application.
         self.app = app
     
-    def create_session(self, handler, email, callback=None):
+    @tornado.gen.coroutine
+    def create_session(self, handler, email):
         if (not self.app.mongo.connected):
-            callback(None, Exception('mongodb not connected'))
-            return
+            raise Exception('mongodb not connected')
         
         # Generate a random sessionid.
         byt = os.urandom(24)
@@ -30,7 +30,8 @@ class SessionMgr(object):
             'starttime': datetime.datetime.now(),
             }
 
-        self.app.mongo.mydb.sessions.insert(sess, callback=callback)
+        res = yield motor.Op(self.app.mongo.mydb.sessions.insert, sess)
+        return res
 
     def find_session(self, handler):
         sessionid = handler.get_secure_cookie('sessionid')
