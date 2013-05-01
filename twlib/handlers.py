@@ -112,7 +112,6 @@ class MainHandler(MyRequestHandler):
     @tornado.gen.coroutine
     def get(self):
         yield tornado.gen.Task(self.find_current_session)
-        self.application.twlog.info('### myreq get getting on')
         if not self.current_user:
             try:
                 name = self.get_cookie('tworld_name', None)

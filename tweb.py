@@ -99,9 +99,9 @@ class TworldApplication(tornado.web.Application):
         self.twlog.info('Launching timers')
 
         # The mongo status monitor. We set up one call immediately, and then
-        # try again every two seconds.
+        # try again every five seconds.
         tornado.ioloop.IOLoop.instance().add_callback(self.monitor_mongo_status)
-        res = tornado.ioloop.PeriodicCallback(self.monitor_mongo_status, 2000)
+        res = tornado.ioloop.PeriodicCallback(self.monitor_mongo_status, 5000)
         res.start()
 
     @tornado.gen.coroutine
@@ -109,12 +109,11 @@ class TworldApplication(tornado.web.Application):
         if (self.mongotimerbusy):
             self.twlog.warning('monitor_mongo_status: already in flight; did a previous call jam?')
             return
-        self.twlog.info('### checking mongo status...')
         self.mongotimerbusy = True
         
         if (self.mongoavailable):
             try:
-                res = yield motor.Op(self.mongo.alive)
+                res = yield motor.Op(self.mongo.admin.command, 'ping')
                 if (not res):
                     self.twlog.error('monitor_mongo_status: Mongo client not alive')
                     self.mongoavailable = False
