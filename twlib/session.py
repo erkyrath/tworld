@@ -46,7 +46,7 @@ class SessionMgr(object):
         if not sessionid:
             return ('unauth', None)
         try:
-            res = yield motor.Op(self.app.mongo.mydb.sessions.find,
+            res = yield motor.Op(self.app.mongo.mydb.sessions.find_one,
                                  { 'sid': sessionid })
         except Exception as ex:
             self.app.twlog.error('Error finding session: %s', ex)
