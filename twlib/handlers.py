@@ -162,7 +162,7 @@ class MainHandler(MyRequestHandler):
             return
             
         if not res:
-            formerror = 'That name and password do not match.'
+            formerror = 'The name and password do not match.'
             self.render('main.html', formerror=formerror, init_name=name)
             return
         
@@ -251,8 +251,21 @@ class RegisterHandler(MyRequestHandler):
             self.render('register.html', formerror=formerror, formfocus=formfocus,
                         init_name=name, init_email=email, init_password=password, init_password2=password2)
             return
+
+        try:
+            res = yield tornado.gen.Task(self.application.twsessionmgr.create_player, self, email, name, password)
+            self.application.twlog.info('Player created: %s (session %s)', email, res)
+        except MessageException as ex:
+            formerror = str(ex)
+            self.render('register.html', formerror=formerror, formfocus=formfocus,
+                        init_name=name, init_email=email, init_password=password, init_password2=password2)
+            return
         
-        self.render('register.html') ####
+        # Set a name cookie, for future form fill-in. We use the player name.
+        self.set_cookie('tworld_name', tornado.escape.url_escape(name),
+                        expires_days=14)
+        
+        self.redirect('/')
         
     def get_template_namespace(self):
         # Call super.

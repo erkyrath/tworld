@@ -67,6 +67,50 @@ class SessionMgr(object):
         return res
     
     @tornado.gen.coroutine
+    def create_player(self, handler, email, name, password):
+        """
+        Create a player entry with the given parameters. Also create a
+        session and sign the player in.
+        
+        The name and email should already have been validated and
+        canonicalized, as much as possible.
+        """
+        if (not self.app.mongoavailable):
+            raise MessageException('Database not available')
+
+        # Check for collisions first.
+        try:
+            resname = yield motor.Op(self.app.mongo.mydb.players.find_one,
+                                     { 'name': name })
+            resemail = yield motor.Op(self.app.mongo.mydb.players.find_one,
+                                     { 'email': email })
+        except Exception as ex:
+            return MessageException('Database error: %s' % ex)
+
+        if (resname):
+            raise MessageException('That player name is already in use.')
+        if (resemail):
+            raise MessageException('That email address is already registered.')
+
+        pwsalt = self.random_bytes(8)
+        saltedpw = pwsalt + b':' + password
+        cryptpw = hashlib.sha1(saltedpw).hexdigest().encode()
+        
+        player = {
+            'name': name,
+            'email': email,
+            'pwsalt': pwsalt,
+            'password': cryptpw,
+            'createtime': datetime.datetime.now(),
+            }
+
+        uid = yield motor.Op(self.app.mongo.mydb.players.insert, player)
+        if not uid:
+            raise MessageException('Unable to create player.')
+        sessionid = yield tornado.gen.Task(self.create_session, handler, uid, email, name)
+        return sessionid
+        
+    @tornado.gen.coroutine
     def create_session(self, handler, uid, email, name):
         """
         Create a session from the request parameters. Return it (as
@@ -89,7 +133,7 @@ class SessionMgr(object):
             }
 
         res = yield motor.Op(self.app.mongo.mydb.sessions.insert, sess)
-        return res
+        return sessionid
 
     @tornado.gen.coroutine
     def find_session(self, handler):
