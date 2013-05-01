@@ -12,6 +12,9 @@ import motor
 import twlib.session
 import twlib.handlers
 
+# Set up all the options. (Generally found in the config file.)
+
+# Clever hack to parse a config file off the command line.
 tornado.options.define(
     'config', type=str,
     help='configuration file',
@@ -45,6 +48,7 @@ tornado.options.define(
     'debug', type=bool,
     help='application debugging (see Tornado docs)')
 
+# Parse 'em up.
 tornado.options.parse_command_line()
 opts = tornado.options.options
 

@@ -9,10 +9,15 @@ import motor
 
 import twlib.session
 
-# Mix-in class, which I used for several of the standard request handlers.
-# It does several things.
-        
 class MyHandlerMixin:
+    """
+    Mix-in class, which I used for several of the standard request handlers.
+    It does several things:
+    - Custom error page
+    - Utility method to figure out the current session
+    - Set up default values for the base template
+    """
+    
     twsessionstatus = None
     twsession = None
     
@@ -23,7 +28,10 @@ class MyHandlerMixin:
         Sets twsessionstatus to be 'auth', 'unauth', or 'unknown' (if the
         auth server is unavailable).
         If this is never called (e.g., the error handler) then the status
-        remains None.
+        remains None. All the handlers which want to show the header-bar
+        status need to call this.
+        (It would be nice to call this automatically from the prepare()
+        method, but that can't be async in Tornado 3.0. Maybe in 3.1.)
         """
         res = yield tornado.gen.Task(self.application.twsessionmgr.find_session, self)
         if (res):
@@ -62,6 +70,7 @@ class MyHandlerMixin:
         self.render('error.html', status_code=status_code, exception=exception)
 
 class MyErrorHandler(MyHandlerMixin, tornado.web.ErrorHandler):
+    """Customization of tornado's ErrorHandler."""
     def get_template_namespace(self):
         # Call the appropriate super.
         map = tornado.web.ErrorHandler.get_template_namespace(self)
@@ -69,6 +78,7 @@ class MyErrorHandler(MyHandlerMixin, tornado.web.ErrorHandler):
         return map
 
 class MyStaticFileHandler(MyHandlerMixin, tornado.web.StaticFileHandler):
+    """Customization of tornado's StaticFileHandler."""
     def get_template_namespace(self):
         # Call the appropriate super.
         map = tornado.web.ErrorHandler.get_template_namespace(self)
@@ -76,6 +86,9 @@ class MyStaticFileHandler(MyHandlerMixin, tornado.web.StaticFileHandler):
         return map
     
 class MyRequestHandler(MyHandlerMixin, tornado.web.RequestHandler):
+    """Customization of tornado's RequestHandler. Used for all my
+    page-specific handlers.
+    """
     def get_template_namespace(self):
         # Call the appropriate super.
         map = tornado.web.RequestHandler.get_template_namespace(self)
@@ -93,6 +106,8 @@ class MyRequestHandler(MyHandlerMixin, tornado.web.RequestHandler):
             return self.twsession['email']
 
 class MainHandler(MyRequestHandler):
+    """Top page: the login form.
+    """
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self):
@@ -144,6 +159,8 @@ class MainHandler(MyRequestHandler):
         return map
 
 class LogOutHandler(MyRequestHandler):
+    """The sign-out page.
+    """
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self):
@@ -157,6 +174,8 @@ class LogOutHandler(MyRequestHandler):
                     twsession=self.twsession)
 
 class TopPageHandler(MyRequestHandler):
+    """Handler for miscellaneous top-level pages ("about", etc.)
+    """
     def initialize(self, page):
         self.page = page
         
@@ -167,6 +186,8 @@ class TopPageHandler(MyRequestHandler):
         self.render('top_%s.html' % (self.page,))
 
 class TestHandler(MyRequestHandler):
+    """Debugging -- will go away eventually.
+    """
     def get(self):
         self.render('test.html', foo=11, xsrf=self.xsrf_form_html())
 
