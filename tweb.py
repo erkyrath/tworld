@@ -106,6 +106,7 @@ class MainHandler(MyRequestHandler):
             self.render('main_auth.html')
 
     @tornado.web.asynchronous
+    @tornado.gen.coroutine
     def post(self):
         name = self.get_argument('name', '')
         name = tornado.escape.squeeze(name.strip())
@@ -126,14 +127,8 @@ class MainHandler(MyRequestHandler):
                         expires_days=14)
         ### convert name to email address; get userid
         self.application.twlog.info('### creating session')
-        self.application.twsession.create_session(self, name, callback=self.callback_create_session)
-        self.application.twlog.info('### called create_session')
-
-    def callback_create_session(self, result, error):
-        if (error):
-            self.write_error(500, error_text=str(error))
-            return
-            
+        res = yield motor.Op(self.application.twsession.create_session, self, name)
+        self.application.twlog.info('### called create_session, res=' + str(res))
         self.application.twlog.info('### created session, about to redir')
         self.redirect('/')
 
