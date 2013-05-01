@@ -22,14 +22,16 @@ Please sign in.
 <form method="post" action="/">
  {% module xsrf_form_html() %}
  <div class="FormSection">
-  <input class="FormInput" autocapitalize="off" autofocus="autofocus"
+  <input class="FormInput" autocapitalize="off"
    id="login_field" name="name" type="text" placeholder="Name or email"
-   {% if init_name %} value="{{init_name}}" {% end %}
+   {% if init_name %} value="{{init_name}}" {% else %} autofocus="autofocus" {% end %}
    >
  </div>
  <div class="FormSection">
   <input class="FormInput" autocomplete="disabled"
-   id="password_field" name="password" type="password" placeholder="Password">
+   id="password_field" name="password" type="password" placeholder="Password"
+   {% if init_name %} autofocus="autofocus" {% end %}
+   >
  </div>
  <div class="FormSection">
   <input class="FormButton FloatRight" name="commit" type="submit" value="Sign in">

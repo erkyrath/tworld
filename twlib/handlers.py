@@ -9,6 +9,7 @@ import tornado.escape
 import motor
 
 import twlib.session
+from twlib.misc import MessageException
 
 class MyHandlerMixin:
     """
@@ -145,7 +146,13 @@ class MainHandler(MyRequestHandler):
             self.render('main.html', formerror=formerror, init_name=name)
             return
 
-        res = yield tornado.gen.Task(self.application.twsessionmgr.find_player, self, name, password)
+        try:
+            res = yield tornado.gen.Task(self.application.twsessionmgr.find_player, self, name, password)
+        except MessageException as ex:
+            formerror = str(ex)
+            self.render('main.html', formerror=formerror, init_name=name)
+            return
+            
         if not res:
             formerror = 'That name and password do not match.'
             self.render('main.html', formerror=formerror, init_name=name)
