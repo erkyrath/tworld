@@ -13,7 +13,13 @@ Welcome
 <h2>Welcome Back</h2>
 
 <p>
-You are signed in as {{current_user}}.
+{% if twsession %}
+You are signed in as 
+{{ twsession['name'] }}
+({{ twsession['email'] }}).
+{% else %}
+You are signed in as... I'm not sure.
+{% end %}
 </p>
 
 <p>

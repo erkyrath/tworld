@@ -1,5 +1,6 @@
 
 import traceback
+import unicodedata
 
 import tornado.web
 import tornado.gen
@@ -126,26 +127,42 @@ class MainHandler(MyRequestHandler):
     @tornado.gen.coroutine
     def post(self):
         yield tornado.gen.Task(self.find_current_session)
+
+        # Apply canonicalizations to the name and password.
         name = self.get_argument('name', '')
+        name = unicodedata.normalize('NFKC', name)
         name = tornado.escape.squeeze(name.strip())
         password = self.get_argument('password', '')
+        password = unicodedata.normalize('NFKC', password)
+        password = password.encode()  # to UTF8 bytes
+        
         formerror = None
         if (not name):
             formerror = 'You must enter your user name or email address.'
         elif (not password):
             formerror = 'You must enter your password.'
-        elif (password != 'x'): ### check password...
-            formerror = 'That name and password do not match.'
         if formerror:
             self.render('main.html', formerror=formerror, init_name=name)
             return
 
-        # Set a name cookie, for future form fill-in
-        self.set_cookie('tworld_name', tornado.escape.url_escape(name),
+        res = yield tornado.gen.Task(self.application.twsessionmgr.find_player, self, name, password)
+        if not res:
+            formerror = 'That name and password do not match.'
+            self.render('main.html', formerror=formerror, init_name=name)
+            return
+        
+        fieldname = name
+        uid = res['_id']
+        email = res['email']
+        name = res['name']
+
+        # Set a name cookie, for future form fill-in. This is whatever the
+        # user entered in the form (name or email)
+        self.set_cookie('tworld_name', tornado.escape.url_escape(fieldname),
                         expires_days=14)
-        ### convert name to email address; get userid
-        res = yield tornado.gen.Task(self.application.twsessionmgr.create_session, self, name)
-        self.application.twlog.info('User signed in: %s (session %s)', name, res)
+
+        res = yield tornado.gen.Task(self.application.twsessionmgr.create_session, self, uid, email, name)
+        self.application.twlog.info('User signed in: %s (session %s)', email, res)
         self.redirect('/')
 
     def get_template_namespace(self):
