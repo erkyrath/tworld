@@ -23,23 +23,31 @@ Javascript, but you will not be able to play.)
 <form method="post" action="/register">
  {% module xsrf_form_html() %}
  <div class="FormSection">
-  <input class="FormInput" autocapitalize="off" autofocus="autofocus"
+  <input class="FormInput" autocapitalize="off"
    id="login_field" name="name" type="text" placeholder="Name"
+   {% if formfocus == 'name' %} autofocus="autofocus" {% end %}
+   {% if init_name %} value="{{init_name}}" {% end %}
    >
  </div>
  <div class="FormSection">
   <input class="FormInput" autocapitalize="off"
    id="email_field" name="email" type="text" placeholder="Email"
+   {% if formfocus == 'email' %} autofocus="autofocus" {% end %}
+   {% if init_email %} value="{{init_email}}" {% end %}
    >
  </div>
  <div class="FormSection">
   <input class="FormInput" autocomplete="disabled"
    id="password_field" name="password" type="password" placeholder="Password"
+   {% if formfocus == 'password' %} autofocus="autofocus" {% end %}
+   {% if init_password %} value="{{init_password}}" {% end %}
    >
  </div>
  <div class="FormSection">
   <input class="FormInput" autocomplete="disabled"
    id="password2_field" name="password2" type="password" placeholder="Password again"
+   {% if formfocus == 'password2' %} autofocus="autofocus" {% end %}
+   {% if init_password2 %} value="{{init_password2}}" {% end %}
    >
  </div>
  <div class="FormSection">

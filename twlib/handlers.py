@@ -147,7 +147,7 @@ class MainHandler(MyRequestHandler):
         
         formerror = None
         if (not name):
-            formerror = 'You must enter your user name or email address.'
+            formerror = 'You must enter your player name or email address.'
         elif (not password):
             formerror = 'You must enter your password.'
         if formerror:
@@ -172,12 +172,12 @@ class MainHandler(MyRequestHandler):
         name = res['name']
 
         # Set a name cookie, for future form fill-in. This is whatever the
-        # user entered in the form (name or email)
+        # player entered in the form (name or email)
         self.set_cookie('tworld_name', tornado.escape.url_escape(fieldname),
                         expires_days=14)
 
         res = yield tornado.gen.Task(self.application.twsessionmgr.create_session, self, uid, email, name)
-        self.application.twlog.info('User signed in: %s (session %s)', email, res)
+        self.application.twlog.info('Player signed in: %s (session %s)', email, res)
         self.redirect('/')
 
     def get_template_namespace(self):
@@ -201,12 +201,70 @@ class RegisterHandler(MyRequestHandler):
             return
         self.render('register.html')
 
+    @tornado.web.asynchronous
+    @tornado.gen.coroutine
+    def post(self):
+        yield tornado.gen.Task(self.find_current_session)
+        
+        # Apply canonicalizations to the name and password.
+        name = self.get_argument('name', '')
+        name = unicodedata.normalize('NFKC', name)
+        name = tornado.escape.squeeze(name.strip())
+        email = self.get_argument('email', '')
+        email = unicodedata.normalize('NFKC', email)
+        email = tornado.escape.squeeze(email.strip())
+        password = self.get_argument('password', '')
+        password = unicodedata.normalize('NFKC', password)
+        password = password.encode()  # to UTF8 bytes
+        password2 = self.get_argument('password2', '')
+        password2 = unicodedata.normalize('NFKC', password2)
+        password2 = password2.encode()  # to UTF8 bytes
+        
+        formerror = None
+        formfocus = 'name'
+        if (not name):
+            formerror = 'You must enter your player name.'
+            formfocus = 'name'
+        elif ('@' in name):
+            formerror = 'Your player name may not contain the @ sign.'
+            formfocus = 'name'
+        elif (not email):
+            formerror = 'You must enter an email address.'
+            formfocus = 'email'
+        elif ('@' not in email):
+            formerror = 'Your email address must contain an @ sign.'
+            formfocus = 'email'
+        elif (not password):
+            formerror = 'You must enter your password.'
+            formfocus = 'password'
+        elif (not password2):
+            formerror = 'You must enter your password twice.'
+            formfocus = 'password2'
+        elif (len(password) < 6):
+            formerror = 'Please use at least six characters in your password.'
+            formfocus = 'password'
+        elif (password != password2):
+            formerror = 'The passwords you entered were not the same.'
+            password2 = ''
+            formfocus = 'password2'
+        if formerror:
+            self.render('register.html', formerror=formerror, formfocus=formfocus,
+                        init_name=name, init_email=email, init_password=password, init_password2=password2)
+            return
+        
+        self.render('register.html') ####
+        
     def get_template_namespace(self):
         # Call super.
         map = MyRequestHandler.get_template_namespace(self)
         # Add a couple of default values. The handlers may or may not override
         # these Nones.
         map['formerror'] = None
+        map['formfocus'] = 'name'
+        map['init_name'] = None
+        map['init_email'] = None
+        map['init_password'] = None
+        map['init_password2'] = None
         return map
 
 class LogOutHandler(MyRequestHandler):
