@@ -4,10 +4,23 @@
 
 mongo_database = 'mydb'
 
+initial_config = {
+    'playerfields': {
+        'desc': 'an ordinary explorer.',
+        'pronoun': 'it',
+        },
+    }
+
 import pymongo
 
 client = pymongo.MongoClient()
 db = client[mongo_database]
+
+# Index for "config": key
+db.config.create_index('key', unique=True)
+# Create some config entries:
+for (key, val) in initial_config.items():
+    db.config.insert({'key':key, 'val':val})
 
 # Index for "sessions": sid
 db.sessions.create_index('sid', unique=True)
