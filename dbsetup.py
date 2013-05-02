@@ -28,3 +28,5 @@ db.sessions.create_index('sid', unique=True)
 # Indexes for "players": email, name
 db.players.create_index('email', unique=True)
 db.players.create_index('name', unique=True)
+
+### Create the admin player (no password)

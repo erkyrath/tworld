@@ -74,6 +74,7 @@ handlers = [
     (r'/register', twlib.handlers.RegisterHandler),
     (r'/logout', twlib.handlers.LogOutHandler),
     (r'/play', twlib.handlers.PlayHandler),
+    (r'/websocket', twlib.handlers.PlayWebSocketHandler),
     (r'/test', twlib.handlers.TestHandler),
     ]
 

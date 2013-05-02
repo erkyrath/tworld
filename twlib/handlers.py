@@ -5,6 +5,7 @@ import unicodedata
 import tornado.web
 import tornado.gen
 import tornado.escape
+import tornado.websocket
 
 import motor
 
@@ -319,6 +320,18 @@ class TopPageHandler(MyRequestHandler):
         yield tornado.gen.Task(self.find_current_session)
         self.render('top_%s.html' % (self.page,))
 
+class PlayWebSocketHandler(tornado.websocket.WebSocketHandler):
+    def open(self):
+        self.application.twlog.info('Player connected to websocket: %s', '###')
+
+    def on_message(self, msg):
+        self.application.twlog.info('### message: %s' % (msg,))
+        self.write_message('You said, \u201C%s\u201D' % msg)
+
+    def on_close(self):
+        self.application.twlog.info('Player disconnected from websocket: %s', '###')
+
+        
 class TestHandler(MyRequestHandler):
     """Debugging -- will go away eventually.
     """
