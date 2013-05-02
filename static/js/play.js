@@ -294,7 +294,17 @@ function evhan_websocket_close() {
 
 function evhan_websocket_message(ev) {
     console.log('### message: ' + ev.data);
-    print_event(ev.data)
+    try {
+        var obj = JSON.parse(ev.data);
+        var cmd = obj.cmd;
+    }
+    catch (ex) {
+        console.log('badly-formatted message from websocket: ' + ev.data);
+        return;
+    }
+
+    if (cmd == 'event')
+        print_event(obj.text)
 }
 
 function websocket_send_json(obj) {

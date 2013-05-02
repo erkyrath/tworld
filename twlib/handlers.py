@@ -340,7 +340,8 @@ class PlayWebSocketHandler(tornado.websocket.WebSocketHandler):
         cmd = obj.get('cmd', None)
         if cmd == 'say':
             text = obj.get('text', None)
-            self.write_message('You said, \u201C%s\u201D' % text)
+            text = 'You said, \u201C%s\u201D' % text
+            self.write_message({ 'cmd':'event', 'text':text })
 
     def on_close(self):
         self.application.twlog.info('Player disconnected from websocket: %s', '###')
