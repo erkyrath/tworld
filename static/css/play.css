@@ -1,0 +1,411 @@
+#topcol {
+  position: absolute;
+  height: 70%;
+  top: 0px;
+  width: 100%;
+  overflow: hidden;
+}
+
+#leftcol {
+  position: absolute;
+  height: 100%;
+  left: 0px;
+  width: 75%;
+}
+
+#rightcol {
+  position: absolute;
+  height: 100%;
+  right: 0px;
+  width: 25%;
+  overflow: auto;
+  line-height: 1.25em;
+}
+
+#bottomcol {
+  position: absolute;
+  height: 30%;
+  bottom: 0px;
+  width: 100%;
+  background: #EED;
+}
+
+#bottomcol_topedge {
+  position: absolute;
+  width: 100%;
+  left: 0px;
+  top: -1px;
+  height: 1px;
+  background: #BBB;
+}
+
+#eventpane {
+  height: 100%;
+  overflow: scroll;
+  overflow-x: hidden;
+  -webkit-box-shadow: inset 0px 0px 12px #CCA;
+  -moz-box-shadow: inset 0px 0px 12px #CCA;
+  box-shadow: inset 0px 0px 12px #CCA;
+}
+
+#leftcol .ui-resizable-e {
+  cursor: crosshair;
+  width: 10px;
+}
+
+#topcol .ui-resizable-s {
+  cursor: crosshair;
+  height: 10px;
+  bottom: 0px;
+
+}
+
+.ui-resizable-handle {
+  -moz-transition: background-color 0.25s;
+  -webkit-transition: background-color 0.25s;
+  transition: background-color 0.25s;
+}
+
+.ui-resizable-handle:hover {
+  background: #BBB;
+  -moz-transition-delay: 0.15s;
+  -webkit-transition-delay: 0.15s;
+  transition-delay: 0.15s;
+}
+
+.ui-resizable-s > .ResizingThumb {
+  position: relative;
+  top: 4px;
+  width: 10%;
+  height: 0px;
+  margin: auto;
+  background: none;
+  border-top: 1px dashed #CCB;
+  border-bottom: 1px dashed #EEC;
+  z-index: -1;
+}
+
+.ui-resizable-e > .ResizingThumb {
+  position: relative;
+  left: 4px;
+  top: 40px;
+  height: 60px;
+  width: 0px;
+  background: none;
+  border-left: 1px dashed #CCB;
+  border-right: 1px dashed #EEC;
+  z-index: -1;
+}
+
+#rightcol a {
+  text-decoration: none;
+  color: #A30; /* inherit? */
+}
+
+#rightcol a:hover {
+  text-decoration: underline;
+  color: #A30;
+}
+
+#focuspane {
+  /* display: none; */
+  /* background: #FFFFF4; */
+  position: absolute;
+  bottom: 0px;
+  width: 100%;
+  max-height: 80%;
+  overflow: auto;
+}
+
+#focuspane p {
+  margin-left: 20px;
+  margin-right: 20px;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  text-indent: 1.5em;
+}
+
+#focuspane a {
+  text-decoration: none;
+  color: #A30; /* inherit? */
+}
+
+#focuspane a:hover {
+  text-decoration: underline;
+  color: #A30;
+}
+
+#eventpane a {
+  text-decoration: none;
+  color: #A30; /* inherit? */
+}
+
+#eventpane a:hover {
+  text-decoration: underline;
+  color: #A30;
+}
+
+.Event {
+  margin: 0px 20px;
+}
+
+.Event:first-child {
+  margin-top: 1em;
+}
+
+.Input {
+  margin: 0px 20px 20px 20px;
+
+  font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
+  font-size: 1em;
+  line-height: 1.25em;
+}
+
+.Input:first-child {
+  margin-top: 1em;
+}
+
+.Input input {
+  font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
+  font-size: 1em;
+  font-weight: bold;
+  line-height: 1.25em;
+
+  border: none;
+  margin: 0px;
+  padding: 0px;
+  outline-width: 0px;
+  outline-style: none;
+  background: none;
+}
+
+.FocusOutline {
+  margin-left: 20px;
+  margin-right: 10px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #BBB;
+  border-radius: 8px;
+  -webkit-box-shadow: 0px 1px 2px 2px #EED;
+  -moz-box-shadow: 0px 1px 2px 2px #EED;
+  box-shadow: 0px 1px 2px 2px #EED;
+  background: #EED;
+}
+
+.FocusCornerControl {
+  float: right;
+  font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
+  font-weight: 100;
+  background: #D2D2B6;
+  background: -webkit-linear-gradient(#E8E8C4, #D2D2B6, #D2D2B6, #D2D2B6, #C4C4A8);
+  background: -moz-linear-gradient(#E8E8C4, #D2D2B6, #D2D2B6, #D2D2B6, #C4C4A8);
+  border-top-right-radius: 7px;
+  border-bottom-left-radius: 4px;
+  border-bottom: 1px solid #AAA;
+  border-left: 1px solid #AAA;
+  margin-left: 20px;
+  padding: 0.25em 0.75em;
+}
+
+.ToolOutline {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  margin-right: 20px;
+  margin-left: 10px;
+  border: 1px solid #BBB;
+  -webkit-box-shadow: 0px 1px 2px 2px #EED;
+  -moz-box-shadow: 0px 1px 2px 2px #EED;
+  box-shadow: 0px 1px 2px 2px #EED;
+  border-radius: 8px;
+  background: #EED;
+  overflow: hidden;
+}
+
+.ToolTitleBar {
+  font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
+  font-weight: 100;
+  background: #D2D2B6;
+  background: -webkit-linear-gradient(#E8E8C4, #D2D2B6, #D2D2B6, #D2D2B6, #C4C4A8);
+  background: -moz-linear-gradient(#E8E8C4, #D2D2B6, #D2D2B6, #D2D2B6, #C4C4A8);
+  border-top-left-radius: 7px;
+  border-top-right-radius: 7px;
+  border-bottom: 1px solid #AAA;
+  padding: 0.25em 0px;
+}
+
+.ToolSegment {
+  border-top: 1px solid #FFF;
+  border-bottom: 1px solid #BBB;
+  padding: 0.25em 0px;
+}
+
+.ToolFooter {
+  border-top: 1px solid #FFF;
+  height: 10px;
+}
+
+.ToolSegment ul {
+  margin: 0px 15px;
+}
+
+.ToolSegment li {
+  position: relative;
+}
+
+.ToolControl {
+  background: #EED;
+  width: 24px;
+  height: 20px;
+  color: #884;
+  font-family: fixed;
+  font-size: 18px;
+  margin-top: 4px;
+  text-align: center;
+  cursor: pointer;
+  border-radius: 4px;
+  -webkit-box-shadow: inset 0 0 2px 2px #DDB;
+  -moz-box-shadow: inset 0 0 2px 2px #DDB;
+  box-shadow: inset 0 0 2px 2px #DDB;
+}
+
+.ToolControl:hover {
+  background: #DDB;
+}
+
+.ToolControlLeft {
+  position: absolute;
+  left: 25px;
+}
+
+.ToolControlRight {
+  position: absolute;
+  right: 30px;
+}
+
+h2.ToolTitle {
+  font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
+  font-size: 1.2em;
+  font-weight: 100;
+  text-shadow: 0px 1px 1px #FFFFE8;
+  margin: 0.5em 15px;
+}
+
+div.ToolData {
+  font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
+  font-size: 1.0em;
+  font-weight: 100;
+  margin: 0.25em 15px;
+}
+
+h3.ToolTitle {
+  font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
+  font-size: 1.0em;
+  font-weight: 100;
+  font-style: italic;
+  text-align: right;
+  margin: 0.25em 15px;
+}
+
+.ToolSegment h3.ToolTitle {
+  margin-left: 40px;
+  margin-right: 40px;
+}
+
+.ToolList {
+  list-style: none;
+  padding: 0px;
+  margin: 0px;
+}
+
+.ToolList li {
+  margin-left: 15px;
+  text-indent: -15px;
+}
+
+.ToolListSub {
+  margin-left: 0px;
+  text-indent: 0px;
+}
+
+.ToolGloss {
+  font-size: 0.75em;
+  font-style: italic;
+}
+
+#popup_menu {
+  background: #D2D2B6;
+  border: 1px solid #AA9;
+  border-radius: 8px;
+  -webkit-box-shadow: 0px 0px 8px #AAA;
+  -moz-box-shadow: 0px 0px 8px #AAA;
+  box-shadow: 0px 0px 8px #AAA;
+
+  padding: 10px 4px;
+  list-style: none;
+
+  font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
+  font-size: 1.0em;
+}
+
+#popup_menu li {
+  padding: 0px 20px;
+}
+
+#popup_menu a {
+  text-decoration: none;
+  color: #A30;
+}
+
+#popup_menu li:hover {
+  background: #BB8;
+}
+
+.DoneButton {
+  font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
+  font-size: 0.9em;
+  width: 3.0em;  
+}
+
+.DelButton {
+  position: absolute;
+  top: 0px;
+  right: -5px;
+  margin: 0px;
+
+  overflow: hidden;
+  color: #F00;
+}
+
+.DelButton:hover {
+  background: #FB9;
+}
+
+#rightcol .ui-slider-horizontal {
+  margin-top: 0.3em;
+  margin-bottom: 0.5em;
+  height: 0.5em;
+  background: #FFFFE8;
+}
+
+#rightcol .ui-slider-horizontal .ui-slider-handle {
+  top: -0.4em;
+}
+
+#rightcol .ui-slider-handle {
+  border-color: #AAA;
+  border-radius: 8px;
+  background: #CC9;
+}
+
+#rightcol .ui-slider-handle.ui-state-hover,
+#rightcol .ui-slider-handle.ui-state-focus {
+  border-color: #888;
+  background-color: #AA7;
+}
+
+#rightcol .ui-slider-handle,
+#rightcol .ui-widget-content,
+#rightcol .ui-widget-header {
+  background-image: none;
+}
+
