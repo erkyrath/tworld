@@ -1,6 +1,10 @@
 
 var websocket = null;
 
+var KEY_RETURN = 13;
+var KEY_UP = 38;
+var KEY_DOWN = 40;
+
 function build_page_structure() {
     /* Clear out the body from the play.html template. */
     $('#submain').empty();
@@ -50,16 +54,38 @@ function build_page_structure() {
     $('#submain').append(bottomcol);
 }
 
+function setup_event_handlers() {
+    $(document).on('keypress', evhan_doc_keypress);
+
+    var inputel = $('#eventinput');
+    inputel.on('keypress', evhan_input_keypress);
+    inputel.on('keydown', evhan_input_keydown);
+    
+    $('#leftcol').resizable( { handles:'e', containment:'parent', distance: 10,
+          resize:handle_leftright_resize, stop:handle_leftright_doneresize } );
+    $('#topcol').resizable( { handles:'s', containment:'parent', distance: 10,
+          resize:handle_updown_resize, stop:handle_updown_doneresize } );
+    
+    $('div.ui-resizable-handle').append('<div class="ResizingThumb">');
+
+}
+
+function open_websocket() {
+    /*### try/except */
+    /*### localize URL */
+    websocket = new WebSocket("ws://localhost:4000/websocket");
+
+    websocket.onopen = evhan_websocket_open;
+    websocket.onclose = evhan_websocket_close;
+    websocket.onmessage = evhan_websocket_message;
+}
+
 function print_event(msg) {
     var el = $('<div>', { 'class':'Event'} );
     el.text(msg);
     $('.Input').before(el);
     /*### scroll down */
 }
-
-var KEY_RETURN = 13;
-var KEY_UP = 38;
-var KEY_DOWN = 40;
 
 function submit_line_input(val) {
     var historylast = null;
@@ -227,22 +253,6 @@ function handle_updown_doneresize(ev, ui) {
 }
 
 
-function setup_event_handlers() {
-    $(document).on('keypress', evhan_doc_keypress);
-
-    var inputel = $('#eventinput');
-    inputel.on('keypress', evhan_input_keypress);
-    inputel.on('keydown', evhan_input_keydown);
-    
-    $('#leftcol').resizable( { handles:'e', containment:'parent', distance: 10,
-          resize:handle_leftright_resize, stop:handle_leftright_doneresize } );
-    $('#topcol').resizable( { handles:'s', containment:'parent', distance: 10,
-          resize:handle_updown_resize, stop:handle_updown_doneresize } );
-    
-    $('div.ui-resizable-handle').append('<div class="ResizingThumb">');
-
-}
-
 function evhan_websocket_open() {
     console.log('### open');
 }
@@ -254,16 +264,6 @@ function evhan_websocket_close() {
 function evhan_websocket_message(ev) {
     console.log('### message: ' + ev.data);
     print_event(ev.data)
-}
-
-function open_websocket() {
-    /*### try/except */
-    /*### localize URL */
-    websocket = new WebSocket("ws://localhost:4000/websocket");
-
-    websocket.onopen = evhan_websocket_open;
-    websocket.onclose = evhan_websocket_close;
-    websocket.onmessage = evhan_websocket_message;
 }
 
 /* The page-ready handler. Like onload(), but better, I'm told. */
