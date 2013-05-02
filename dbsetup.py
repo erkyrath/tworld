@@ -2,13 +2,16 @@
 
 ### Stuff this into either tweb or tworld, or else use a common config file.
 
+mongo_database = 'mydb'
+
 import pymongo
 
 client = pymongo.MongoClient()
+db = client[mongo_database]
 
 # Index for "sessions": sid
-client.mydb.sessions.create_index('sid', unique=True)
+db.sessions.create_index('sid', unique=True)
 
 # Indexes for "players": email, name
-client.mydb.players.create_index('email', unique=True)
-client.mydb.players.create_index('name', unique=True)
+db.players.create_index('email', unique=True)
+db.players.create_index('name', unique=True)
