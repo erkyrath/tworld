@@ -265,7 +265,7 @@ class RegisterHandler(MyRequestHandler):
         self.set_cookie('tworld_name', tornado.escape.url_escape(name),
                         expires_days=14)
         
-        self.redirect('/')
+        self.redirect('/play')
         
     def get_template_namespace(self):
         # Call super.
