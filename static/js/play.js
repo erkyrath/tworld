@@ -1,13 +1,22 @@
 function build_page_structure() {
+    /* Clear out the body from the play.html template. */
     $('#submain').empty();
 
     var topcol = $('<div>', { id: 'topcol' });
     var leftcol = $('<div>', { id: 'leftcol' });
     var localepane = $('<div>', { id: 'localepane' });
-    var focuspane = $('<div>', { id: 'focuspane' });
+    var focuspane = $('<div>', { id: 'focuspane', style: 'display:none;' });
     var rightcol = $('<div>', { id: 'rightcol' });
     var bottomcol = $('<div>', { id: 'bottomcol' });
     var eventpane = $('<div>', { id: 'eventpane' });
+
+    var focusoutline = $('<div>', { 'class': 'FocusOutline' });
+    var focuscornercontrol = $('<div class="FocusCornerControl">Close</div>');
+    focusoutline.append(focuscornercontrol);
+    focusoutline.append($('<div>', { 'class': 'InvisibleAbovePara' }));
+    focusoutline.append($('<p>Text.</p>'));
+    focusoutline.append($('<div>', { 'class': 'InvisibleBeloePara' }));
+    focuspane.append(focusoutline);
 
     var inputline = $('<div>', { 'class': 'Input' });
     var inputprompt = $('<div>', { 'class': 'InputPrompt' });
@@ -26,6 +35,8 @@ function build_page_structure() {
     bottomcol.append(eventpane);
     eventpane.append(inputline);
 
+    /* Add the top-level, fully-constructed structures to the DOM last. More
+       efficient this way. */
     $('#submain').append(topcol);
     $('#submain').append(bottomcol);
 }
