@@ -154,6 +154,7 @@
 }
 
 .Input {
+  position: relative;
   margin: 0px 20px 20px 20px;
 
   font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
@@ -161,11 +162,22 @@
   line-height: 1.25em;
 }
 
+.InputFrame {
+  margin: 0px 0px 0px 1em;
+}
+
+.InputPrompt {
+  position: absolute;
+}
+
 .Input:first-child {
   margin-top: 1em;
 }
 
 .Input input {
+  display: block;
+  width: 100%;
+
   font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
   font-size: 1em;
   font-weight: bold;

@@ -9,12 +9,22 @@ function build_page_structure() {
     var bottomcol = $('<div>', { id: 'bottomcol' });
     var eventpane = $('<div>', { id: 'eventpane' });
 
+    var inputline = $('<div>', { 'class': 'Input' });
+    var inputprompt = $('<div>', { 'class': 'InputPrompt' });
+    var inputframe = $('<div>', { 'class': 'InputFrame' });
+
+    inputprompt.text('>');
+    inputframe.append($('<input>', { id: 'eventinput', type: 'text', maxlength: '256' } ));
+    inputline.append(inputprompt);
+    inputline.append(inputframe);
+
     topcol.append(leftcol);
     leftcol.append(localepane);
     leftcol.append(focuspane);
     topcol.append(rightcol);
     bottomcol.append($('<div>', { id: 'bottomcol_topedge' }));
     bottomcol.append(eventpane);
+    eventpane.append(inputline);
 
     $('#submain').append(topcol);
     $('#submain').append(bottomcol);
