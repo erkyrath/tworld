@@ -86,6 +86,10 @@ body {
   overflow: auto;
 }
 
+#localepane :first-child {
+  margin-top: 1em;
+}
+
 #localepane p {
   margin-left: 20px;
   margin-right: 20px;
@@ -97,7 +101,6 @@ body {
 #localepane h2 {
   margin-left: 20px;
   margin-right: 20px;
-  margin-top: 20px;
   text-align: center;
   font-size: 1.2em;
 }

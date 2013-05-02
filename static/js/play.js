@@ -1,5 +1,7 @@
 
 var websocket = null;
+var connected = false;
+var everconnected = false;
 
 var KEY_RETURN = 13;
 var KEY_UP = 38;
@@ -71,13 +73,28 @@ function setup_event_handlers() {
 }
 
 function open_websocket() {
-    /*### try/except */
-    /*### localize URL */
-    websocket = new WebSocket("ws://localhost:4000/websocket");
+    try {
+        var url = 'ws://' + window.location.host + '/websocket';
+        websocket = new WebSocket(url);
+    }
+    catch (ex) {
+        print_event('Unable to open websocket: ' + ex);
+        display_error('The connection to the server could not be created. Possibly your browser does not support WebSockets.');
+        return;
+    }
 
     websocket.onopen = evhan_websocket_open;
     websocket.onclose = evhan_websocket_close;
     websocket.onmessage = evhan_websocket_message;
+}
+
+function display_error(msg) {
+    var el = $('<div>', { 'class':'BlockError'} );
+    el.text(msg);
+    $('#localepane').empty();
+    $('#localepane').append(el);
+
+    /* ### also close the focus pane? */
 }
 
 function print_event(msg) {
@@ -110,7 +127,8 @@ function submit_line_input(val) {
 
     if (val) {
         console.log('### input: ' + val);
-        websocket.send(val);
+        if (connected)
+            websocket.send(val);
     }
 }
 
@@ -255,16 +273,40 @@ function handle_updown_doneresize(ev, ui) {
 
 function evhan_websocket_open() {
     console.log('### open');
+    connected = true;
+    everconnected = true;
 }
 
 function evhan_websocket_close() {
     console.log('### close');
+    websocket = null;
+    connected = false;
+
+    if (!everconnected) {
+        display_error('The connection to the server could not be opened.');
+    }
+    else {
+        display_error('The connection to the server was lost.');
+    }
 }
 
 function evhan_websocket_message(ev) {
     console.log('### message: ' + ev.data);
     print_event(ev.data)
 }
+
+/* Run a function (no arguments) in timeout seconds. */
+function delay_func(timeout, func)
+{
+    return window.setTimeout(func, timeout*1000);
+}
+
+/* Run a function (no arguments) "soon". */
+function defer_func(func)
+{
+    return window.setTimeout(func, 0.01*1000);
+}
+
 
 /* The page-ready handler. Like onload(), but better, I'm told. */
 $(document).ready(function() {
