@@ -50,7 +50,7 @@ class SessionMgr(object):
             key = 'name'
             
         try:
-            res = yield motor.Op(self.app.mongo.mydb.players.find_one,
+            res = yield motor.Op(self.app.mongodb.players.find_one,
                                  { key: name })
         except Exception as ex:
             return MessageException('Database error: %s' % ex)
@@ -80,9 +80,9 @@ class SessionMgr(object):
 
         # Check for collisions first.
         try:
-            resname = yield motor.Op(self.app.mongo.mydb.players.find_one,
+            resname = yield motor.Op(self.app.mongodb.players.find_one,
                                      { 'name': name })
-            resemail = yield motor.Op(self.app.mongo.mydb.players.find_one,
+            resemail = yield motor.Op(self.app.mongodb.players.find_one,
                                      { 'email': email })
         except Exception as ex:
             return MessageException('Database error: %s' % ex)
@@ -104,7 +104,7 @@ class SessionMgr(object):
             'createtime': datetime.datetime.now(),
             }
 
-        uid = yield motor.Op(self.app.mongo.mydb.players.insert, player)
+        uid = yield motor.Op(self.app.mongodb.players.insert, player)
         if not uid:
             raise MessageException('Unable to create player.')
         sessionid = yield tornado.gen.Task(self.create_session, handler, uid, email, name)
@@ -132,7 +132,7 @@ class SessionMgr(object):
             'starttime': datetime.datetime.now(),
             }
 
-        res = yield motor.Op(self.app.mongo.mydb.sessions.insert, sess)
+        res = yield motor.Op(self.app.mongodb.sessions.insert, sess)
         return sessionid
 
     @tornado.gen.coroutine
@@ -148,7 +148,7 @@ class SessionMgr(object):
         if not sessionid:
             return ('unauth', None)
         try:
-            res = yield motor.Op(self.app.mongo.mydb.sessions.find_one,
+            res = yield motor.Op(self.app.mongodb.sessions.find_one,
                                  { 'sid': sessionid })
         except Exception as ex:
             self.app.twlog.error('Error finding session: %s', ex)
@@ -165,6 +165,6 @@ class SessionMgr(object):
         sessionid = handler.get_secure_cookie('sessionid')
         handler.clear_cookie('sessionid')
         if (sessionid):
-            yield motor.Op(self.app.mongo.mydb.sessions.remove,
+            yield motor.Op(self.app.mongodb.sessions.remove,
                            { 'sid': sessionid })
     

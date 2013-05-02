@@ -42,11 +42,15 @@ tornado.options.define(
     'port', type=int, default=4000,
     help='port number to listen on')
 tornado.options.define(
-    'cookie_secret', type=str,
-    help='cookie secret key (see Tornado docs)')
-tornado.options.define(
     'debug', type=bool,
     help='application debugging (see Tornado docs)')
+
+tornado.options.define(
+    'mongo_database', type=str, default='tworld',
+    help='name of mongodb database')
+tornado.options.define(
+    'cookie_secret', type=str,
+    help='cookie secret key (see Tornado docs)')
 
 # Parse 'em up.
 tornado.options.parse_command_line()
@@ -84,6 +88,7 @@ class TworldApplication(tornado.web.Application):
         # This will be the Motor (MongoDB) connection. We'll open it in the
         # first monitor_mongo_status call.
         self.mongo = None
+        self.mongodb = None   # will be mongo[mongo_database]
         self.mongoavailable = False  # true if self.mongo exists and is open
         self.mongotimerbusy = False  # true while monitor_mongo_status runs
         
@@ -124,12 +129,14 @@ class TworldApplication(tornado.web.Application):
             if (not self.mongoavailable):
                 self.mongo.disconnect()
                 self.mongo = None
+                self.mongodb = None
             
         if (not self.mongoavailable):
             try:
                 self.mongo = motor.MotorClient()
                 res = yield motor.Op(self.mongo.open)
                 ### maybe authenticate to a database?
+                self.mongodb = self.mongo[opts.mongo_database]
                 self.mongoavailable = True
                 self.twlog.info('monitor_mongo_status: Mongo client open')
             except Exception as ex:
