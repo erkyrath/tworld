@@ -1,6 +1,7 @@
 
 import traceback
 import unicodedata
+import json
 
 import tornado.web
 import tornado.gen
@@ -326,7 +327,20 @@ class PlayWebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def on_message(self, msg):
         self.application.twlog.info('### message: %s' % (msg,))
-        self.write_message('You said, \u201C%s\u201D' % msg)
+        try:
+            obj = json.loads(msg)
+        except Exception as ex:
+            self.application.twlog.warning('invalid websocket message: %s', ex)
+            return
+
+        if (type(obj) != dict):
+            self.application.twlog.warning('invalid websocket message: %s', 'not a dict')
+            return
+
+        cmd = obj.get('cmd', None)
+        if cmd == 'say':
+            text = obj.get('text', None)
+            self.write_message('You said, \u201C%s\u201D' % text)
 
     def on_close(self):
         self.application.twlog.info('Player disconnected from websocket: %s', '###')

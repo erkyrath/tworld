@@ -127,8 +127,7 @@ function submit_line_input(val) {
 
     if (val) {
         console.log('### input: ' + val);
-        if (connected)
-            websocket.send(val);
+        websocket_send_json({ cmd:'say', text:val });
     }
 }
 
@@ -288,11 +287,24 @@ function evhan_websocket_close() {
     else {
         display_error('The connection to the server was lost.');
     }
+
+    /* ### set up a timer to try reconnecting. But don't change the displayed
+       error unless it succeeds? */
 }
 
 function evhan_websocket_message(ev) {
     console.log('### message: ' + ev.data);
     print_event(ev.data)
+}
+
+function websocket_send_json(obj) {
+    if (!connected) {
+        console.log('websocket not connected');
+        return;
+    }
+
+    val = JSON.stringify(obj);
+    websocket.send(val);
 }
 
 /* Run a function (no arguments) in timeout seconds. */
