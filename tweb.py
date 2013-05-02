@@ -73,6 +73,7 @@ handlers = [
     (r'/', twlib.handlers.MainHandler),
     (r'/register', twlib.handlers.RegisterHandler),
     (r'/logout', twlib.handlers.LogOutHandler),
+    (r'/play', twlib.handlers.PlayHandler),
     (r'/test', twlib.handlers.TestHandler),
     ]
 

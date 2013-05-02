@@ -12,15 +12,7 @@ Welcome
 
 <h2>Welcome Back</h2>
 
-<p>
-{% if twsession %}
-You are signed in as 
-{{ twsession['name'] }}
-({{ twsession['email'] }}).
-{% else %}
-You are signed in as... I'm not sure.
-{% end %}
-</p>
+<h2><a href="/play">Enter {{ tworld_app_title() }}</a></h2>
 
 <p>
 <a href="/about">What is {{ tworld_app_title() }}?</a>

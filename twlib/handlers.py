@@ -178,7 +178,7 @@ class MainHandler(MyRequestHandler):
 
         res = yield tornado.gen.Task(self.application.twsessionmgr.create_session, self, uid, email, name)
         self.application.twlog.info('Player signed in: %s (session %s)', email, res)
-        self.redirect('/')
+        self.redirect('/play')
 
     def get_template_namespace(self):
         # Call super.
@@ -295,6 +295,18 @@ class LogOutHandler(MyRequestHandler):
                     twsessionstatus=self.twsessionstatus,
                     twsession=self.twsession)
 
+class PlayHandler(MyRequestHandler):
+    """Handler for the game itself.
+    """
+    @tornado.web.asynchronous
+    @tornado.gen.coroutine
+    def get(self):
+        yield tornado.gen.Task(self.find_current_session)
+        if not self.twsession:
+            self.redirect('/')
+            return
+        self.render('play.html')
+        
 class TopPageHandler(MyRequestHandler):
     """Handler for miscellaneous top-level pages ("about", etc.)
     """
