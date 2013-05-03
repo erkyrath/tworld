@@ -11,6 +11,7 @@ import motor
 
 import twlib.session
 import twlib.handlers
+import twlib.connections
 
 # Set up all the options. (Generally found in the config file.)
 
@@ -94,8 +95,11 @@ class TworldApplication(tornado.web.Application):
         self.mongoavailable = False  # true if self.mongo exists and is open
         self.mongotimerbusy = False  # true while monitor_mongo_status runs
         
-        # Set up a session manager.
+        # Set up a session manager (for web client sessions).
         self.twsessionmgr = twlib.session.SessionMgr(self)
+
+        # And a connection table (for talking to tworld).
+        self.twconntable = twlib.connections.ConnectionTable(self)
 
         # Grab the same logger that tornado uses.
         self.twlog = logging.getLogger("tornado.general")

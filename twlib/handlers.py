@@ -332,6 +332,7 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
         # Proceed using a callback, because the open() method cannot be
         # made into a coroutine.
         self.twconnid = None
+        self.twconn = None
         self.find_current_session(callback=self.open_cont)
 
     @tornado.gen.coroutine
@@ -342,14 +343,23 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
             self.write_tw_error('You are not authenticated.')
             self.close()
             return
-        self.application.twlog.info('Player connected to websocket: %s (session %s)', self.twsession['email'], self.twsession['sid'])
-        ### send "new connection" command to tworld
-        ### on successful return, add this to the connection table
+        self.twconnid = self.application.twconntable.generate_connid()
+        uid = self.twsession['uid']
+        self.application.twlog.info('Player connected to websocket: %s (session %s, connid %d)', self.twsession['email'], self.twsession['sid'], self.twconnid)
+        ### send "new connection" command to tworld.
+        ### on successful return, add this to the connection table and send the initial status.
         ### on failure or timeout, write an error and close.
+        self.twconn = self.application.twconntable.add(self, uid)
         return
 
     def on_message(self, msg):
         self.application.twlog.info('### message: %s' % (msg,))
+        if not self.twconn:
+            self.application.twlog.warning('websocket connection is not ready yet')
+            return
+        
+        ### temporary response implementation. The real deal will be to add a connid and throw it over to tworld.
+        
         try:
             obj = json.loads(msg)
         except Exception as ex:
@@ -368,6 +378,11 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
 
     def on_close(self):
         self.application.twlog.info('Player disconnected from websocket: %s', '###')
+        self.application.twconntable.remove(self)
+        self.twconnid = None
+        self.twconn = None
+        ### pass "close connection" message to tworld
+
 
     def write_tw_error(self, msg):
         """Write a JSON error-reporting command through the socket.
