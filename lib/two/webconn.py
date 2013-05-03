@@ -71,7 +71,7 @@ class WebConnIOStream(tornado.iostream.IOStream):
             # This slices a chunk off the buffer and returns it, if a
             # complete chunk is available.
             try:
-                tup = wcproto.check_buffer(self.twbuffer)
+                tup = wcproto.check_buffer(self.twbuffer, namespace=True)
                 if not tup:
                     return
             except Exception as ex:

@@ -7,6 +7,8 @@ import tornado.gen
 
 import two.webconn
 
+from twcommon import wcproto
+
 class Tworld(object):
     def __init__(self, opts):
         self.opts = opts
@@ -64,3 +66,9 @@ class Tworld(object):
     def handle_command(self, tup, stream, queuetime):
         self.log.info('### handling message %s', tup)
 
+        (typ, connid, obj) = tup
+        if connid == 0:
+            # This message is for us!
+            cmd = obj.cmd
+            if cmd == 'connect':
+                stream.write(wcproto.message(wcproto.msgtype.connect, 0, {'cmd':'reply'}))
