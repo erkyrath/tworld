@@ -3,6 +3,7 @@ import socket
 import logging
 
 import tornado.ioloop
+import tornado.iostream
 
 class Tworld(object):
     def __init__(self, opts):
@@ -10,9 +11,13 @@ class Tworld(object):
 
         self.log = logging.getLogger('tworld')
 
+        self.ioloop = None
         self.listensock = None
+        self.webconns = set()   # set of IOStreams (normally just one)
 
     def listen(self):
+        self.ioloop = tornado.ioloop.IOLoop.current()
+        
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
         self.listensock = sock
         #sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -22,7 +27,7 @@ class Tworld(object):
         sock.bind( ('localhost', self.opts.tworld_port) )
         sock.listen(32)
         
-        tornado.ioloop.IOLoop.instance().add_handler(
+        self.ioloop.add_handler(
             sock.fileno(),
             self.listen_ready,
             tornado.ioloop.IOLoop.READ)
@@ -30,27 +35,35 @@ class Tworld(object):
         self.log.info('Listening on port %d', self.opts.tworld_port)
 
     def listen_ready(self, fd, events):
-        self.log.info('### read_ready %d', events)
         while True:
+            sock = None
             try:
                 (sock, addr) = self.listensock.accept()
                 (host, port) = addr
             except socket.error as ex:
-                self.log.info('### accept error %s', ex)
                 if ex.args[0] not in (errno.EWOULDBLOCK, errno.EAGAIN):
                     raise
-                self.log.info('### returning')
                 return
             
             sock.setblocking(0)
-            tornado.ioloop.IOLoop.instance().add_handler(
-                sock.fileno(),
-                self.read_ready,
-                tornado.ioloop.IOLoop.READ | tornado.ioloop.IOLoop.ERROR)
-            self.log.info('Accepted connection from %s', host)
-            sock = None
+            
+            stream = tornado.iostream.IOStream(sock)
+            stream.twhost = host
+            self.webconns.add(stream)
+            self.log.info('Accepted web connection from %s (now %d connected)', stream.twhost, len(self.webconns))
 
-    def read_ready(self, fd, events):
-        self.log.info('### read_ready %d', events)
+            stream.read_until_close(
+                lambda dat:self.stream_closed(stream, dat),
+                lambda dat:self.stream_read(stream, dat))
 
-    
+    def stream_read(self, stream, dat):
+        self.log.info('### stream_read %s', dat)
+
+    def stream_closed(self, stream, dat):
+        try:
+            self.webconns.remove(stream)
+        except:
+            pass
+        self.log.info('End of web connection from %s (now %d connected)', stream.twhost, len(self.webconns))
+        
+        
