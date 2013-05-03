@@ -4,6 +4,8 @@ import socket
 import tornado.ioloop
 import tornado.iostream
 
+from twcommon import wcproto
+
 class WebConnectionTable(object):
     def __init__(self, app):
         # Keep a link to the owning application.
@@ -48,7 +50,7 @@ class WebConnectionTable(object):
             
             stream = WebConnIOStream(self, sock, host)
             self.webconns.add(stream)
-            self.log.info('Accepted web connection from %s (now %d connected)', stream, len(self.webconns))
+            self.log.info('Accepted: %s (now %d connected)', stream, len(self.webconns))
 
             stream.read_until_close(stream.twclose, stream.twread)
 
@@ -57,16 +59,28 @@ class WebConnIOStream(tornado.iostream.IOStream):
         tornado.iostream.IOStream.__init__(self, socket)
         self.twhost = host
         self.twtable = table
+        self.twbuffer = bytearray()
 
     def __repr__(self):
         return '<WebConnIOStream (%s)>' % (self.twhost,)
         
     def twread(self, dat):
         self.twtable.log.info('### stream_read %s', dat)
+        self.twbuffer.extend(dat)
+        while True:
+            # This slices a chunk off the buffer and returns it, if a
+            # complete chunk is available.
+            tup = wcproto.check_buffer(self.twbuffer)
+            if not tup:
+                break
+            self.twtable.log.info('### received message %s', tup)
 
     def twclose(self, dat):
         try:
             self.twtable.webconns.remove(self)
         except:
             pass
-        self.twtable.log.info('End of web connection from %s (now %d connected)', self, len(self.twtable.webconns))
+        self.twtable.log.info('Closed: %s (now %d connected)', self, len(self.twtable.webconns))
+        self.twbuffer = None
+        self.twtable = None
+        
