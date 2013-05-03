@@ -1,3 +1,8 @@
+"""
+This table manages the websocket connections from clients.
+"""
+
+import tweblib.handlers
 
 class ConnectionTable(object):
     def __init__(self, app):
@@ -12,6 +17,7 @@ class ConnectionTable(object):
         return res
 
     def add(self, handler, uid):
+        assert isinstance(handler, tweblib.handlers.PlayWebSocketHandler)
         assert handler.twconnid, 'handler.twconnid is not positive'
         conn = Connection(handler, uid)
         self.table[conn.connid] = conn

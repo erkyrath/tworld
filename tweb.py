@@ -2,12 +2,10 @@
 
 import sys
 import logging
-import socket
 
 import tornado.web
 import tornado.gen
 import tornado.ioloop
-import tornado.iostream
 import tornado.options
 
 import motor
@@ -71,7 +69,7 @@ if opts.python_path:
 import tweblib.session
 import tweblib.handlers
 import tweblib.connections
-from twcommon import wcproto
+import tweblib.servers
 
 # Define application options which are always set.
 appoptions = {
@@ -104,118 +102,31 @@ handlers.append( (r'.*', tweblib.handlers.MyErrorHandler, {'status_code': 404}) 
 
 class TwebApplication(tornado.web.Application):
     def init_tworld(self):
-        # This will be the Motor (MongoDB) connection. We'll open it in the
-        # first monitor_mongo_status call.
-        self.mongo = None
-        self.mongodb = None   # will be mongo[mongo_database]
-        self.mongoavailable = False  # true if self.mongo exists and is open
-        self.mongotimerbusy = False  # true while monitor_mongo_status runs
-
-        # This will be the Tworld connection. Handled by monitor_tworld_status.
-        self.tworld = None
-        self.tworldavailable = False  # true if self.tworld exists and is ready
-        self.tworldtimerbusy = False
+        # The parsed options (all of them, not just the tornado options)
+        self.twopts = opts
         
+        # Grab the same logger that tornado uses.
+        self.twlog = logging.getLogger("tornado.general")
+
+        # This will be self.twservermgr.mongo[mongo_database], when that's
+        # available.
+        self.mongodb = None
+
         # Set up a session manager (for web client sessions).
         self.twsessionmgr = tweblib.session.SessionMgr(self)
 
+        # And a server manager (for mongodb and tworld connections).
+        self.twservermgr = tweblib.servers.ServerMgr(self)
+
         # And a connection table (for talking to tworld).
         self.twconntable = tweblib.connections.ConnectionTable(self)
-
-        # Grab the same logger that tornado uses.
-        self.twlog = logging.getLogger("tornado.general")
 
         # When the IOLoop starts, we'll set up periodic tasks.
         tornado.ioloop.IOLoop.instance().add_callback(self.init_timers)
 
     def init_timers(self):
         self.twlog.info('Launching timers')
-
-        ioloop = tornado.ioloop.IOLoop.instance()
-        
-        # The mongo status monitor. We set up one call immediately, and then
-        # try again every five seconds.
-        ioloop.add_callback(self.monitor_mongo_status)
-        res = tornado.ioloop.PeriodicCallback(self.monitor_mongo_status, 5000)
-        res.start()
-
-        # The tworld status monitor. Same deal.
-        ioloop.add_callback(self.monitor_tworld_status)
-        res = tornado.ioloop.PeriodicCallback(self.monitor_tworld_status, 5000)
-        res.start()
-
-    @tornado.gen.coroutine
-    def monitor_mongo_status(self):
-        if (self.mongotimerbusy):
-            self.twlog.warning('monitor_mongo_status: already in flight; did a previous call jam?')
-            return
-        self.mongotimerbusy = True
-        
-        if (self.mongoavailable):
-            try:
-                res = yield motor.Op(self.mongo.admin.command, 'ping')
-                if (not res):
-                    self.twlog.error('monitor_mongo_status: Mongo client not alive')
-                    self.mongoavailable = False
-            except Exception as ex:
-                self.twlog.error('monitor_mongo_status: Mongo client not alive: %s', ex)
-                self.mongoavailable = False
-            if (not self.mongoavailable):
-                self.mongo.disconnect()
-                self.mongo = None
-                self.mongodb = None
-            
-        if (not self.mongoavailable):
-            try:
-                self.mongo = motor.MotorClient()
-                res = yield motor.Op(self.mongo.open)
-                ### maybe authenticate to a database?
-                self.mongodb = self.mongo[opts.mongo_database]
-                self.mongoavailable = True
-                self.twlog.info('monitor_mongo_status: Mongo client open')
-            except Exception as ex:
-                self.mongoavailable = False
-                self.twlog.error('monitor_mongo_status: Mongo client not open: %s', ex)
-        
-        self.mongotimerbusy = False
-
-    @tornado.gen.coroutine
-    def monitor_tworld_status(self):
-        if (self.tworldtimerbusy):
-            self.twlog.warning('monitor_tworld_status: already in flight; did a previous call jam?')
-            return
-
-        if (self.tworldavailable):
-            # Nothing to do
-            return
-        
-        self.tworldtimerbusy = True
-
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
-            # We do a sync connect, because I don't understand how the
-            # async version works. (IOStream.connect seems to hang forever
-            # when the other process is down?)
-            sock.connect(('localhost', opts.tworld_port))
-            sock.setblocking(0)
-            self.tworld = tornado.iostream.IOStream(sock)
-        except Exception as ex:
-            self.tworldavailable = False
-            self.twlog.error('monitor_tworld_status: Could not open tworld socket: %s', ex)
-            self.tworldtimerbusy = False
-            return
-            
-        self.twlog.info('monitor_tworld_status: Tworld socket open')
-
-        # But it won't count as available until we get a response from it.
-        try:
-            self.tworld.write(wcproto.message(wcproto.msgtype.connect, 0, {'cmd':'connect', 'connections':[]}))
-        except Exception as ex:
-            self.tworldavailable = False
-            self.twlog.error('monitor_tworld_status: Could not write connect message to tworld socket: %s', ex)
-            self.tworldtimerbusy = False
-            return
-
+        self.twservermgr.init_timers()
 
 
 application = TwebApplication(

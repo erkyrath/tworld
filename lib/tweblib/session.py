@@ -41,7 +41,7 @@ class SessionMgr(object):
         This presumes that names do not contain @ signs, and that neither
         names nor email addresses are duplicated.
         """
-        if (not self.app.mongoavailable):
+        if (not self.app.mongodb):
             raise MessageException('Database not available')
 
         if ('@' in name):
@@ -75,7 +75,7 @@ class SessionMgr(object):
         The name and email should already have been validated and
         canonicalized, as much as possible.
         """
-        if (not self.app.mongoavailable):
+        if (not self.app.mongodb):
             raise MessageException('Database not available')
 
         # Check for collisions first.
@@ -116,7 +116,7 @@ class SessionMgr(object):
         Create a session from the request parameters. Return it (as
         a dict, with _id).
         """
-        if (not self.app.mongoavailable):
+        if (not self.app.mongodb):
             raise MessageException('Database not available')
         
         # Generate a random sessionid.
@@ -142,7 +142,7 @@ class SessionMgr(object):
         (status, session). The status is 'auth', 'unauth', or 'unknown'
         (if the auth server is unavailable).
         """
-        if (not self.app.mongoavailable):
+        if (not self.app.mongodb):
             return ('unknown', None)
         sessionid = handler.get_secure_cookie('sessionid')
         if not sessionid:
