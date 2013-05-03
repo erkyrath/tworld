@@ -50,9 +50,9 @@ class Tworld(object):
             self.log.error('error handling command: %s', tup, exc_info=True)
 
         endtime = datetime.datetime.now()
-        self.log.info('finished command in %.1f us (queued for %.1f us)',
-                      (endtime-starttime).total_seconds() * 1000000,
-                      (starttime-queuetime).total_seconds() * 1000000)
+        self.log.info('finished command in %.3f ms (queued for %.3f ms)',
+                      (endtime-starttime).total_seconds() * 1000,
+                      (starttime-queuetime).total_seconds() * 1000)
         
         self.commandbusy = False
 
