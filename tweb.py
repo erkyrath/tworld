@@ -71,6 +71,7 @@ if opts.python_path:
 import tweblib.session
 import tweblib.handlers
 import tweblib.connections
+from twcommon import wcproto
 
 # Define application options which are always set.
 appoptions = {
@@ -200,13 +201,20 @@ class TwebApplication(tornado.web.Application):
             self.tworld = tornado.iostream.IOStream(sock)
         except Exception as ex:
             self.tworldavailable = False
-            self.twlog.error('monitor_tworld_status: Tworld socket would not open: %s', ex)
+            self.twlog.error('monitor_tworld_status: Could not open tworld socket: %s', ex)
             self.tworldtimerbusy = False
             return
             
         self.twlog.info('monitor_tworld_status: Tworld socket open')
-        self.tworldavailable = True
-        self.tworldtimerbusy = False
+
+        # But it won't count as available until we get a response from it.
+        try:
+            self.tworld.write(wcproto.message(wcproto.msgtype.connect, 0, {'cmd':'connect', 'connections':[]}))
+        except Exception as ex:
+            self.tworldavailable = False
+            self.twlog.error('monitor_tworld_status: Could not write connect message to tworld socket: %s', ex)
+            self.tworldtimerbusy = False
+            return
 
 
 

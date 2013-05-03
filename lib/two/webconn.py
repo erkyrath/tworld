@@ -75,7 +75,8 @@ class WebConnIOStream(tornado.iostream.IOStream):
                 if not tup:
                     return
             except Exception as ex:
-                self.log.info('Malformed message: %s', ex)
+                self.twtable.log.info('Malformed message: %s', ex)
+                return
             self.twtable.log.info('### received message %s', tup)
 
     def twclose(self, dat):

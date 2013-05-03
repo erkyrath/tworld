@@ -20,6 +20,7 @@ HEADER_LENGTH = 12  # three four-byte fields
 
 msgtype = types.SimpleNamespace(
     say = b'SAY ',
+    connect = b'CONN',
     )
 
 def namespace_wrapper(map):
@@ -59,6 +60,14 @@ def check_buffer(buf, namespace=False):
 
     msgstr = msgdat.decode()  # Decode UTF-8
     msgobj = json.loads(msgstr, object_hook=object_hook)  # Decode JSON
-    if (type(obj) not in [dict, types.SimpleNamespace]):
+    if (type(msgobj) not in [dict, types.SimpleNamespace]):
         raise ValueError('Message was not an object')
     return (msgtype, msgobj)
+
+def message(typ, connid, obj):
+    msgstr = json.dumps(obj)
+    msgdat = msgstr.encode()  # Encode UTF-8
+    blen = struct.pack('<1I', len(msgdat))
+    bconnid = struct.pack('<1I', connid)
+    assert len(typ) == 4
+    return blen + typ + bconnid + msgdat
