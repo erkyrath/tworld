@@ -84,8 +84,10 @@ class ServerMgr(object):
         self.mongotimerbusy = False
 
 
-    @tornado.gen.coroutine
     def monitor_tworld_status(self):
+        # This routine is *not* a coroutine, because it doesn't do anything
+        # yieldy.
+        
         if (self.tworldtimerbusy):
             self.log.warning('monitor_tworld_status: already in flight; did a previous call jam?')
             return
@@ -93,7 +95,9 @@ class ServerMgr(object):
         if (self.tworldavailable):
             # Nothing to do
             return
-        
+
+        # We're going to hold this "lock" until the connection attempt
+        # fails or definitely succeeds.
         self.tworldtimerbusy = True
 
         try:
@@ -105,8 +109,8 @@ class ServerMgr(object):
             sock.setblocking(0)
             self.tworld = tornado.iostream.IOStream(sock)
         except Exception as ex:
-            self.tworldavailable = False
             self.log.error('monitor_tworld_status: Could not open tworld socket: %s', ex)
+            self.tworldavailable = False
             self.tworldtimerbusy = False
             return
             
@@ -114,10 +118,24 @@ class ServerMgr(object):
 
         # But it won't count as available until we get a response from it.
         try:
+            ### grab connection list from conntable
             self.tworld.write(wcproto.message(wcproto.msgtype.connect, 0, {'cmd':'connect', 'connections':[]}))
         except Exception as ex:
-            self.tworldavailable = False
             self.log.error('monitor_tworld_status: Could not write connect message to tworld socket: %s', ex)
+            self.tworld = None
+            self.tworldavailable = False
             self.tworldtimerbusy = False
             return
+        
+        self.tworld.read_until_close(self.close_tworld, self.read_tworld_data)
+        # Exit, still holding tworldtimerbusy. We'll drop it if the connect
+        # pong arrives, or if the socket closes.
 
+    def read_tworld_data(self, dat):
+        self.log.info('### tworld read data: %s', dat)
+
+    def close_tworld(self, dat):
+        self.log.error('Connection to tworld closed.')
+        self.tworld = None
+        self.tworldavailable = False
+        self.tworldtimerbusy = False

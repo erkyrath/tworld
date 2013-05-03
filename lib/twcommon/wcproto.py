@@ -62,7 +62,7 @@ def check_buffer(buf, namespace=False):
     msgobj = json.loads(msgstr, object_hook=object_hook)  # Decode JSON
     if (type(msgobj) not in [dict, types.SimpleNamespace]):
         raise ValueError('Message was not an object')
-    return (msgtype, msgobj)
+    return (msgtype, connid, msgobj)
 
 def message(typ, connid, obj):
     msgstr = json.dumps(obj)

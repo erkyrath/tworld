@@ -77,15 +77,17 @@ class WebConnIOStream(tornado.iostream.IOStream):
             except Exception as ex:
                 self.twtable.log.info('Malformed message: %s', ex)
                 return
-            self.twtable.log.info('### received message %s', tup)
+            self.twtable.app.queue_command(tup, self)
 
     def twclose(self, dat):
         try:
             self.twtable.webconns.remove(self)
             ### say goodbye to all connections on this stream!
+            ### but we should queue that, so that the list of connections
+            ### doesn't change in the middle of a command.
         except:
             pass
-        self.twtable.log.info('Closed: %s (now %d connected)', self, len(self.twtable.webconns))
+        self.twtable.log.error('Closed: %s (now %d connected)', self, len(self.twtable.webconns))
         self.twbuffer = None
         self.twtable = None
         
