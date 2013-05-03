@@ -76,7 +76,7 @@ class WebConnIOStream(tornado.iostream.IOStream):
                     return
             except Exception as ex:
                 self.twtable.log.info('Malformed message: %s', ex)
-                return
+                continue
             self.twtable.app.queue_command(tup, self)
 
     def twclose(self, dat):

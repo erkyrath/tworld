@@ -32,6 +32,9 @@ class ServerMgr(object):
         self.tworldavailable = False  # true if self.tworld exists and is ready
         self.tworldtimerbusy = False
 
+        # Buffer for Tworld message data.
+        self.twbuffer = None
+
     def init_timers(self):
         ioloop = tornado.ioloop.IOLoop.instance()
         
@@ -108,6 +111,7 @@ class ServerMgr(object):
             sock.connect(('localhost', self.app.twopts.tworld_port))
             sock.setblocking(0)
             self.tworld = tornado.iostream.IOStream(sock)
+            self.twbuffer = bytearray()
         except Exception as ex:
             self.log.error('monitor_tworld_status: Could not open tworld socket: %s', ex)
             self.tworldavailable = False
@@ -123,6 +127,7 @@ class ServerMgr(object):
         except Exception as ex:
             self.log.error('monitor_tworld_status: Could not write connect message to tworld socket: %s', ex)
             self.tworld = None
+            self.twbuffer = None
             self.tworldavailable = False
             self.tworldtimerbusy = False
             return
@@ -133,9 +138,23 @@ class ServerMgr(object):
 
     def read_tworld_data(self, dat):
         self.log.info('### tworld read data: %s', dat)
+        self.twbuffer.extend(dat)
+        while True:
+            # This slices a chunk off the buffer and returns it, if a
+            # complete chunk is available.
+            try:
+                tup = wcproto.check_buffer(self.twbuffer, namespace=True)
+                if not tup:
+                    return
+            except Exception as ex:
+                self.log.info('Malformed message: %s', ex)
+                continue
+            self.log.info('### tworld got message: %s', tup)
+        
 
     def close_tworld(self, dat):
         self.log.error('Connection to tworld closed.')
         self.tworld = None
+        self.twbuffer = None
         self.tworldavailable = False
         self.tworldtimerbusy = False
