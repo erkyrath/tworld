@@ -119,7 +119,7 @@ class ServerMgr(object):
         # But it won't count as available until we get a response from it.
         try:
             ### grab connection list from conntable
-            self.tworld.write(wcproto.message(wcproto.msgtype.connect, 0, {'cmd':'connect', 'connections':[]}))
+            self.tworld.write(wcproto.message(0, {'cmd':'connect', 'connections':[]}))
         except Exception as ex:
             self.log.error('monitor_tworld_status: Could not write connect message to tworld socket: %s', ex)
             self.tworld = None
