@@ -305,6 +305,8 @@ function evhan_websocket_message(ev) {
 
     if (cmd == 'event')
         print_event(obj.text)
+    if (cmd == 'error')
+        print_event('ERROR: ' + obj.text)
 }
 
 function websocket_send_json(obj) {

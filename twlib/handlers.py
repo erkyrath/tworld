@@ -29,13 +29,19 @@ class MyHandlerMixin:
     def find_current_session(self):
         """
         Look up the user's session, using the sessionid cookie.
+        
         Sets twsessionstatus to be 'auth', 'unauth', or 'unknown' (if the
-        auth server is unavailable).
+        auth server is unavailable). In the 'auth' case, also sets
+        twsession to the session dict.
+        
         If this is never called (e.g., the error handler) then the status
-        remains None. All the handlers which want to show the header-bar
-        status need to call this.
-        (It would be nice to call this automatically from the prepare()
-        method, but that can't be async in Tornado 3.0. Maybe in 3.1.)
+        remains None. This method should catch all its own exceptions
+        (setting 'unknown').
+
+        All the handlers which want to show the header-bar status need to
+        call this. (It would be nice to call this automatically from the
+        prepare() method, but that can't be async in Tornado 3.0. Maybe in
+        3.1.)
         """
         res = yield tornado.gen.Task(self.application.twsessionmgr.find_session, self)
         if (res):
@@ -321,9 +327,26 @@ class TopPageHandler(MyRequestHandler):
         yield tornado.gen.Task(self.find_current_session)
         self.render('top_%s.html' % (self.page,))
 
-class PlayWebSocketHandler(tornado.websocket.WebSocketHandler):
+class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
     def open(self):
-        self.application.twlog.info('Player connected to websocket: %s', '###')
+        # Proceed using a callback, because the open() method cannot be
+        # made into a coroutine.
+        self.twconnid = None
+        self.find_current_session(callback=self.open_cont)
+
+    @tornado.gen.coroutine
+    def open_cont(self, result):
+        # From here on out we have to catch our own exceptions and close
+        # the socket.
+        if self.twsessionstatus != 'auth':
+            self.write_tw_error('You are not authenticated.')
+            self.close()
+            return
+        self.application.twlog.info('Player connected to websocket: %s (session %s)', self.twsession['email'], self.twsession['sid'])
+        ### send "new connection" command to tworld
+        ### on successful return, add this to the connection table
+        ### on failure or timeout, write an error and close.
+        return
 
     def on_message(self, msg):
         self.application.twlog.info('### message: %s' % (msg,))
@@ -346,6 +369,14 @@ class PlayWebSocketHandler(tornado.websocket.WebSocketHandler):
     def on_close(self):
         self.application.twlog.info('Player disconnected from websocket: %s', '###')
 
+    def write_tw_error(self, msg):
+        """Write a JSON error-reporting command through the socket.
+        """
+        try:
+            obj = { 'cmd': 'error', 'text': msg }
+            self.write_message(obj)
+        except Exception as ex:
+            self.application.twlog.warning('Unable to send error to websocket (%s): %s', msg, ex)
         
 class TestHandler(MyRequestHandler):
     """Debugging -- will go away eventually.
