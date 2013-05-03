@@ -12,16 +12,27 @@ class ConnectionTable(object):
         return res
 
     def add(self, handler, uid):
-        assert handler.connid, 'handler.connid is not positive'
+        assert handler.twconnid, 'handler.twconnid is not positive'
         conn = Connection(handler, uid)
         self.table[conn.connid] = conn
         return conn
+
+    def remove(self, handler):
+        if not handler.twconnid:
+            return
+        conn = self.table.get(handler.twconnid, None)
+        if not conn:
+            return
+        del self.table[handler.twconnid]
         
 class Connection(object):
     def __init__(self, handler, uid):
         self.handler = handler
-        self.connid = handler.connid
+        self.connid = handler.twconnid
         self.uid = uid
+
+    def __repr__(self):
+        return '<Connection %d>' % (self.connid,)
         
     def write_tw_error(self, msg):
         self.handler.write_tw_error(msg)

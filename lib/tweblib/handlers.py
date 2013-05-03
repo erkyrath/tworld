@@ -349,7 +349,12 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
         ### send "new connection" command to tworld.
         ### on successful return, add this to the connection table and send the initial status.
         ### on failure or timeout, write an error and close.
-        self.twconn = self.application.twconntable.add(self, uid)
+        try:
+            self.twconn = self.application.twconntable.add(self, uid)
+        except Exception as ex:
+            self.write_tw_error('Unable to add connection: %s' % (ex,))
+            self.close()
+            return
         return
 
     def on_message(self, msg):
@@ -378,7 +383,10 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
 
     def on_close(self):
         self.application.twlog.info('Player disconnected from websocket: %s', '###')
-        self.application.twconntable.remove(self)
+        try:
+            self.application.twconntable.remove(self)
+        except Exception as ex:
+            self.application.twlog.warning('error removing connection: %s', ex)
         self.twconnid = None
         self.twconn = None
         ### pass "close connection" message to tworld
