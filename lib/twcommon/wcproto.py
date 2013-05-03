@@ -59,4 +59,6 @@ def check_buffer(buf, namespace=False):
 
     msgstr = msgdat.decode()  # Decode UTF-8
     msgobj = json.loads(msgstr, object_hook=object_hook)  # Decode JSON
+    if (type(obj) not in [dict, types.SimpleNamespace]):
+        raise ValueError('Message was not an object')
     return (msgtype, msgobj)
