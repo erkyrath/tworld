@@ -61,10 +61,10 @@ class ServerMgr(object):
             try:
                 res = yield motor.Op(self.mongo.admin.command, 'ping')
                 if (not res):
-                    self.log.error('monitor_mongo_status: Mongo client not alive')
+                    self.log.error('Mongo client not alive')
                     self.mongoavailable = False
             except Exception as ex:
-                self.log.error('monitor_mongo_status: Mongo client not alive: %s', ex)
+                self.log.error('Mongo client not alive: %s', ex)
                 self.mongoavailable = False
             if (not self.mongoavailable):
                 self.mongo.disconnect()
@@ -78,11 +78,11 @@ class ServerMgr(object):
                 ### maybe authenticate to a database?
                 self.mongoavailable = True
                 self.app.mongodb = self.mongo[self.app.twopts.mongo_database]
-                self.log.info('monitor_mongo_status: Mongo client open')
+                self.log.info('Mongo client open')
             except Exception as ex:
                 self.mongoavailable = False
                 self.app.mongodb = None
-                self.log.error('monitor_mongo_status: Mongo client not open: %s', ex)
+                self.log.error('Mongo client not open: %s', ex)
         
         self.mongotimerbusy = False
 
@@ -113,19 +113,19 @@ class ServerMgr(object):
             self.tworld = tornado.iostream.IOStream(sock)
             self.twbuffer = bytearray()
         except Exception as ex:
-            self.log.error('monitor_tworld_status: Could not open tworld socket: %s', ex)
+            self.log.error('Could not open tworld socket: %s', ex)
             self.tworldavailable = False
             self.tworldtimerbusy = False
             return
             
-        self.log.info('monitor_tworld_status: Tworld socket open')
+        self.log.info('Tworld socket open')
 
         # But it won't count as available until we get a response from it.
         try:
             ### grab connection list from conntable
             self.tworld.write(wcproto.message(0, {'cmd':'connect', 'connections':[]}))
         except Exception as ex:
-            self.log.error('monitor_tworld_status: Could not write connect message to tworld socket: %s', ex)
+            self.log.error('Could not write connect message to tworld socket: %s', ex)
             self.tworld = None
             self.twbuffer = None
             self.tworldavailable = False
@@ -137,7 +137,6 @@ class ServerMgr(object):
         # pong arrives, or if the socket closes.
 
     def read_tworld_data(self, dat):
-        self.log.info('### tworld read data: %s', dat)
         self.twbuffer.extend(dat)
         while True:
             # This slices a chunk off the buffer and returns it, if a
@@ -149,7 +148,27 @@ class ServerMgr(object):
             except Exception as ex:
                 self.log.info('Malformed message: %s', ex)
                 continue
-            self.log.info('### tworld got message: %s', tup)
+            
+            (connid, raw, obj) = tup
+
+            # Special case: if we're connecting, only accept 'connectok'
+            if not self.tworldavailable:
+                if (connid):
+                    self.log.warning('Cannot pass message back to client before tworld is available!')
+                elif getattr(obj, 'cmd', None) != 'connectok':
+                    self.log.warning('Cannot handle command before tworld is available!')
+                else:
+                    self.log.info('Tworld socket available')
+                    self.tworldavailable = True
+                    self.tworldtimerbusy = False
+                continue
+            
+            if (connid != 0):
+                # Pass it along to the client.
+                pass
+            else:
+                # It's for us.
+                pass
         
 
     def close_tworld(self, dat):
