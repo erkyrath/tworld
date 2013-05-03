@@ -70,9 +70,12 @@ class WebConnIOStream(tornado.iostream.IOStream):
         while True:
             # This slices a chunk off the buffer and returns it, if a
             # complete chunk is available.
-            tup = wcproto.check_buffer(self.twbuffer)
-            if not tup:
-                break
+            try:
+                tup = wcproto.check_buffer(self.twbuffer)
+                if not tup:
+                    return
+            except Exception as ex:
+                self.log.info('Malformed message: %s', ex)
             self.twtable.log.info('### received message %s', tup)
 
     def twclose(self, dat):

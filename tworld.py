@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 
 import sys
+import types
 import logging
 import tornado.ioloop
 
 sys.path.insert(0, '/Volumes/Zarfslab Tir/seltani/lib')
 
 # Lazy options setup, for now
-class TempOptions():
-    pass
-options = TempOptions()
-options.tworld_port = 4001
+options = types.SimpleNamespace(
+    tworld_port = 4001)
 
 rootlogger = logging.getLogger('')
 rootlogger.setLevel(logging.DEBUG) ### or based on an options
