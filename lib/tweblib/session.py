@@ -7,7 +7,7 @@ import hashlib
 import tornado.gen
 import motor
 
-from twlib.misc import MessageException
+from tweblib.misc import MessageException
 
 ### occasionally expire sessions
 

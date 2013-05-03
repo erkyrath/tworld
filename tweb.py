@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import sys
 import logging
 
 import tornado.ioloop
@@ -8,10 +9,6 @@ import tornado.gen
 import tornado.options
 
 import motor
-
-import twlib.session
-import twlib.handlers
-import twlib.connections
 
 # Set up all the options. (Generally found in the config file.)
 
@@ -27,6 +24,9 @@ tornado.options.define(
 tornado.options.define(
     'static_path', type=str,
     help='static files directory')
+tornado.options.define(
+    'python_path', type=str,
+    help='Python modules directory (optional)')
 
 tornado.options.define(
     'app_title', type=str, default='Tworld',
@@ -57,10 +57,19 @@ tornado.options.define(
 tornado.options.parse_command_line()
 opts = tornado.options.options
 
+if opts.python_path:
+    sys.path.insert(0, opts.python_path)
+
+# Now that we have a python_path, we can import the tworld-specific modules.
+
+import tweblib.session
+import tweblib.handlers
+import tweblib.connections
+
 # Define application options which are always set.
 appoptions = {
     'xsrf_cookies': True,
-    'static_handler_class': twlib.handlers.MyStaticFileHandler,
+    'static_handler_class': tweblib.handlers.MyStaticFileHandler,
     }
 
 # Pull out some of the config-file options to pass along to the application.
@@ -71,20 +80,20 @@ for key in [ 'debug', 'template_path', 'static_path', 'cookie_secret' ]:
 
 # Core handlers.
 handlers = [
-    (r'/', twlib.handlers.MainHandler),
-    (r'/register', twlib.handlers.RegisterHandler),
-    (r'/logout', twlib.handlers.LogOutHandler),
-    (r'/play', twlib.handlers.PlayHandler),
-    (r'/websocket', twlib.handlers.PlayWebSocketHandler),
-    (r'/test', twlib.handlers.TestHandler),
+    (r'/', tweblib.handlers.MainHandler),
+    (r'/register', tweblib.handlers.RegisterHandler),
+    (r'/logout', tweblib.handlers.LogOutHandler),
+    (r'/play', tweblib.handlers.PlayHandler),
+    (r'/websocket', tweblib.handlers.PlayWebSocketHandler),
+    (r'/test', tweblib.handlers.TestHandler),
     ]
 
 # Add in all the top_pages handlers.
 for val in opts.top_pages:
-    handlers.append( ('/'+val, twlib.handlers.TopPageHandler, {'page': val}) )
+    handlers.append( ('/'+val, tweblib.handlers.TopPageHandler, {'page': val}) )
 
 # Fallback 404 handler for everything else.
-handlers.append( (r'.*', twlib.handlers.MyErrorHandler, {'status_code': 404}) )
+handlers.append( (r'.*', tweblib.handlers.MyErrorHandler, {'status_code': 404}) )
 
 class TworldApplication(tornado.web.Application):
     def init_tworld(self):
@@ -96,10 +105,10 @@ class TworldApplication(tornado.web.Application):
         self.mongotimerbusy = False  # true while monitor_mongo_status runs
         
         # Set up a session manager (for web client sessions).
-        self.twsessionmgr = twlib.session.SessionMgr(self)
+        self.twsessionmgr = tweblib.session.SessionMgr(self)
 
         # And a connection table (for talking to tworld).
-        self.twconntable = twlib.connections.ConnectionTable(self)
+        self.twconntable = tweblib.connections.ConnectionTable(self)
 
         # Grab the same logger that tornado uses.
         self.twlog = logging.getLogger("tornado.general")
