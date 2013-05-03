@@ -86,7 +86,7 @@ body {
   overflow: auto;
 }
 
-#localepane :first-child {
+#localepane > :first-child {
   margin-top: 1em;
 }
 
