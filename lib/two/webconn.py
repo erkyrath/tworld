@@ -46,23 +46,27 @@ class WebConnectionTable(object):
             
             sock.setblocking(0)
             
-            stream = tornado.iostream.IOStream(sock)
-            stream.twhost = host
+            stream = WebConnIOStream(self, sock, host)
             self.webconns.add(stream)
-            self.log.info('Accepted web connection from %s (now %d connected)', stream.twhost, len(self.webconns))
+            self.log.info('Accepted web connection from %s (now %d connected)', stream, len(self.webconns))
 
-            stream.read_until_close(
-                lambda dat:self.stream_closed(stream, dat),
-                lambda dat:self.stream_read(stream, dat))
+            stream.read_until_close(stream.twclose, stream.twread)
 
-    def stream_read(self, stream, dat):
-        self.log.info('### stream_read %s', dat)
+class WebConnIOStream(tornado.iostream.IOStream):
+    def __init__(self, table, socket, host):
+        tornado.iostream.IOStream.__init__(self, socket)
+        self.twhost = host
+        self.twtable = table
 
-    def stream_closed(self, stream, dat):
+    def __repr__(self):
+        return '<WebConnIOStream (%s)>' % (self.twhost,)
+        
+    def twread(self, dat):
+        self.twtable.log.info('### stream_read %s', dat)
+
+    def twclose(self, dat):
         try:
-            self.webconns.remove(stream)
+            self.twtable.webconns.remove(self)
         except:
             pass
-        self.log.info('End of web connection from %s (now %d connected)', stream.twhost, len(self.webconns))
-        
-        
+        self.twtable.log.info('End of web connection from %s (now %d connected)', self, len(self.twtable.webconns))
