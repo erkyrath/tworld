@@ -78,6 +78,7 @@ class WebConnIOStream(tornado.iostream.IOStream):
     def twclose(self, dat):
         try:
             self.twtable.webconns.remove(self)
+            ### say goodbye to all connections on this stream!
         except:
             pass
         self.twtable.log.info('Closed: %s (now %d connected)', self, len(self.twtable.webconns))

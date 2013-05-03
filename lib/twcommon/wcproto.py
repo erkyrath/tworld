@@ -12,20 +12,30 @@ The type is four ASCII bytes.
 The content is always JSON, UTF-8, and starts and ends with "{}".
 """
 
+import types
 import struct
 import json
 
 HEADER_LENGTH = 12  # three four-byte fields
 
-class MsgType:
-    say = b'SAY '
+msgtype = types.SimpleNamespace(
+    say = b'SAY ',
+    )
 
-def check_buffer(buf):
+def namespace_wrapper(map):
+    return types.SimpleNamespace(**map)
+
+def check_buffer(buf, namespace=False):
     """
     Given a mutable bytearray, see if it begins with a complete message.
     If it does, parse it out and return (type, content). The type will be
     a bytes, the content will be a dict. The message chunk is then sliced
     out of the buffer.
+
+    If namespace is true, the content object will wind up as a
+    SimpleNamespace instead of a dict. (That is, you will be able to
+    do obj.foo instead of obj['foo']. But any keys that are not keyable
+    will have to be read using getattr().)
 
     If the content fails to parse, this throws an exception, but the
     message will still be sliced out of the buffer.
@@ -45,6 +55,8 @@ def check_buffer(buf):
     
     buf[0:msglen] = b''
 
+    object_hook = namespace_wrapper if namespace else None
+
     msgstr = msgdat.decode()  # Decode UTF-8
-    msgobj = json.loads(msgstr)
+    msgobj = json.loads(msgstr, object_hook=object_hook)  # Decode JSON
     return (msgtype, msgobj)
