@@ -334,8 +334,9 @@ class AdminMainHandler(MyRequestHandler):
     @tornado.gen.coroutine
     def get(self):
         yield tornado.gen.Task(self.find_current_session)
-        ### check credentials!
-        #raise tornado.web.HTTPError(403, 'You do not have admin access.')
+        ### check player credentials too!
+        if self.twsessionstatus != 'auth':
+            raise tornado.web.HTTPError(403, 'You do not have admin access.')
         self.render('admin.html',
                     mongoavailable=(self.application.mongodb is not None),
                     tworldavailable=(self.application.twservermgr.tworldavailable),
