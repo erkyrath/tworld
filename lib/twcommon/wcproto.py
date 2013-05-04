@@ -56,8 +56,14 @@ def check_buffer(buf, namespace=False):
         raise ValueError('Message was not an object')
     return (connid, msgdat, msgobj)
 
-def message(connid, obj):
-    msgstr = json.dumps(obj)
-    msgdat = msgstr.encode()  # Encode UTF-8
+def message(connid, obj, alreadyjson=False):
+    if type(obj) is bytes:
+        msgdat = obj
+    else:
+        if alreadyjson:
+            msgstr = obj
+        else:
+            msgstr = json.dumps(obj)
+        msgdat = msgstr.encode()  # Encode UTF-8
     head = struct.pack('<2I', len(msgdat), connid)
     return head + msgdat

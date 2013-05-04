@@ -73,7 +73,15 @@ class Tworld(object):
             if cmd == 'connect':
                 ### look at cmd.connections array, install
                 stream.write(wcproto.message(0, {'cmd':'connectok'}))
+        elif True: ### if connid is unknown!
+            # Only 'playeropen' is acceptable.
+            if obj.cmd != 'playeropen':
+                stream.write(wcproto.message(connid, {'cmd':'error', 'text':'Tworld has not yet registered this connection.'}))
+                return
+            ### add connid to connection table
+            stream.write(wcproto.message(0, {'cmd':'playerok', 'connid':connid}))
         else:
             # This message needs to do something. Something which may
             # involve a lot of database access.
+            ### playerclose case...
             pass

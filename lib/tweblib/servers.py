@@ -166,18 +166,28 @@ class ServerMgr(object):
                 continue
             
             if (connid != 0):
-                # Pass the raw message along to the client.
+                # Pass the raw message along to the client. (As UTF-8.)
                 try:
                     conn = self.app.twconntable.find(connid)
                     if not conn.available:
                         raise Exception('Connection not yet available')
-                    conn.write_message(raw)
+                    conn.handler.write_message(raw.decode())
                 except Exception as ex:
                     self.log.error('Unable to pass message back to connection %d (%s): %s', connid, raw[0:50], ex)
             else:
                 # It's for us.
                 try:
                     cmd = obj.cmd
+                    if cmd == 'playerok':
+                        try:
+                            conn = self.app.twconntable.find(obj.connid)
+                            if conn.available:
+                                raise Exception('Connection is already available')
+                            self.log.info('Player connection registered: %s (connid %d)', conn.email, conn.connid)
+                            conn.available = True
+                        except Exception as ex:
+                            self.log.error('Unable to process playerok: %s', ex)
+                        return
                     raise Exception('### no server commands are implemented')
                 except Exception as ex:
                     self.log.error('Problem handling server command (%s): %s', raw[0:50], ex)

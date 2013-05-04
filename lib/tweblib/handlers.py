@@ -380,7 +380,8 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
         # Tell tworld about this new connection. Tworld will send back
         # a reply, at which point we'll mark it available.
         try:
-            self.application.twservermgr.tworld.write(wcproto.message(self.twconnid, {'cmd':'playeropen'}))
+            msg = { 'cmd':'playeropen', 'uid':str(uid) }
+            self.application.twservermgr.tworld.write(wcproto.message(self.twconnid, msg))
         except Exception as ex:
             self.application.twlog.error('Could not write playeropen message to tworld socket: %s', ex)
             self.write_tw_error('Unable to register connection with service: %s' % (ex,))
@@ -388,29 +389,30 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
             return
 
     def on_message(self, msg):
+        # Note that message is a string here; it hasn't been de-jsoned.
         self.application.twlog.info('### message: %s' % (msg,))
         if not self.twconn or not self.twconn.available:
             self.application.twlog.warning('Websocket connection is not ready yet')
             self.write_tw_error('Your connection is not yet registered.')
             return
-        
-        ### temporary response implementation. The real deal will be to add a connid and throw it over to tworld. But does it need to be queued? Do we need to wait for a response? I hope not.
-        
+
+        if not self.application.twservermgr.tworldavailable:
+            self.application.twlog.warning('Tworld is not available.')
+            self.write_tw_error('Tworld service is not available.')
+            return
+
+        # Perform some very minimal format-checking.
+        if not msg.startswith('{'):
+            self.application.twlog.warning('Message from client appeared invalid: %s', msg[0:50])
+            self.write_tw_error('Message format appeared to be invalid.')
+            return
+
+        # Pass it along to tworld.
         try:
-            obj = json.loads(msg)
+            self.application.twservermgr.tworld.write(wcproto.message(self.twconnid, msg, alreadyjson=True))
         except Exception as ex:
-            self.application.twlog.warning('Invalid websocket message: %s', ex)
-            return
-
-        if (type(obj) != dict):
-            self.application.twlog.warning('Invalid websocket message: %s', 'not a dict')
-            return
-
-        cmd = obj.get('cmd', None)
-        if cmd == 'say':
-            text = obj.get('text', None)
-            text = 'You said, \u201C%s\u201D' % text
-            self.write_message({ 'cmd':'event', 'text':text })
+            self.application.twlog.error('Could not pass message to tworld socket: %s', ex)
+            self.write_tw_error('Unable to pass command to service: %s' % (ex,))
 
     def on_close(self):
         self.application.twlog.info('Player disconnected from websocket %s', self.twconnid)
