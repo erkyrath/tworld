@@ -336,7 +336,10 @@ class AdminMainHandler(MyRequestHandler):
         yield tornado.gen.Task(self.find_current_session)
         ### check credentials!
         #raise tornado.web.HTTPError(403, 'You do not have admin access.')
-        self.render('admin.html', conntable=self.application.twconntable.as_dict())
+        self.render('admin.html',
+                    mongoavailable=(self.application.mongodb is not None),
+                    tworldavailable=(self.application.twservermgr.tworldavailable),
+                    conntable=self.application.twconntable.as_dict())
 
 
 class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
@@ -357,6 +360,7 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
         
         self.twconnid = self.application.twconntable.generate_connid()
         uid = self.twsession['uid']
+        email = self.twsession['email']
         self.application.twlog.info('Player connected to websocket: %s (session %s, connid %d)', self.twsession['email'], self.twsession['sid'], self.twconnid)
 
         if not self.application.twservermgr.tworldavailable:
@@ -366,7 +370,7 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
 
         # Add it to the connection table.
         try:
-            self.twconn = self.application.twconntable.add(self, uid)
+            self.twconn = self.application.twconntable.add(self, uid, email)
         except Exception as ex:
             self.write_tw_error('Unable to add connection: %s' % (ex,))
             self.close()

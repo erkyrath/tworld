@@ -13,6 +13,8 @@ got an ack back). If tworld crashes, all connections become unavailable
 until it returns (and then we have to ack them again).
 """
 
+import datetime
+
 import tweblib.handlers
 
 class ConnectionTable(object):
@@ -30,13 +32,13 @@ class ConnectionTable(object):
     def as_dict(self):
         return dict(self.table)
 
-    def add(self, handler, uid):
+    def add(self, handler, uid, email):
         """Add the handler to the table, as a new Connection. It will
         initially be unavailable. Returns the Connection.
         """
         assert isinstance(handler, tweblib.handlers.PlayWebSocketHandler)
         assert handler.twconnid, 'handler.twconnid is not positive'
-        conn = Connection(handler, uid)
+        conn = Connection(handler, uid, email)
         self.table[conn.connid] = conn
         return conn
 
@@ -59,14 +61,23 @@ class ConnectionTable(object):
         del self.table[handler.twconnid]
         
 class Connection(object):
-    def __init__(self, handler, uid):
+    def __init__(self, handler, uid, email):
         self.handler = handler
         self.connid = handler.twconnid
         self.uid = uid
+        self.email = email
+        self.starttime = datetime.datetime.now()
         self.available = False
 
     def __repr__(self):
         return '<Connection %d>' % (self.connid,)
+
+    def uptime(self):
+        """Return how long the connection has been open. But trim off the
+        microseconds, because that's silly.
+        """
+        delta = datetime.datetime.now() - self.starttime
+        return datetime.timedelta(seconds=int(delta.total_seconds()))
         
     def write_tw_error(self, msg):
         """Write a JSON error-reporting command through the socket.

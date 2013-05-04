@@ -8,10 +8,17 @@ Admin View
 
 <h2>Admin View</h2>
 
+<h3>Status</h3>
+
+<ul>
+<li>Mongo: {% if mongoavailable %} ok {% else %} down! {% end %}
+<li>Tworld: {% if tworldavailable %} ok {% else %} down! {% end %}
+</ul>
+
 <h3>Connection Table: {{ len(conntable) }} websockets</h3>
 <ul>
 {% for (id, conn) in sorted(conntable.items()) %}
-  <li>{{ id }}: uid {{ conn.uid }}
+  <li>{{ conn.email}} on {{ conn.uptime() }} (connid {{ id }}, uid {{ conn.uid }})
   {% if not conn.available %} (unavailable) {% end %}
 {% end %}
 </ul>

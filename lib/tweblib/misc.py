@@ -1,3 +1,4 @@
 
 class MessageException(Exception):
     pass
+

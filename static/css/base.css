@@ -105,6 +105,12 @@ body {
   font-size: 1.2em;
 }
 
+#localepane h3 {
+  margin-left: 20px;
+  margin-right: 20px;
+  font-size: 1.0em;
+}
+
 #localepane a {
   color: #A30;
 }
