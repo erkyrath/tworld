@@ -16,6 +16,9 @@ class WebConnectionTable(object):
         self.listensock = None
         self.map = {}  # maps twwcids to IOStreams (normally just one)
 
+    def get(self, twwcid):
+        return self.map.get(twwcid, None)
+
     def listen(self):
         self.ioloop = tornado.ioloop.IOLoop.current()
         
@@ -49,7 +52,7 @@ class WebConnectionTable(object):
             sock.setblocking(0)
             
             stream = WebConnIOStream(self, sock, host)
-            assert stream.twwcid not in self.map
+            assert stream.twwcid not in self.map, 'WebConn ID is already in use!'
             self.map[stream.twwcid] = stream
             self.log.info('Accepted: %s (now %d connected)', stream, len(self.map))
 
@@ -86,12 +89,12 @@ class WebConnIOStream(tornado.iostream.IOStream):
             except Exception as ex:
                 self.twtable.log.info('Malformed message: %s', ex)
                 continue
-            self.twtable.app.queue_command(tup, self)
+            self.twtable.app.queue_command(tup, self.twwcid)
 
     def twclose(self, dat):
         try:
             self.twtable.map.pop(self.twwcid, None)
-            ### say goodbye to all connections on this stream!
+            #### say goodbye to all connections on this stream!
             ### but we should queue that, so that the list of connections
             ### doesn't change in the middle of a command.
         except:

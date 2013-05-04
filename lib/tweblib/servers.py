@@ -122,8 +122,10 @@ class ServerMgr(object):
 
         # But it won't count as available until we get a response from it.
         try:
-            ### grab connection list from conntable
-            self.tworld.write(wcproto.message(0, {'cmd':'connect', 'connections':[]}))
+            arr = []
+            for (connid, conn) in self.app.twconntable.as_dict().items():
+                arr.append( { 'connid':connid, 'uid':str(conn.uid) } )
+            self.tworld.write(wcproto.message(0, {'cmd':'connect', 'connections':arr}))
         except Exception as ex:
             self.log.error('Could not write connect message to tworld socket: %s', ex)
             self.tworld = None
@@ -199,3 +201,5 @@ class ServerMgr(object):
         self.twbuffer = None
         self.tworldavailable = False
         self.tworldtimerbusy = False
+        #### mark all connections as unavailable!
+        

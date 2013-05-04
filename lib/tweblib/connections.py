@@ -54,7 +54,7 @@ class ConnectionTable(object):
         conn = self.table.get(handler.twconnid, None)
         if not conn:
             return
-        assert handler.twconnid == conn.connid
+        assert handler.twconnid == conn.connid, 'Connection ID did not match at remove!'
         conn.handler = None
         conn.uid = None
         conn.available = False
