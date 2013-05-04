@@ -14,7 +14,7 @@ class WebConnectionTable(object):
 
         self.ioloop = None
         self.listensock = None
-        self.webconns = set()   # set of IOStreams (normally just one)
+        self.map = {}  # maps twwcids to IOStreams (normally just one)
 
     def listen(self):
         self.ioloop = tornado.ioloop.IOLoop.current()
@@ -49,22 +49,31 @@ class WebConnectionTable(object):
             sock.setblocking(0)
             
             stream = WebConnIOStream(self, sock, host)
-            self.webconns.add(stream)
-            self.log.info('Accepted: %s (now %d connected)', stream, len(self.webconns))
+            assert stream.twwcid not in self.map
+            self.map[stream.twwcid] = stream
+            self.log.info('Accepted: %s (now %d connected)', stream, len(self.map))
 
             stream.read_until_close(stream.twclose, stream.twread)
 
 class WebConnIOStream(tornado.iostream.IOStream):
+    # Counter for generating twwcid values. These are only used internally
+    # as dict keys -- we don't share them with tweb.
+    counter = 1
+    
     def __init__(self, table, socket, host):
         tornado.iostream.IOStream.__init__(self, socket)
         self.twhost = host
         self.twtable = table
         self.twbuffer = bytearray()
+        self.twwcid = WebConnIOStream.counter
+        WebConnIOStream.counter += 1
 
     def __repr__(self):
-        return '<WebConnIOStream (%s)>' % (self.twhost,)
+        return '<WebConnIOStream %d (%s)>' % (self.twwcid, self.twhost,)
         
     def twread(self, dat):
+        if not self.twtable:
+            return  # must have already closed
         self.twtable.log.info('### stream_read %s', dat)
         self.twbuffer.extend(dat)
         while True:
@@ -81,13 +90,14 @@ class WebConnIOStream(tornado.iostream.IOStream):
 
     def twclose(self, dat):
         try:
-            self.twtable.webconns.remove(self)
+            self.twtable.map.pop(self.twwcid, None)
             ### say goodbye to all connections on this stream!
             ### but we should queue that, so that the list of connections
             ### doesn't change in the middle of a command.
         except:
             pass
-        self.twtable.log.error('Closed: %s (now %d connected)', self, len(self.twtable.webconns))
+        self.twtable.log.error('Closed: %s (now %d connected)', self, len(self.twtable.map))
         self.twbuffer = None
         self.twtable = None
+        self.twwcid = None
         

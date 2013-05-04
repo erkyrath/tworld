@@ -188,7 +188,7 @@ class ServerMgr(object):
                         except Exception as ex:
                             self.log.error('Unable to process playerok: %s', ex)
                         return
-                    raise Exception('### no server commands are implemented')
+                    raise Exception('Not implemented')
                 except Exception as ex:
                     self.log.error('Problem handling server command (%s): %s', raw[0:50], ex)
         

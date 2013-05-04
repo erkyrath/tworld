@@ -407,6 +407,12 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
             self.write_tw_error('Message format appeared to be invalid.')
             return
 
+        if len(msg) > 1000:
+            ### This will require some tuning
+            self.application.twlog.warning('Message from client was too long: %s', msg[0:50])
+            self.write_tw_error('Message was too long.')
+            return
+
         # Pass it along to tworld.
         try:
             self.application.twservermgr.tworld.write(wcproto.message(self.twconnid, msg, alreadyjson=True))
