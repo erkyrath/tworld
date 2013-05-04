@@ -120,4 +120,7 @@ class Tworld(object):
         # This message needs to do something. Something which may
         # involve a lot of database access.
         #### playerclose case...
-        pass
+
+        if obj.cmd == 'say':
+            val = 'You say, \u201C%s\u201D' % (obj.text,)
+            conn.stream.write(wcproto.message(conn.connid, {'cmd':'event', 'text':val}))
