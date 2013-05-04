@@ -27,6 +27,9 @@ class ConnectionTable(object):
         self.counter += 1
         return res
 
+    def as_dict(self):
+        return dict(self.table)
+
     def add(self, handler, uid):
         """Add the handler to the table, as a new Connection. It will
         initially be unavailable. Returns the Connection.

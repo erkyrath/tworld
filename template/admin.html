@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block page_title %}
+Admin View
+{% end %}
+
+{% block body %}
+
+<h2>Admin View</h2>
+
+<h3>Connection Table: {{ len(conntable) }} websockets</h3>
+<ul>
+{% for (id, conn) in sorted(conntable.items()) %}
+  <li>{{ id }}: uid {{ conn.uid }}
+  {% if not conn.available %} (unavailable) {% end %}
+{% end %}
+</ul>
+
+{% end %}

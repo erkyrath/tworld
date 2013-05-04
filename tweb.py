@@ -89,6 +89,7 @@ handlers = [
     (r'/register', tweblib.handlers.RegisterHandler),
     (r'/logout', tweblib.handlers.LogOutHandler),
     (r'/play', tweblib.handlers.PlayHandler),
+    (r'/admin', tweblib.handlers.AdminMainHandler),
     (r'/websocket', tweblib.handlers.PlayWebSocketHandler),
     (r'/test', tweblib.handlers.TestHandler),
     ]

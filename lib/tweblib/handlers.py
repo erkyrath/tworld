@@ -328,6 +328,17 @@ class TopPageHandler(MyRequestHandler):
         yield tornado.gen.Task(self.find_current_session)
         self.render('top_%s.html' % (self.page,))
 
+class AdminMainHandler(MyRequestHandler):
+    
+    @tornado.web.asynchronous
+    @tornado.gen.coroutine
+    def get(self):
+        yield tornado.gen.Task(self.find_current_session)
+        ### check credentials!
+        #raise tornado.web.HTTPError(403, 'You do not have admin access.')
+        self.render('admin.html', conntable=self.application.twconntable.as_dict())
+
+
 class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
     def open(self):
         # Proceed using a callback, because the open() method cannot be
@@ -375,7 +386,7 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
         self.application.twlog.info('### message: %s' % (msg,))
         if not self.twconn or not self.twconn.available:
             self.application.twlog.warning('Websocket connection is not ready yet')
-            self.write_tw_error('Your connection is not yet ready.')
+            self.write_tw_error('Your connection is not yet registered.')
             return
         
         ### temporary response implementation. The real deal will be to add a connid and throw it over to tworld. But does it need to be queued? Do we need to wait for a response? I hope not.
