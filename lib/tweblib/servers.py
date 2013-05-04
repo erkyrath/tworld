@@ -142,6 +142,8 @@ class ServerMgr(object):
             # This slices a chunk off the buffer and returns it, if a
             # complete chunk is available.
             try:
+                ### this unnecessarily de-jsons the message! We only care
+                ### about raw, unless connid turns out to be zero.
                 tup = wcproto.check_buffer(self.twbuffer, namespace=True)
                 if not tup:
                     return
@@ -153,7 +155,7 @@ class ServerMgr(object):
 
             # Special case: if we're connecting, only accept 'connectok'
             if not self.tworldavailable:
-                if (connid):
+                if (connid != 0):
                     self.log.warning('Cannot pass message back to client before tworld is available!')
                 elif getattr(obj, 'cmd', None) != 'connectok':
                     self.log.warning('Cannot handle command before tworld is available!')
@@ -164,11 +166,19 @@ class ServerMgr(object):
                 continue
             
             if (connid != 0):
-                # Pass it along to the client.
-                pass
+                # Pass the raw message along to the client.
+                try:
+                    conn = self.app.conntable.find(connid)
+                    conn.write_message(raw)
+                except Exception as ex:
+                    self.log.error('Unable to pass message back to connection %d: %s', connid, raw)
             else:
                 # It's for us.
-                pass
+                try:
+                    cmd = obj.cmd
+                    raise Exception('### no server commands are implemented')
+                except Exception as ex:
+                    self.log.error('Problem handling server command: %s', raw)
         
 
     def close_tworld(self, dat):

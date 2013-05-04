@@ -23,6 +23,9 @@ class ConnectionTable(object):
         self.table[conn.connid] = conn
         return conn
 
+    def find(self, connid):
+        return self.table[connid]
+
     def remove(self, handler):
         if not handler.twconnid:
             return

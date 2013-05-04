@@ -346,7 +346,13 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
         self.twconnid = self.application.twconntable.generate_connid()
         uid = self.twsession['uid']
         self.application.twlog.info('Player connected to websocket: %s (session %s, connid %d)', self.twsession['email'], self.twsession['sid'], self.twconnid)
-        ### send "new connection" command to tworld.
+
+        if not self.application.twservermgr.tworldavailable:
+            self.write_tw_error('Tworld service is not available.')
+            self.close()
+            return
+            
+        ### send "new connection" command to tworld. Wait for a response.
         ### on successful return, add this to the connection table and send the initial status.
         ### on failure or timeout, write an error and close.
         try:
@@ -363,7 +369,7 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
             self.application.twlog.warning('websocket connection is not ready yet')
             return
         
-        ### temporary response implementation. The real deal will be to add a connid and throw it over to tworld.
+        ### temporary response implementation. The real deal will be to add a connid and throw it over to tworld. But does it need to be queued?
         
         try:
             obj = json.loads(msg)
