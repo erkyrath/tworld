@@ -12,6 +12,7 @@ import motor
 
 import tweblib.session
 from tweblib.misc import MessageException
+from twcommon import wcproto
 
 class MyHandlerMixin:
     """
@@ -335,7 +336,6 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
         self.twconn = None
         self.find_current_session(callback=self.open_cont)
 
-    @tornado.gen.coroutine
     def open_cont(self, result):
         # From here on out we have to catch our own exceptions and close
         # the socket.
@@ -343,6 +343,7 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
             self.write_tw_error('You are not authenticated.')
             self.close()
             return
+        
         self.twconnid = self.application.twconntable.generate_connid()
         uid = self.twsession['uid']
         self.application.twlog.info('Player connected to websocket: %s (session %s, connid %d)', self.twsession['email'], self.twsession['sid'], self.twconnid)
@@ -351,34 +352,42 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
             self.write_tw_error('Tworld service is not available.')
             self.close()
             return
-            
-        ### send "new connection" command to tworld. Wait for a response.
-        ### on successful return, add this to the connection table and send the initial status.
-        ### on failure or timeout, write an error and close.
+
+        # Add it to the connection table.
         try:
             self.twconn = self.application.twconntable.add(self, uid)
         except Exception as ex:
             self.write_tw_error('Unable to add connection: %s' % (ex,))
             self.close()
             return
-        return
+
+        # Tell tworld about this new connection. Tworld will send back
+        # a reply, at which point we'll mark it available.
+        try:
+            self.application.twservermgr.tworld.write(wcproto.message(self.twconnid, {'cmd':'playeropen'}))
+        except Exception as ex:
+            self.application.twlog.error('Could not write playeropen message to tworld socket: %s', ex)
+            self.write_tw_error('Unable to register connection with service: %s' % (ex,))
+            self.close()
+            return
 
     def on_message(self, msg):
         self.application.twlog.info('### message: %s' % (msg,))
-        if not self.twconn:
-            self.application.twlog.warning('websocket connection is not ready yet')
+        if not self.twconn or not self.twconn.available:
+            self.application.twlog.warning('Websocket connection is not ready yet')
+            self.write_tw_error('Your connection is not yet ready.')
             return
         
-        ### temporary response implementation. The real deal will be to add a connid and throw it over to tworld. But does it need to be queued?
+        ### temporary response implementation. The real deal will be to add a connid and throw it over to tworld. But does it need to be queued? Do we need to wait for a response? I hope not.
         
         try:
             obj = json.loads(msg)
         except Exception as ex:
-            self.application.twlog.warning('invalid websocket message: %s', ex)
+            self.application.twlog.warning('Invalid websocket message: %s', ex)
             return
 
         if (type(obj) != dict):
-            self.application.twlog.warning('invalid websocket message: %s', 'not a dict')
+            self.application.twlog.warning('Invalid websocket message: %s', 'not a dict')
             return
 
         cmd = obj.get('cmd', None)
@@ -388,15 +397,21 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
             self.write_message({ 'cmd':'event', 'text':text })
 
     def on_close(self):
-        self.application.twlog.info('Player disconnected from websocket: %s', '###')
+        self.application.twlog.info('Player disconnected from websocket %s', self.twconnid)
+        # Tell tworld that the connection is closed. (Maybe it never
+        # became available, but we'll send the message anyway.)
+        try:
+            self.application.twservermgr.tworld.write(wcproto.message(self.twconnid, {'cmd':'playerclose'}))
+        except Exception as ex:
+            self.application.twlog.error('Could not write playerclose message to tworld socket: %s', ex)
+        # Remove the connection from our table.
         try:
             self.application.twconntable.remove(self)
         except Exception as ex:
-            self.application.twlog.warning('error removing connection: %s', ex)
+            self.application.twlog.error('Error removing connection: %s', ex)
+        # Clean up dangling fields, and drop self forever.
         self.twconnid = None
         self.twconn = None
-        ### pass "close connection" message to tworld
-
 
     def write_tw_error(self, msg):
         """Write a JSON error-reporting command through the socket.

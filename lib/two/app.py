@@ -73,3 +73,7 @@ class Tworld(object):
             if cmd == 'connect':
                 ### look at cmd.connections array, install
                 stream.write(wcproto.message(0, {'cmd':'connectok'}))
+        else:
+            # This message needs to do something. Something which may
+            # involve a lot of database access.
+            pass

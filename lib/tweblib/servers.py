@@ -168,17 +168,19 @@ class ServerMgr(object):
             if (connid != 0):
                 # Pass the raw message along to the client.
                 try:
-                    conn = self.app.conntable.find(connid)
+                    conn = self.app.twconntable.find(connid)
+                    if not conn.available:
+                        raise Exception('Connection not yet available')
                     conn.write_message(raw)
                 except Exception as ex:
-                    self.log.error('Unable to pass message back to connection %d: %s', connid, raw)
+                    self.log.error('Unable to pass message back to connection %d (%s): %s', connid, raw[0:50], ex)
             else:
                 # It's for us.
                 try:
                     cmd = obj.cmd
                     raise Exception('### no server commands are implemented')
                 except Exception as ex:
-                    self.log.error('Problem handling server command: %s', raw)
+                    self.log.error('Problem handling server command (%s): %s', raw[0:50], ex)
         
 
     def close_tworld(self, dat):
