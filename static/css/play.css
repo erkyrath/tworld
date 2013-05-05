@@ -150,6 +150,10 @@
   margin-top: 1em;
 }
 
+.EventError {
+  font-style: italic;
+}
+
 .Input {
   position: relative;
   margin: 0px 20px 20px 20px;

@@ -78,7 +78,7 @@ function open_websocket() {
         websocket = new WebSocket(url);
     }
     catch (ex) {
-        print_event('Unable to open websocket: ' + ex);
+        eventpane_add('Unable to open websocket: ' + ex);
         display_error('The connection to the server could not be created. Possibly your browser does not support WebSockets.');
         return;
     }
@@ -97,11 +97,26 @@ function display_error(msg) {
     /* ### also close the focus pane? */
 }
 
-function print_event(msg) {
-    var el = $('<div>', { 'class':'Event'} );
+function eventpane_add(msg, extraclass) {
+    var frameel = $('#eventpane');
+    /* Determine whether the event pane is currently scrolled to the bottom
+       (give or take a margin of error). Note that scrollHeight is not a jQuery
+       property; we have to go to the raw DOM to get it.
+    */
+    var atbottom = (frameel.get(0).scrollHeight - (frameel.scrollTop() + frameel.outerHeight()) < 20);
+
+    var cls = 'Event';
+    if (extraclass)
+        cls = cls + ' ' + extraclass;
+    var el = $('<div>', { 'class':cls} );
     el.text(msg);
     $('.Input').before(el);
-    /*### scroll down */
+
+    /* If we were previously scrolled to the bottom, scroll to the new 
+       bottom. */
+    if (atbottom) {
+        frameel.scrollTop(frameel.get(0).scrollHeight);
+    }
 }
 
 function submit_line_input(val) {
@@ -304,9 +319,9 @@ function evhan_websocket_message(ev) {
     }
 
     if (cmd == 'event')
-        print_event(obj.text)
+        eventpane_add(obj.text)
     if (cmd == 'error')
-        print_event('ERROR: ' + obj.text) /*### unfakeable italics class*/
+        eventpane_add('Error: ' + obj.text, 'EventError')
 }
 
 function websocket_send_json(obj) {
