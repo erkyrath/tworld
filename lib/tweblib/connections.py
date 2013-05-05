@@ -78,6 +78,8 @@ class Connection(object):
         """
         delta = datetime.datetime.now() - self.starttime
         return datetime.timedelta(seconds=int(delta.total_seconds()))
+
+    ### idletime...
         
     def write_tw_error(self, msg):
         """Write a JSON error-reporting command through the socket.

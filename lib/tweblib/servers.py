@@ -172,7 +172,7 @@ class ServerMgr(object):
                 try:
                     conn = self.app.twconntable.find(connid)
                     if not conn.available:
-                        raise Exception('Connection not yet available')
+                        raise Exception('Connection not available')
                     conn.handler.write_message(raw.decode())
                 except Exception as ex:
                     self.log.error('Unable to pass message back to connection %d (%s): %s', connid, raw[0:50], ex)
@@ -197,9 +197,12 @@ class ServerMgr(object):
 
     def close_tworld(self, dat):
         self.log.error('Connection to tworld closed.')
+        # All connections we're holding are back to unavailable status.
+        for (connid, conn) in self.app.twconntable.as_dict().items():
+            conn.available = False
         self.tworld = None
         self.twbuffer = None
         self.tworldavailable = False
         self.tworldtimerbusy = False
-        #### mark all connections as unavailable!
+
         

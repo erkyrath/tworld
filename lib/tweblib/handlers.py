@@ -392,8 +392,8 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
         # Note that message is a string here; it hasn't been de-jsoned.
         self.application.twlog.info('### message: %s' % (msg,))
         if not self.twconn or not self.twconn.available:
-            self.application.twlog.warning('Websocket connection is not ready yet')
-            self.write_tw_error('Your connection is not yet registered.')
+            self.application.twlog.warning('Websocket connection is not available')
+            self.write_tw_error('Your connection is not registered.')
             return
 
         if not self.application.twservermgr.tworldavailable:

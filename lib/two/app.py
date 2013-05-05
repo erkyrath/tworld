@@ -88,9 +88,10 @@ class Tworld(object):
             cmd = obj.cmd
             if cmd == 'connect':
                 assert stream is not None, 'Tweb connect command from no stream.'
-                for connobj in obj.connections:
-                    self.playconns.add(connobj.connid, connobj.uid, stream)
                 stream.write(wcproto.message(0, {'cmd':'connectok'}))
+                for connobj in obj.connections:
+                    conn = self.playconns.add(connobj.connid, connobj.uid, stream)
+                    stream.write(wcproto.message(0, {'cmd':'playerok', 'connid':conn.connid}))
             return
 
         conn = self.playconns.get(connid)
