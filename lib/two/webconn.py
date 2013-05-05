@@ -1,3 +1,4 @@
+import types
 import errno
 import socket
 
@@ -94,12 +95,14 @@ class WebConnIOStream(tornado.iostream.IOStream):
     def twclose(self, dat):
         try:
             self.twtable.map.pop(self.twwcid, None)
-            #### say goodbye to all connections on this stream!
-            ### but we should queue that, so that the list of connections
-            ### doesn't change in the middle of a command.
+            # Say goodbye to all connections on this stream!
+            # But we do this as a queued command. Until it comes around,
+            # we might see some write failures.
+            obj = types.SimpleNamespace(cmd='disconnect', twwcid=self.twwcid)
+            self.twtable.app.queue_command(obj, 0, 0)
         except:
             pass
-        self.twtable.log.error('Closed: %s (now %d connected)', self, len(self.twtable.map))
+        self.twtable.log.error('Closed: %s', self)
         self.twbuffer = None
         self.twtable = None
         self.twwcid = None

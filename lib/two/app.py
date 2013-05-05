@@ -93,6 +93,15 @@ class Tworld(object):
                     stream.write(wcproto.message(0, {'cmd':'playerok', 'connid':conn.connid}))
                     self.log.info('Player %s has reappeared (uid %s)', conn.email, conn.uid)
                 return
+            if cmd == 'disconnect':
+                for (connid, conn) in self.playconns.as_dict().items():
+                    if conn.twwcid == obj.twwcid:
+                        try:
+                            self.playconns.remove(connid)
+                        except:
+                            pass
+                self.log.warning('Tweb has disconnected; now %d connections remain', len(self.playconns.as_dict()))
+                return
             if cmd == 'logplayerconntable':
                 self.playconns.dumplog()
                 return

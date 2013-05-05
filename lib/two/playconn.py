@@ -15,6 +15,9 @@ class PlayerConnectionTable(object):
     def get(self, connid):
         return self.map.get(connid, None)
 
+    def as_dict(self):
+        return dict(self.map)
+
     def add(self, connid, uidstr, email, stream):
         assert connid not in self.map, 'Connection ID already in use!'
         conn = PlayerConnection(connid, ObjectId(uidstr), email, stream)
@@ -31,7 +34,7 @@ class PlayerConnectionTable(object):
     def dumplog(self):
         self.log.debug('PlayerConnectionTable has %d entries', len(self.map))
         for (connid, conn) in sorted(self.map.items()):
-            self.log.debug(' %d: uid %s (twwcid %d)', connid, conn.uid, conn.twwcid)
+            self.log.debug(' %d: email %s, uid %s (twwcid %d)', connid, conn.email, conn.uid, conn.twwcid)
 
 class PlayerConnection(object):
     def __init__(self, connid, uid, email, stream):
