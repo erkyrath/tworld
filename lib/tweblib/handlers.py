@@ -343,6 +343,17 @@ class AdminMainHandler(MyRequestHandler):
                     tworldavailable=(self.application.twservermgr.tworldavailable),
                     conntable=self.application.twconntable.as_dict())
 
+    @tornado.web.asynchronous
+    @tornado.gen.coroutine
+    def post(self):
+        yield tornado.gen.Task(self.find_current_session)
+        ### check player credentials too!
+        if self.twsessionstatus != 'auth':
+            raise tornado.web.HTTPError(403, 'You do not have admin access.')
+        if (self.get_argument('playerconntable', None)):
+            msg = { 'cmd':'logplayerconntable' }
+            self.application.twservermgr.tworld.write(wcproto.message(0, msg))
+        self.redirect('/admin')
 
 class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
     def open(self):

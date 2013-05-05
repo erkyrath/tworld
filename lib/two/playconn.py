@@ -21,6 +21,11 @@ class PlayerConnectionTable(object):
         self.map[connid] = conn
         return conn
 
+    def dumplog(self):
+        self.log.debug('PlayerConnectionTable has %d entries', len(self.map))
+        for (connid, conn) in sorted(self.map.items()):
+            self.log.debug(' %d: uid %s (twwcid %d)', connid, conn.uid, conn.twwcid)
+
 class PlayerConnection(object):
     def __init__(self, connid, uid, stream):
         self.connid = connid

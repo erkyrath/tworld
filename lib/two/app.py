@@ -92,7 +92,11 @@ class Tworld(object):
                 for connobj in obj.connections:
                     conn = self.playconns.add(connobj.connid, connobj.uid, stream)
                     stream.write(wcproto.message(0, {'cmd':'playerok', 'connid':conn.connid}))
-            return
+                return
+            if cmd == 'logplayerconntable':
+                self.playconns.dumplog()
+                return
+            raise Exception('Unknown server command "%s": %s' % (cmd, obj))
 
         conn = self.playconns.get(connid)
         

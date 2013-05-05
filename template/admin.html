@@ -24,4 +24,11 @@ Admin View
 {% end %}
 </ul>
 
+<h3>Buttons</h3>
+
+<form method="post" action="/admin"><p>
+ {% module xsrf_form_html() %}
+ <input name="playerconntable" type="submit" value="Check Player Connections">
+</p></form>
+
 {% end %}
