@@ -86,10 +86,10 @@ class WebConnIOStream(tornado.iostream.IOStream):
                 tup = wcproto.check_buffer(self.twbuffer, namespace=True)
                 if not tup:
                     return
+                (connid, raw, obj) = tup
+                self.twtable.app.queue_command(obj, connid, self.twwcid)
             except Exception as ex:
                 self.twtable.log.info('Malformed message: %s', ex)
-                continue
-            self.twtable.app.queue_command(tup, self.twwcid)
 
     def twclose(self, dat):
         try:

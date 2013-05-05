@@ -25,11 +25,11 @@ class Tworld(object):
     def listen(self):
         self.webconns.listen()
 
-    def queue_command(self, tup, twwcid):
+    def queue_command(self, obj, connid, twwcid):
         # If this command was caused by a message from tweb, twwcid is
         # its ID number. We will rarely need this.
-        self.log.info('### received message %s', tup)
-        self.queue.append( (tup, twwcid, datetime.datetime.now()) )
+        self.log.info('### received message %s', obj)
+        self.queue.append( (obj, connid, twwcid, datetime.datetime.now()) )
         
         if not self.commandbusy:
             tornado.ioloop.IOLoop.instance().add_callback(self.pop_queue)
@@ -46,14 +46,14 @@ class Tworld(object):
 
         self.commandbusy = True
 
-        (tup, twwcid, queuetime) = self.queue.pop(0)
+        (obj, connid, twwcid, queuetime) = self.queue.pop(0)
 
         starttime = datetime.datetime.now()
 
         try:
-            yield tornado.gen.Task(self.handle_command, tup, twwcid, queuetime)
+            yield tornado.gen.Task(self.handle_command, obj, connid, twwcid, queuetime)
         except Exception as ex:
-            self.log.error('error handling command: %s', tup, exc_info=True)
+            self.log.error('error handling command: %s', obj, exc_info=True)
 
         endtime = datetime.datetime.now()
         self.log.info('finished command in %.3f ms (queued for %.3f ms)',
@@ -67,10 +67,9 @@ class Tworld(object):
             tornado.ioloop.IOLoop.instance().add_callback(self.pop_queue)
 
     @tornado.gen.coroutine
-    def handle_command(self, tup, twwcid, queuetime):
-        self.log.info('### handling message %s', tup)
+    def handle_command(self, obj, connid, twwcid, queuetime):
+        self.log.info('### handling message %s', obj)
 
-        (connid, raw, obj) = tup
         if connid == 0:
             # A message not from any player!
             if twwcid == 0:
