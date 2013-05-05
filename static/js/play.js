@@ -334,11 +334,6 @@ function defer_func(func)
 
 /* The page-ready handler. Like onload(), but better, I'm told. */
 $(document).ready(function() {
-    if (!page_sessionid) {
-        /* Not actually signed in. Not sure how that's possible. */
-        return;
-    }
-
     build_page_structure();
     setup_event_handlers();
     open_websocket();

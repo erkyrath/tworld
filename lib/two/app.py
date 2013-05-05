@@ -150,7 +150,10 @@ class Tworld(object):
                     val = 'You say, \u201C%s\u201D' % (obj.text,)
                 else:
                     val = '%s says, \u201C%s\u201D' % (conn.email, obj.text,)
-                oconn.stream.write(wcproto.message(oconn.connid, {'cmd':'event', 'text':val}))
+                try:
+                    oconn.stream.write(wcproto.message(oconn.connid, {'cmd':'event', 'text':val}))
+                except Exception as ex:
+                    self.log.error('Unable to write to %d: %s', oconn.connid, ex)
             return
         
         raise Exception('Unknown player command "%s": %s' % (cmd, obj))
