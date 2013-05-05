@@ -124,7 +124,7 @@ class ServerMgr(object):
         try:
             arr = []
             for (connid, conn) in self.app.twconntable.as_dict().items():
-                arr.append( { 'connid':connid, 'uid':str(conn.uid) } )
+                arr.append( { 'connid':connid, 'uid':str(conn.uid), 'email':conn.email } )
             self.tworld.write(wcproto.message(0, {'cmd':'connect', 'connections':arr}))
         except Exception as ex:
             self.log.error('Could not write connect message to tworld socket: %s', ex)

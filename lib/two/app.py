@@ -90,9 +90,9 @@ class Tworld(object):
                 assert stream is not None, 'Tweb connect command from no stream.'
                 stream.write(wcproto.message(0, {'cmd':'connectok'}))
                 for connobj in obj.connections:
-                    conn = self.playconns.add(connobj.connid, connobj.uid, stream)
+                    conn = self.playconns.add(connobj.connid, connobj.uid, connobj.email, stream)
                     stream.write(wcproto.message(0, {'cmd':'playerok', 'connid':conn.connid}))
-                    self.log.info('Player %s has reappeared', conn.uid)
+                    self.log.info('Player %s has reappeared (uid %s)', conn.email, conn.uid)
                 return
             if cmd == 'logplayerconntable':
                 self.playconns.dumplog()
@@ -117,24 +117,26 @@ class Tworld(object):
                 return
             # Add entry to player connection table.
             try:
-                conn = self.playconns.add(connid, obj.uid, stream)
+                conn = self.playconns.add(connid, obj.uid, obj.email, stream)
                 conn.stream.write(wcproto.message(0, {'cmd':'playerok', 'connid':connid}))
-                self.log.info('Player %s has connected', conn.uid)
+                self.log.info('Player %s has connected (uid %s)', conn.email, conn.uid)
             except Exception as ex:
                 self.log.error('Failed to ack new playeropen: %s', ex)
             return
         
         # This message needs to do something. Something which may
         # involve a lot of database access.
-        if obj.cmd == 'playerclose':
-            self.log.info('Player %s has disconnected', conn.uid)
+        cmd = obj.cmd
+        
+        if cmd == 'playerclose':
+            self.log.info('Player %s has disconnected (uid %s)', conn.email, conn.uid)
             try:
                 self.playconns.remove(connid)
             except Exception as ex:
                 self.log.error('Failed to remove on playerclose %d: %s', connid, ex)
             return
 
-        if obj.cmd == 'say':
+        if cmd == 'say':
             val = 'You say, \u201C%s\u201D' % (obj.text,)
             conn.stream.write(wcproto.message(conn.connid, {'cmd':'event', 'text':val}))
             return

@@ -15,9 +15,9 @@ class PlayerConnectionTable(object):
     def get(self, connid):
         return self.map.get(connid, None)
 
-    def add(self, connid, uidstr, stream):
+    def add(self, connid, uidstr, email, stream):
         assert connid not in self.map, 'Connection ID already in use!'
-        conn = PlayerConnection(connid, ObjectId(uidstr), stream)
+        conn = PlayerConnection(connid, ObjectId(uidstr), email, stream)
         self.map[connid] = conn
         return conn
 
@@ -34,9 +34,10 @@ class PlayerConnectionTable(object):
             self.log.debug(' %d: uid %s (twwcid %d)', connid, conn.uid, conn.twwcid)
 
 class PlayerConnection(object):
-    def __init__(self, connid, uid, stream):
+    def __init__(self, connid, uid, email, stream):
         self.connid = connid
         self.uid = uid   # an ObjectId
+        self.email = email  # used only for log messages, not DB work
         self.stream = stream   # WebConnIOStream that handles this connection
         self.twwcid = stream.twwcid
         

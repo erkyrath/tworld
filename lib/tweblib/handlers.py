@@ -392,7 +392,7 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
         # Tell tworld about this new connection. Tworld will send back
         # a reply, at which point we'll mark it available.
         try:
-            msg = { 'cmd':'playeropen', 'uid':str(uid) }
+            msg = { 'cmd':'playeropen', 'uid':str(uid), 'email':email }
             self.application.twservermgr.tworld.write(wcproto.message(self.twconnid, msg))
         except Exception as ex:
             self.application.twlog.error('Could not write playeropen message to tworld socket: %s', ex)
