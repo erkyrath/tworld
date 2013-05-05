@@ -92,6 +92,7 @@ class Tworld(object):
                 for connobj in obj.connections:
                     conn = self.playconns.add(connobj.connid, connobj.uid, stream)
                     stream.write(wcproto.message(0, {'cmd':'playerok', 'connid':conn.connid}))
+                    self.log.info('Player %s has reappeared', conn.uid)
                 return
             if cmd == 'logplayerconntable':
                 self.playconns.dumplog()
@@ -118,14 +119,24 @@ class Tworld(object):
             try:
                 conn = self.playconns.add(connid, obj.uid, stream)
                 conn.stream.write(wcproto.message(0, {'cmd':'playerok', 'connid':connid}))
+                self.log.info('Player %s has connected', conn.uid)
             except Exception as ex:
                 self.log.error('Failed to ack new playeropen: %s', ex)
             return
         
         # This message needs to do something. Something which may
         # involve a lot of database access.
-        #### playerclose case...
+        if obj.cmd == 'playerclose':
+            self.log.info('Player %s has disconnected', conn.uid)
+            try:
+                self.playconns.remove(connid)
+            except Exception as ex:
+                self.log.error('Failed to remove on playerclose %d: %s', connid, ex)
+            return
 
         if obj.cmd == 'say':
             val = 'You say, \u201C%s\u201D' % (obj.text,)
             conn.stream.write(wcproto.message(conn.connid, {'cmd':'event', 'text':val}))
+            return
+        
+        raise Exception('Unknown player command "%s": %s' % (cmd, obj))

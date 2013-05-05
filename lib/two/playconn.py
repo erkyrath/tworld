@@ -21,6 +21,13 @@ class PlayerConnectionTable(object):
         self.map[connid] = conn
         return conn
 
+    def remove(self, connid):
+        conn = self.map[connid]
+        del self.map[connid]
+        conn.connid = None
+        conn.stream = None
+        conn.twwcid = None
+
     def dumplog(self):
         self.log.debug('PlayerConnectionTable has %d entries', len(self.map))
         for (connid, conn) in sorted(self.map.items()):
