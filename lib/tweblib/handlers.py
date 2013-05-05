@@ -1,4 +1,5 @@
 
+import datetime
 import traceback
 import unicodedata
 import json
@@ -395,6 +396,8 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
             self.application.twlog.warning('Websocket connection is not available')
             self.write_tw_error('Your connection is not registered.')
             return
+
+        self.twconn.lastmsgtime = datetime.datetime.now()
 
         if not self.application.twservermgr.tworldavailable:
             self.application.twlog.warning('Tworld is not available.')

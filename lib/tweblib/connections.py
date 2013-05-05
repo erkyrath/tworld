@@ -67,6 +67,7 @@ class Connection(object):
         self.uid = uid
         self.email = email
         self.starttime = datetime.datetime.now()
+        self.lastmsgtime = self.starttime   # last user activity
         self.available = False
 
     def __repr__(self):
@@ -79,7 +80,12 @@ class Connection(object):
         delta = datetime.datetime.now() - self.starttime
         return datetime.timedelta(seconds=int(delta.total_seconds()))
 
-    ### idletime...
+    def idletime(self):
+        """Return how long it's been since the last activity from the
+        player.
+        """
+        delta = datetime.datetime.now() - self.lastmsgtime
+        return datetime.timedelta(seconds=int(delta.total_seconds()))
         
     def write_tw_error(self, msg):
         """Write a JSON error-reporting command through the socket.
