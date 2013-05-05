@@ -78,7 +78,6 @@ class WebConnIOStream(tornado.iostream.IOStream):
     def twread(self, dat):
         if not self.twtable:
             return  # must have already closed
-        self.twtable.log.info('### stream_read %s', dat)
         self.twbuffer.extend(dat)
         while True:
             # This slices a chunk off the buffer and returns it, if a

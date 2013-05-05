@@ -15,6 +15,9 @@ class PlayerConnectionTable(object):
     def get(self, connid):
         return self.map.get(connid, None)
 
+    def all(self):
+        return self.map.values()
+
     def as_dict(self):
         return dict(self.map)
 

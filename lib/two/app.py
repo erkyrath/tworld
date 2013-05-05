@@ -145,8 +145,12 @@ class Tworld(object):
             return
 
         if cmd == 'say':
-            val = 'You say, \u201C%s\u201D' % (obj.text,)
-            conn.stream.write(wcproto.message(conn.connid, {'cmd':'event', 'text':val}))
+            for oconn in self.playconns.all():
+                if conn == oconn:
+                    val = 'You say, \u201C%s\u201D' % (obj.text,)
+                else:
+                    val = '%s says, \u201C%s\u201D' % (conn.email, obj.text,)
+                oconn.stream.write(wcproto.message(oconn.connid, {'cmd':'event', 'text':val}))
             return
         
         raise Exception('Unknown player command "%s": %s' % (cmd, obj))
