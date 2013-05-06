@@ -184,48 +184,48 @@ function submit_line_input(val) {
    Move the input focus to the event pane's input line.
 */
 function evhan_doc_keypress(ev) {
-  var keycode = 0;
-  if (ev) keycode = ev.which;
+    var keycode = 0;
+    if (ev) keycode = ev.which;
 
-  if (ev.target.tagName.toUpperCase() == 'INPUT') {
-    /* If the focus is already on an input field, don't mess with it. */
-    return;
-  }
-
-  if (ev.altKey || ev.metaKey || ev.ctrlKey) {
-    /* Don't mess with command key combinations. This is not a perfect
-       test, since option-key combos are ordinary (accented) characters
-       on Mac keyboards, but it's close enough. */
-    return;
-  }
-
-  var inputel = $('#eventinput');
-  inputel.focus();
-
-  if (keycode == KEY_RETURN) {
-    /* Grab the Return/Enter key here. This is the same thing we'd do if
-       the input field handler caught it. */
-    submit_line_input(inputel.val());
-    /* Safari drops an extra newline into the input field unless we call
-       preventDefault() here. */
-    ev.preventDefault();
-    return;
-  }
-
-  if (keycode) {
-    /* For normal characters, we fake the normal keypress handling by
-       appending the character onto the end of the input field. If we
-       didn't call preventDefault() here, Safari would actually do
-       the right thing with the keystroke, but Firefox wouldn't. */
-    /* This is completely wrong for accented characters (on a Mac
-       keyboard), but that's beyond my depth. */
-    if (keycode >= 32) {
-      var val = String.fromCharCode(keycode);
-      inputel.val(inputel.val() + val);
+    if (ev.target.tagName.toUpperCase() == 'INPUT') {
+        /* If the focus is already on an input field, don't mess with it. */
+        return;
     }
-    ev.preventDefault();
-    return;
-  }
+
+    if (ev.altKey || ev.metaKey || ev.ctrlKey) {
+        /* Don't mess with command key combinations. This is not a perfect
+           test, since option-key combos are ordinary (accented) characters
+           on Mac keyboards, but it's close enough. */
+        return;
+    }
+
+    var inputel = $('#eventinput');
+    inputel.focus();
+
+    if (keycode == KEY_RETURN) {
+        /* Grab the Return/Enter key here. This is the same thing we'd do if
+           the input field handler caught it. */
+        submit_line_input(inputel.val());
+        /* Safari drops an extra newline into the input field unless we call
+           preventDefault() here. */
+        ev.preventDefault();
+        return;
+    }
+
+    if (keycode) {
+        /* For normal characters, we fake the normal keypress handling by
+           appending the character onto the end of the input field. If we
+           didn't call preventDefault() here, Safari would actually do
+           the right thing with the keystroke, but Firefox wouldn't. */
+        /* This is completely wrong for accented characters (on a Mac
+           keyboard), but that's beyond my depth. */
+        if (keycode >= 32) {
+            var val = String.fromCharCode(keycode);
+            inputel.val(inputel.val() + val);
+        }
+        ev.preventDefault();
+        return;
+    }
 }
 
 var eventhistory = new Array();
