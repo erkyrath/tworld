@@ -156,5 +156,10 @@ class Tworld(object):
                 except Exception as ex:
                     self.log.error('Unable to write to %d: %s', oconn.connid, ex)
             return
+
+        if cmd == 'uiprefs':
+            self.log.info('### Player set uiprefs %s', obj.map.__dict__)
+            ### write them to the database, when we have a database handle
+            return
         
         raise Exception('Unknown player command "%s": %s' % (cmd, obj))

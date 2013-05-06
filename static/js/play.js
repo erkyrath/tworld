@@ -292,6 +292,37 @@ function submit_line_input(val) {
     }
 }
 
+var changed_uiprefs = {};
+var uipref_changed_timer = null;
+
+function note_uipref_changed(key)
+{
+    changed_uiprefs[key] = true;
+
+    /* A bit of hysteresis; we don't send uiprefs until they've been
+       stable for five seconds. */
+    if (uipref_changed_timer)
+        cancel_delayed_func(uipref_changed_timer);
+    uipref_changed_timer = delay_func(2, send_uipref_changed);
+}
+
+function send_uipref_changed()
+{
+    console.log('### send_uipref_changed');
+    if (!connected) {
+        /* Leave changed_uiprefs full of keys. Maybe we can send it later. */
+        return;
+    }
+
+    var obj = {};
+    for (var key in changed_uiprefs) {
+        obj[key] = uiprefs[key];
+    }
+
+    websocket_send_json({ cmd:'uiprefs', map:obj });
+    changed_uiprefs = {};
+}
+
 /* Event handler: keypress events on input fields.
 
    Move the input focus to the event pane's input line.
@@ -424,7 +455,7 @@ function handle_leftright_doneresize(ev, ui) {
     $('#rightcol').css({ width: otherpercent+'%' });
 
     uiprefs.leftright_percent = Math.round(percent);
-    /*### send notification to server */
+    note_uipref_changed('leftright_percent');
 }
 
 function handle_updown_resize(ev, ui) {
@@ -444,18 +475,16 @@ function handle_updown_doneresize(ev, ui) {
     $('#bottomcol').css({ height: otherpercent+'%' });
     
     uiprefs.updown_percent = Math.round(percent);
-    /*### send notification to server */
+    note_uipref_changed('updown_percent');
 }
 
 
 function evhan_websocket_open() {
-    console.log('### open');
     connected = true;
     everconnected = true;
 }
 
 function evhan_websocket_close() {
-    console.log('### close');
     websocket = null;
     connected = false;
 
@@ -497,10 +526,17 @@ function websocket_send_json(obj) {
     websocket.send(val);
 }
 
-/* Run a function (no arguments) in timeout seconds. */
+/* Run a function (no arguments) in timeout seconds. Returns a value that
+   can be passed to cancel_delayed_func(). */
 function delay_func(timeout, func)
 {
     return window.setTimeout(func, timeout*1000);
+}
+
+/* Cancel a delayed function. */
+function cancel_delayed_func(val)
+{
+    window.clearTimeout(val);
 }
 
 /* Run a function (no arguments) "soon". */
