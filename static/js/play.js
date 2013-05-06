@@ -3,6 +3,10 @@ var websocket = null;
 var connected = false;
 var everconnected = false;
 
+var uiprefs = {
+    smooth_scroll: true
+};
+
 var KEY_RETURN = 13;
 var KEY_UP = 38;
 var KEY_DOWN = 40;
@@ -115,7 +119,11 @@ function eventpane_add(msg, extraclass) {
     /* If we were previously scrolled to the bottom, scroll to the new 
        bottom. */
     if (atbottom) {
-        frameel.scrollTop(frameel.get(0).scrollHeight);
+        var newscrolltop = frameel.get(0).scrollHeight - frameel.outerHeight() + 2;
+        if (!uiprefs.smooth_scroll)
+            frameel.scrollTop(newscrolltop);
+        else
+            frameel.stop().animate({ 'scrollTop': newscrolltop }, 200);
     }
 }
 

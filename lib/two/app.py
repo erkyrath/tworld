@@ -92,6 +92,7 @@ class Tworld(object):
                     conn = self.playconns.add(connobj.connid, connobj.uid, connobj.email, stream)
                     stream.write(wcproto.message(0, {'cmd':'playerok', 'connid':conn.connid}))
                     self.log.info('Player %s has reappeared (uid %s)', conn.email, conn.uid)
+                self.log.info('### sent playerok for %d players', len(obj.connections))
                 return
             if cmd == 'disconnect':
                 for (connid, conn) in self.playconns.as_dict().items():
