@@ -74,6 +74,15 @@ for (key, val) in initial_config.items():
         db.config.insert({'key':key, 'val':val})
 
 
+# The global scope.
+
+globalscope = db.scopes.find_one({'type':'glob'})
+if not globalscope:
+    globalscopeid = db.scopes.insert({'type':'glob'})
+    db.config.update({'key':'globalscopeid'},
+                     {'key':'globalscopeid', 'val':globalscopeid}, upsert=True)
+
+
 # The admin player, and associated state.
 
 adminplayer = db.players.find_one({'admin':True})
@@ -103,4 +112,11 @@ else:
         }
     db.playstate.insert(playstate)
 
-
+    scope = {
+        'type': 'pers',
+        'uid': adminuid,
+        }
+    
+    scid = db.scopes.insert(scope)
+    db.players.update({'_id':adminuid},
+                      {'$set': {'scid': scid}})
