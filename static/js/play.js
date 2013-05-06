@@ -16,6 +16,8 @@ var KEY_RETURN = 13;
 var KEY_UP = 38;
 var KEY_DOWN = 40;
 
+var NBSP = '\u00A0';
+
 function build_page_structure() {
     /* Clear out the body from the play.html template. */
     $('#submain').empty();
@@ -59,7 +61,7 @@ function build_page_structure() {
     $('#submain').append(topcol);
     $('#submain').append(bottomcol);
 
-    toolpane_set_world('(In transition)', '\u00A0', '\u00A0');
+    toolpane_set_world('(In transition)', NBSP, NBSP);
 }
 
 function build_focuspane(contentls)
@@ -234,7 +236,7 @@ function focuspane_set(text)
     }
     if (!count) {
         var el = $('<p>');
-        el.text('\u00A0');
+        el.text(NBSP);
         contentls.push(el);
         count++;
     }

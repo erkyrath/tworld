@@ -59,11 +59,15 @@ db.sessions.create_index('sid', unique=True)
 db.players.create_index('email', unique=True)
 db.players.create_index('name', unique=True)
 
+db.playprefs.create_index('uid')  # not unique
 # Compound index
-db.locations.create_index([('wid', pymongo.ASCENDING), ('key', pymongo.ASCENDING)])
+db.playprefs.create_index([('uid', pymongo.ASCENDING), ('key', pymongo.ASCENDING)], unique=True)
 
 # Compound index
-db.instances.create_index([('wid', pymongo.ASCENDING), ('scid', pymongo.ASCENDING)])
+db.locations.create_index([('wid', pymongo.ASCENDING), ('key', pymongo.ASCENDING)], unique=True)
+
+# Compound index
+db.instances.create_index([('wid', pymongo.ASCENDING), ('scid', pymongo.ASCENDING)], unique=True)
 
 
 # Create some config entries if they don't exist, but leave them alone
