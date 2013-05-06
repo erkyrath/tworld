@@ -119,7 +119,7 @@ function display_error(msg) {
     focuspane_clear();
 }
 
-function localepane_set(val) {
+function localepane_set(text) {
     var parals = text.split('\n');
     var contentls = [];
     for (var ix=0; ix<parals.length; ix++) {
@@ -128,12 +128,11 @@ function localepane_set(val) {
         var el = $('<p>');
         el.text(parals[ix]);
         contentls.push(el);
-        count++;
     }
 
     var localeel = $('#localepane');
     localeel.empty();
-    for (var ix in contentls; ix<contentls.length; ix++) {
+    for (var ix=0; ix<contentls.length; ix++) {
         localeel.append(contentls[ix]);
     }
 }
