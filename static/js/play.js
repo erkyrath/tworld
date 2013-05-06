@@ -187,6 +187,19 @@ function evhan_doc_keypress(ev) {
     var keycode = 0;
     if (ev) keycode = ev.which;
 
+    /* If we're not scrolled to the bottom, scroll to the bottom. Yes,
+       we're going to check this on every single document keystroke.
+       It doesn't seem to be necessary in Safari, but it does in Firefox. */
+    var frameel = $('#eventpane');
+    var bottomdiff = (frameel.get(0).scrollHeight - (frameel.scrollTop() + frameel.outerHeight()));
+    if (bottomdiff > 0) {
+        var newscrolltop = frameel.get(0).scrollHeight - frameel.outerHeight() + 2;
+        if (!uiprefs.smooth_scroll)
+            frameel.scrollTop(newscrolltop);
+        else
+            frameel.stop().animate({ 'scrollTop': newscrolltop }, 200);
+    }
+    
     if (ev.target.tagName.toUpperCase() == 'INPUT') {
         /* If the focus is already on an input field, don't mess with it. */
         return;
