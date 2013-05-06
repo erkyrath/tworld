@@ -111,10 +111,31 @@ function open_websocket() {
 function display_error(msg) {
     var el = $('<div>', { 'class':'BlockError'} );
     el.text(msg);
-    $('#localepane').empty();
-    $('#localepane').append(el);
+
+    var localeel = $('#localepane');
+    localeel.empty();
+    localeel.append(el);
 
     focuspane_clear();
+}
+
+function localepane_set(val) {
+    var parals = text.split('\n');
+    var contentls = [];
+    for (var ix=0; ix<parals.length; ix++) {
+        if (parals[ix].length == 0)
+            continue;
+        var el = $('<p>');
+        el.text(parals[ix]);
+        contentls.push(el);
+        count++;
+    }
+
+    var localeel = $('#localepane');
+    localeel.empty();
+    for (var ix in contentls; ix<contentls.length; ix++) {
+        localeel.append(contentls[ix]);
+    }
 }
 
 function eventpane_add(msg, extraclass) {
