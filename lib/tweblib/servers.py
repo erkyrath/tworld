@@ -7,6 +7,7 @@ import socket
 import tornado.gen
 import tornado.ioloop
 import tornado.iostream
+import tornado.platform
 
 import motor
 
@@ -110,6 +111,7 @@ class ServerMgr(object):
             # when the other process is down?)
             sock.connect(('localhost', self.app.twopts.tworld_port))
             sock.setblocking(0)
+            tornado.platform.auto.set_close_exec(sock.fileno())
             self.tworld = tornado.iostream.IOStream(sock)
             self.twbuffer = bytearray()
         except Exception as ex:

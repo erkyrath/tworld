@@ -4,6 +4,7 @@ import socket
 
 import tornado.ioloop
 import tornado.iostream
+import tornado.platform
 
 from twcommon import wcproto
 
@@ -25,7 +26,7 @@ class WebConnectionTable(object):
         
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
         self.listensock = sock
-        #sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        tornado.platform.auto.set_close_exec(sock.fileno())
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR,
             (sock.getsockopt (socket.SOL_SOCKET, socket.SO_REUSEADDR) | 1))
         sock.setblocking(0)
