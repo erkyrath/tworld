@@ -103,11 +103,11 @@ function display_error(msg) {
 
 function eventpane_add(msg, extraclass) {
     var frameel = $('#eventpane');
+
     /* Determine whether the event pane is currently scrolled to the bottom
        (give or take a margin of error). Note that scrollHeight is not a jQuery
-       property; we have to go to the raw DOM to get it.
-    */
-    var atbottom = (frameel.get(0).scrollHeight - (frameel.scrollTop() + frameel.outerHeight()) < 20);
+       property; we have to go to the raw DOM to get it. */
+    var atbottom = (frameel.get(0).scrollHeight - (frameel.scrollTop() + frameel.outerHeight()) < 40);
 
     var cls = 'Event';
     if (extraclass)
@@ -115,6 +115,26 @@ function eventpane_add(msg, extraclass) {
     var el = $('<div>', { 'class':cls} );
     el.text(msg);
     $('.Input').before(el);
+
+    /* If there are too many lines in the event pane, chop out the early
+       ones. That's easy. Keeping the apparent scroll position the same --
+       that's harder. */
+    var eventls = $('#eventpane .Event');
+    var curcount = eventls.size();
+    if (curcount > EVENT_TRIM_LIMIT) {
+        var firstkeep = curcount - EVENT_TRIM_KEEP;
+        var remls = eventls.slice(0, firstkeep);
+        /* Calculate the vertical extent of the entries to remove, *not
+           counting the top margin*. (We have a :first-child top margin
+           to give the top edge of the pane some breathing room.) This
+           margin calculation uses a possibly undocumented feature of
+           query -- $.css(e, p, true) returns a number instead of a "16px"
+           string. Hope this doesn't bite me on the toe someday.
+        */
+        var remheight = $(eventls[firstkeep]).position().top - $(eventls[0]).position().top - $.css(eventls[0], 'marginTop', true);
+        frameel.scrollTop(frameel.scrollTop() - remheight);
+        remls.remove();
+    }
 
     /* If we were previously scrolled to the bottom, scroll to the new 
        bottom. */
