@@ -28,9 +28,14 @@ function build_page_structure() {
     var eventpane = $('<div>', { id: 'eventpane' });
 
     var tooloutline = $('<div>', { 'class': 'ToolOutline' });
-    tooloutline.append($('<div>', { 'class': 'ToolTitleBar' }));
+    var toolheader = $('<div>', { 'class': 'ToolTitleBar' });
+    tooloutline.append(toolheader);
     tooloutline.append($('<div>', { 'class': 'ToolSegment' }));
     tooloutline.append($('<div>', { 'class': 'ToolFooter' }));
+
+    toolheader.append($('<h2>', { id: 'tool_title_title', 'class': 'ToolTitle' }));
+    toolheader.append($('<div>', { id: 'tool_title_scope', 'class': 'ToolData' }));
+    toolheader.append($('<h3>', { id: 'tool_title_creator', 'class': 'ToolTitle' }));
     rightcol.append(tooloutline);
 
     var inputline = $('<div>', { 'class': 'Input' });
@@ -53,6 +58,8 @@ function build_page_structure() {
        efficient this way. */
     $('#submain').append(topcol);
     $('#submain').append(bottomcol);
+
+    toolpane_set_world('(In transition)', '\u00A0', '\u00A0');
 }
 
 function build_focuspane(contentls)
@@ -117,6 +124,12 @@ function display_error(msg) {
     localeel.append(el);
 
     focuspane_clear();
+}
+
+function toolpane_set_world(world, scope, creator) {
+    $('#tool_title_title').text(world);
+    $('#tool_title_scope').text(scope);
+    $('#tool_title_creator').text(creator);
 }
 
 function localepane_set(text) {
