@@ -147,9 +147,11 @@ class ServerMgr(object):
             # complete chunk is available.
             try:
                 ### this unnecessarily de-jsons the message! We only care
-                ### about raw, unless connid turns out to be zero.
+                ### about raw, in the common case.
                 tup = wcproto.check_buffer(self.twbuffer, namespace=True)
                 if not tup:
+                    # No more complete messages to pull! (This is the
+                    # only return point from this method.)
                     return
             except Exception as ex:
                 self.log.info('Malformed message: %s', ex)
@@ -191,7 +193,7 @@ class ServerMgr(object):
                             conn.available = True
                         except Exception as ex:
                             self.log.error('Unable to process playerok: %s', ex)
-                        return
+                        continue
                     raise Exception('Not implemented')
                 except Exception as ex:
                     self.log.error('Problem handling server command (%s): %s', raw[0:50], ex)
