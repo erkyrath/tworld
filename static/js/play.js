@@ -7,6 +7,11 @@ var uiprefs = {
     smooth_scroll: true
 };
 
+/* When there are more than 80 lines in the event pane, chop it down to
+   the last 60. */
+var EVENT_TRIM_LIMIT = 80;
+var EVENT_TRIM_KEEP = 60;
+
 var KEY_RETURN = 13;
 var KEY_UP = 38;
 var KEY_DOWN = 40;
