@@ -64,6 +64,17 @@ opts = tornado.options.options
 if opts.python_path:
     sys.path.insert(0, opts.python_path)
 
+rootlogger = logging.getLogger('')
+rootlogger.setLevel(logging.DEBUG) ### or based on an options
+if (rootlogger.handlers):
+    roothandler = rootlogger.handlers[0]
+else:
+    roothandler = logging.StreamHandler(sys.stdout)
+    rootlogger.addHandler(roothandler)
+rootform = logging.Formatter('[%(levelname).1s %(asctime)s: %(module)s:%(lineno)d] %(message)s', '%b-%d %H:%M:%S')
+roothandler.setFormatter(rootform)
+### log rotation, see volityd.py again...
+
 # Now that we have a python_path, we can import the tworld-specific modules.
 
 import tweblib.session
