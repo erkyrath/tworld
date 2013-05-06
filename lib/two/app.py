@@ -147,7 +147,7 @@ class Tworld(object):
 
         if cmd == 'say':
             for oconn in self.playconns.all():
-                if conn == oconn:
+                if conn.uid == oconn.uid:
                     val = 'You say, \u201C%s\u201D' % (obj.text,)
                 else:
                     val = '%s says, \u201C%s\u201D' % (conn.email, obj.text,)
