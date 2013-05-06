@@ -47,6 +47,7 @@ initial_config = {
         'desc': 'an ordinary explorer.',
         'pronoun': 'it',
         },
+    'startworldloc': 'start',
     }
 
 # All the indexes we need. (Except _id, which comes free.)
@@ -87,8 +88,10 @@ if not globalscope:
 
 adminplayer = db.players.find_one({'admin':True})
 if adminplayer:
-    print('Admin player already exists.')
+    adminuid = adminplayer['_id']
 else:
+    print('No admin player exists; creating.')
+
     if not opts.admin_email:
         raise Exception('You must define admin_email in the config file!')
     adminplayer = {
@@ -120,3 +123,37 @@ else:
     scid = db.scopes.insert(scope)
     db.players.update({'_id':adminuid},
                       {'$set': {'scid': scid}})
+
+
+# The starting world (solo).
+
+world = db.worlds.find_one()
+if not world:
+    print('No world exists; creating start world.')
+
+    world = {
+        'creator': adminuid,
+        'name': 'Beginning',
+        'copyable': True,
+        'instancing': 'solo',
+        }
+    
+    worldid = db.worlds.insert(world)
+    db.config.update({'key':'startworldid'},
+                     {'key':'startworldid', 'val':worldid}, upsert=True)
+    
+    startloc = {
+        'wid': worldid,
+        'key': initial_config['startworldloc'],
+        'name': 'The Start',
+        }
+    startlocid = db.locations.insert(startloc)
+
+    desc = {
+        'wid': worldid,
+        'locid': startlocid,
+        'key': 'desc',
+        'val': 'You are at the start.',
+        }
+    db.worldprop.insert(desc)
+    
