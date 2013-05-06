@@ -23,7 +23,6 @@ function build_page_structure() {
     var topcol = $('<div>', { id: 'topcol' });
     var leftcol = $('<div>', { id: 'leftcol' });
     var localepane = $('<div>', { id: 'localepane' });
-    var focuspane = $('<div>', { id: 'focuspane', style: 'display:none;' });
     var rightcol = $('<div>', { id: 'rightcol' });
     var bottomcol = $('<div>', { id: 'bottomcol' });
     var eventpane = $('<div>', { id: 'eventpane' });
@@ -33,14 +32,6 @@ function build_page_structure() {
     tooloutline.append($('<div>', { 'class': 'ToolSegment' }));
     tooloutline.append($('<div>', { 'class': 'ToolFooter' }));
     rightcol.append(tooloutline);
-
-    var focusoutline = $('<div>', { 'class': 'FocusOutline' });
-    var focuscornercontrol = $('<div class="FocusCornerControl">Close</div>');
-    focusoutline.append(focuscornercontrol);
-    focusoutline.append($('<div>', { 'class': 'InvisibleAbovePara' }));
-    focusoutline.append($('<p>Text.</p>'));
-    focusoutline.append($('<div>', { 'class': 'InvisibleBeloePara' }));
-    focuspane.append(focusoutline);
 
     var inputline = $('<div>', { 'class': 'Input' });
     var inputprompt = $('<div>', { 'class': 'InputPrompt' });
@@ -53,7 +44,6 @@ function build_page_structure() {
 
     topcol.append(leftcol);
     leftcol.append(localepane);
-    leftcol.append(focuspane);
     topcol.append(rightcol);
     bottomcol.append($('<div>', { id: 'bottomcol_topedge' }));
     bottomcol.append(eventpane);
@@ -63,6 +53,27 @@ function build_page_structure() {
        efficient this way. */
     $('#submain').append(topcol);
     $('#submain').append(bottomcol);
+}
+
+function build_focuspane(contentls)
+{
+    var focuspane = $('<div>', { class: 'FocusPane FocusPaneAnimating',
+                                 style: 'display:none;' });
+
+    var focusoutline = $('<div>', { 'class': 'FocusOutline' });
+    var focuscornercontrol = $('<div class="FocusCornerControl"><a href="#">Close</a></div>');
+    focusoutline.append(focuscornercontrol);
+    focusoutline.append($('<div>', { 'class': 'InvisibleAbovePara' }));
+    for (var ix=0; ix<contentls.length; ix++) {
+        focusoutline.append(contentls[ix]);
+    }
+    focusoutline.append($('<div>', { 'class': 'InvisibleBelowPara' }));
+    focuspane.append(focusoutline);
+
+    /* ### make this close control look and act nicer */
+    focuscornercontrol.on('click', function() { focuspane_clear(); });
+
+    return focuspane;
 }
 
 function setup_event_handlers() {
@@ -103,7 +114,7 @@ function display_error(msg) {
     $('#localepane').empty();
     $('#localepane').append(el);
 
-    /* ### also close the focus pane? */
+    focuspane_clear();
 }
 
 function eventpane_add(msg, extraclass) {
@@ -150,6 +161,59 @@ function eventpane_add(msg, extraclass) {
         else
             frameel.stop().animate({ 'scrollTop': newscrolltop }, 200);
     }
+}
+
+function focuspane_clear()
+{
+    /* If any old panes are in the process of sliding up or down, we
+       kill them unceremoniously. */
+    var oldel = $('.FocusPaneAnimating');
+    if (oldel.length) {
+        oldel.remove();
+    }
+
+    /* If an old pane exists, slide it out. (The call is "slideUp", even
+       though the motion will be downwards. jQuery assumes everything is
+       anchored at the top, but we are anchored at the bottom.) */
+    var el = $('.FocusPane');
+    if (el.length) {
+        el.addClass('FocusPaneAnimating');
+        el.slideUp(200, function() { el.remove(); });
+    }
+}
+
+function focuspane_set(text)
+{
+    var parals = text.split('\n');
+    var count = 0;
+
+    /* We do work here to make sure that there are no empty paragraphs.
+       Really the server should do this, and if the text is entirely blank,
+       convert to a clear command. */
+    var contentls = [];
+    for (var ix=0; ix<parals.length; ix++) {
+        if (parals[ix].length == 0)
+            continue;
+        var el = $('<p>');
+        el.text(parals[ix]);
+        contentls.push(el);
+        count++;
+    }
+    if (!count) {
+        var el = $('<p>');
+        el.text('\u00A0');
+        contentls.push(el);
+        count++;
+    }
+
+    /* Clear out old panes and slide in the new one. (It will have the
+       'FocusPaneAnimating' class until it finishes sliding.) */
+
+    focuspane_clear();
+
+    var newpane = build_focuspane(contentls);
+    $('#leftcol').append(newpane);
+    newpane.slideDown(200, function() { newpane.removeClass('FocusPaneAnimating'); } );
 }
 
 function submit_line_input(val) {

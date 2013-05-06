@@ -104,7 +104,7 @@
   color: #A30;
 }
 
-#focuspane {
+.FocusPane {
   /* display: none; */
   /* background: #FFFFF4; */
   position: absolute;
@@ -114,7 +114,7 @@
   overflow: auto;
 }
 
-#focuspane p {
+.FocusPane p {
   margin-left: 20px;
   margin-right: 20px;
   margin-top: 0.5em;
@@ -122,12 +122,12 @@
   text-indent: 1.5em;
 }
 
-#focuspane a {
+.FocusPane a {
   text-decoration: none;
   color: #A30; /* inherit? */
 }
 
-#focuspane a:hover {
+.FocusPane a:hover {
   text-decoration: underline;
   color: #A30;
 }
