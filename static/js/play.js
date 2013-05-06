@@ -4,6 +4,8 @@ var connected = false;
 var everconnected = false;
 
 var uiprefs = {
+    leftright_percent: 75,
+    updown_percent: 70,
     smooth_scroll: true
 };
 
@@ -17,6 +19,12 @@ var KEY_UP = 38;
 var KEY_DOWN = 40;
 
 var NBSP = '\u00A0';
+
+function collate_uiprefs() {
+    for (var key in db_uiprefs) {
+        uiprefs[key] = db_uiprefs[key];
+    }
+}
 
 function build_page_structure() {
     /* Clear out the body from the play.html template. */
@@ -62,6 +70,12 @@ function build_page_structure() {
     $('#submain').append(bottomcol);
 
     toolpane_set_world('(In transition)', NBSP, NBSP);
+
+    /* Apply the current ui layout preferences. */
+    $('#topcol').css({ height: uiprefs.updown_percent+'%' });
+    $('#bottomcol').css({ height: (100-uiprefs.updown_percent)+'%' });
+    $('#leftcol').css({ width: uiprefs.leftright_percent+'%' });
+    $('#rightcol').css({ width: (100-uiprefs.leftright_percent)+'%' });
 }
 
 function build_focuspane(contentls)
@@ -380,53 +394,57 @@ function evhan_input_keydown(ev) {
    Divert the enter/return key to submit a line of input.
 */
 function evhan_input_keypress(ev) {
-  var keycode = 0;
-  if (ev) keycode = ev.which;
-  if (!keycode) return true;
-
-  if (keycode == KEY_RETURN) {
-    submit_line_input(this.value);
-    return false;
-  }
-
-  return true;
+    var keycode = 0;
+    if (ev) keycode = ev.which;
+    if (!keycode) return true;
+    
+    if (keycode == KEY_RETURN) {
+        submit_line_input(this.value);
+        return false;
+    }
+    
+    return true;
 }
 
 
 function handle_leftright_resize(ev, ui) {
-  var parentwidth = $('#submain').width();
-  $('#rightcol').css({ width: parentwidth - ui.size.width });
+    var parentwidth = $('#submain').width();
+    $('#rightcol').css({ width: parentwidth - ui.size.width });
 }
 
 function handle_leftright_doneresize(ev, ui) {
-  var parentwidth = $('#submain').width();
-  var percent = 100.0 * ui.size.width / parentwidth;
-  if (percent < 25)
-    percent = 25;
-  if (percent > 85)
-    percent = 85;
-  var otherpercent = 100.0 - percent;
-  $('#leftcol').css({ width: percent+'%' });
-  $('#rightcol').css({ width: otherpercent+'%' });
-  /* ### save leftright percent preference, int() */
+    var parentwidth = $('#submain').width();
+    var percent = 100.0 * ui.size.width / parentwidth;
+    if (percent < 25)
+        percent = 25;
+    if (percent > 85)
+        percent = 85;
+    var otherpercent = 100.0 - percent;
+    $('#leftcol').css({ width: percent+'%' });
+    $('#rightcol').css({ width: otherpercent+'%' });
+
+    uiprefs.leftright_percent = Math.round(percent);
+    /*### send notification to server */
 }
 
 function handle_updown_resize(ev, ui) {
-  var parentheight = $('#submain').height();
-  $('#bottomcol').css({ height: parentheight - ui.size.height });
+    var parentheight = $('#submain').height();
+    $('#bottomcol').css({ height: parentheight - ui.size.height });
 }
 
 function handle_updown_doneresize(ev, ui) {
-  var parentheight = $('#submain').height();
-  var percent = 100.0 * ui.size.height / parentheight;
-  if (percent < 25)
-    percent = 25;
-  if (percent > 85)
-    percent = 85;
-  var otherpercent = 100.0 - percent;
-  $('#topcol').css({ height: percent+'%' });
-  $('#bottomcol').css({ height: otherpercent+'%' });
-  /* ### save updown percent preference, int() */
+    var parentheight = $('#submain').height();
+    var percent = 100.0 * ui.size.height / parentheight;
+    if (percent < 25)
+        percent = 25;
+    if (percent > 85)
+        percent = 85;
+    var otherpercent = 100.0 - percent;
+    $('#topcol').css({ height: percent+'%' });
+    $('#bottomcol').css({ height: otherpercent+'%' });
+    
+    uiprefs.updown_percent = Math.round(percent);
+    /*### send notification to server */
 }
 
 
@@ -494,6 +512,7 @@ function defer_func(func)
 
 /* The page-ready handler. Like onload(), but better, I'm told. */
 $(document).ready(function() {
+    collate_uiprefs();
     build_page_structure();
     setup_event_handlers();
     open_websocket();

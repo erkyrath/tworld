@@ -315,7 +315,13 @@ class PlayHandler(MyRequestHandler):
         if not self.twsession:
             self.redirect('/')
             return
-        self.render('play.html')
+        uiprefs = {}
+        if self.application.mongodb is not None:
+            cursor = self.application.mongodb.playprefs.find({'uid':self.twsession['uid']})
+            while (yield cursor.fetch_next):
+                pref = cursor.next_object()
+                uiprefs[pref['key']] = pref['val']
+        self.render('play.html', uiprefs=json.dumps(uiprefs))
         
 class TopPageHandler(MyRequestHandler):
     """Handler for miscellaneous top-level pages ("about", etc.)
