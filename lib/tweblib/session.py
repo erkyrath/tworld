@@ -114,8 +114,10 @@ class SessionMgr(object):
         if not uid:
             raise MessageException('Unable to create player.')
 
+        # Create the playstate entry.
+        
         playstate = {
-            '_id': player['_id'],
+            '_id': uid,
             'iid': None,
             'locale': None,
             'focus': None,
@@ -125,6 +127,18 @@ class SessionMgr(object):
         if not uid:
             raise MessageException('Unable to create playstate.')
 
+        # Create a personal scope for the player.
+        scope = {
+            'type': 'pers',
+            'uid': uid,
+            }
+    
+        scid = yield motor.Op(self.app.mongodb.scopes.insert, scope)
+        yield motor.Op(self.app.mongodb.players.update,
+                       {'_id':uid},
+                       {'$set': {'scid': scid}})
+        
+        # Create a sign-in session too, and we're done.
         sessionid = yield tornado.gen.Task(self.create_session, handler, uid, email, name)
         return sessionid
         
