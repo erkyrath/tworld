@@ -92,6 +92,8 @@ class SessionMgr(object):
         if (resemail):
             raise MessageException('That email address is already registered.')
 
+        # Both the salt and password strings are stored as bytes, although
+        # they'll really be ascii hex digits.
         pwsalt = self.random_bytes(8)
         saltedpw = pwsalt + b':' + password
         cryptpw = hashlib.sha1(saltedpw).hexdigest().encode()
@@ -104,9 +106,25 @@ class SessionMgr(object):
             'createtime': datetime.datetime.now(),
             }
 
+        playerfields = yield motor.Op(self.app.mongodb.config.find_one, {'key':'playerfields'})
+        if playerfields:
+            player.update(playerfields)
+
         uid = yield motor.Op(self.app.mongodb.players.insert, player)
         if not uid:
             raise MessageException('Unable to create player.')
+
+        playstate = {
+            '_id': player['_id'],
+            'iid': None,
+            'locale': None,
+            'focus': None,
+            }
+        
+        uid = yield motor.Op(self.app.mongodb.playstate.insert, playstate)
+        if not uid:
+            raise MessageException('Unable to create playstate.')
+
         sessionid = yield tornado.gen.Task(self.create_session, handler, uid, email, name)
         return sessionid
         
