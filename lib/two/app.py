@@ -9,6 +9,8 @@ import two.webconn
 import two.playconn
 import two.mongomgr
 
+import motor
+
 from twcommon import wcproto
 
 class Tworld(object):
@@ -187,8 +189,11 @@ class Tworld(object):
 
         if cmd == 'uiprefs':
             ### Could we handle this in tweb? I guess, if we cared.
-            self.log.info('### Player set uiprefs %s', obj.map.__dict__)
-            ### write them to the database, when we have a database handle
+            for (key, val) in obj.map.__dict__.items():
+                res = yield motor.Op(self.mongodb.playprefs.update,
+                                     {'uid':conn.uid, 'key':key},
+                                     {'uid':conn.uid, 'key':key, 'val':val},
+                                     upsert=True)
             return
         
         raise Exception('Unknown player command "%s": %s' % (cmd, obj))
