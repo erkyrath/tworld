@@ -32,13 +32,13 @@ class ConnectionTable(object):
     def as_dict(self):
         return dict(self.table)
 
-    def add(self, handler, uid, email):
+    def add(self, handler, uid, email, sessionid):
         """Add the handler to the table, as a new Connection. It will
         initially be unavailable. Returns the Connection.
         """
         assert isinstance(handler, tweblib.handlers.PlayWebSocketHandler)
         assert handler.twconnid, 'handler.twconnid is not positive'
-        conn = Connection(handler, uid, email)
+        conn = Connection(handler, uid, email, sessionid)
         self.table[conn.connid] = conn
         return conn
 
@@ -61,10 +61,11 @@ class ConnectionTable(object):
         del self.table[handler.twconnid]
         
 class Connection(object):
-    def __init__(self, handler, uid, email):
+    def __init__(self, handler, uid, email, sessionid):
         self.handler = handler
         self.connid = handler.twconnid
         self.uid = uid
+        self.sessionid = sessionid
         self.email = email
         self.starttime = datetime.datetime.now()
         self.lastmsgtime = self.starttime   # last user activity
@@ -88,6 +89,7 @@ class Connection(object):
         return datetime.timedelta(seconds=int(delta.total_seconds()))
 
     def close(self):
+        ### Maybe this should send a specifiable error message first
         if self.handler:
             self.handler.close()
         

@@ -19,7 +19,7 @@ Admin View
 <ul>
 {% for (id, conn) in sorted(conntable.items()) %}
   <li>{{ conn.email}}, on {{ conn.uptime() }}, idle {{ conn.idletime() }} 
-      (connid {{ id }}, uid {{ conn.uid }})
+      (connid {{ id }}, uid {{ conn.uid }}, sessionid ...{{ conn.sessionid[-4:] }})
   {% if not conn.available %} (unavailable) {% end %}
 {% end %}
 </ul>

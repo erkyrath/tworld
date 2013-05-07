@@ -297,7 +297,17 @@ class LogOutHandler(MyRequestHandler):
     @tornado.gen.coroutine
     def get(self):
         yield tornado.gen.Task(self.find_current_session)
+        # End this sign-in session and kill the cookie.
         self.application.twsessionmgr.remove_session(self)
+        # Clobber any open web sockets on this session. (But the player
+        # might still be signed in on a different session.)
+        ls = self.application.twconntable.as_dict().values()
+        ls = [ conn for conn in ls if conn.sessionid == self.twsession['sid'] ]
+        for conn in ls:
+            try:
+                conn.close()
+            except Exception as ex:
+                pass
         # Now reload the session status. Also override the out-of-date
         # get_template_namespace entries.
         yield tornado.gen.Task(self.find_current_session)
@@ -389,7 +399,7 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
 
         # Add it to the connection table.
         try:
-            self.twconn = self.application.twconntable.add(self, uid, email)
+            self.twconn = self.application.twconntable.add(self, uid, email, self.twsession['sid'])
         except Exception as ex:
             self.write_tw_error('Unable to add connection: %s' % (ex,))
             self.close()
