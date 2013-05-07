@@ -72,6 +72,17 @@ def define_commands():
                     pass
         app.log.warning('Tweb has disconnected; now %d connections remain', len(app.playconns.as_dict()))
     
+    @command('logplayerconntable', isserver=True, noneedmongo=True)
+    def cmd_logplayerconntable(app, cmd, stream):
+        app.playconns.dumplog()
+        
+    @command('refreshconn', isserver=True, noneedmongo=True)
+    def cmd_refreshconn(app, cmd, stream):
+        # Refresh one connection (not all the player's connections!)
+        conn = app.playconns.get(cmd.connid)
+        msg = {'cmd':'refresh', 'locale':'You are in a place.', 'focus':None, 'world':{'world':'Start', 'scope':'(Personal instance)', 'creator':'Created by Somebody'}}
+        conn.write(msg)
+    
     @command('playeropen', noneedmongo=True, preconnection=True)
     def cmd_playeropen(app, cmd, conn):
         assert conn is None, 'playeropen command with connection not None'
