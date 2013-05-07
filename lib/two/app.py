@@ -34,6 +34,7 @@ class Tworld(object):
         tornado.ioloop.IOLoop.instance().add_callback(self.init_timers)
         
     def init_timers(self):
+        self.ioloop = tornado.ioloop.IOLoop.current()
         self.webconns.listen()
         self.mongomgr.init_timers()
 
@@ -45,7 +46,7 @@ class Tworld(object):
         self.queue.append( (obj, connid, twwcid, datetime.datetime.now()) )
         
         if not self.commandbusy:
-            tornado.ioloop.IOLoop.instance().add_callback(self.pop_queue)
+            self.ioloop.add_callback(self.pop_queue)
 
     @tornado.gen.coroutine
     def pop_queue(self):
@@ -54,7 +55,7 @@ class Tworld(object):
             return
 
         if not self.queue:
-            self.log.warning('### queue is empty now')
+            self.log.warning('pop_queue called when already empty!')
             return
 
         self.commandbusy = True
@@ -69,7 +70,7 @@ class Tworld(object):
             self.log.error('error handling command: %s', obj, exc_info=True)
 
         endtime = datetime.datetime.now()
-        self.log.info('finished command in %.3f ms (queued for %.3f ms)',
+        self.log.info('Finished command in %.3f ms (queued for %.3f ms)',
                       (endtime-starttime).total_seconds() * 1000,
                       (starttime-queuetime).total_seconds() * 1000)
         
@@ -77,11 +78,12 @@ class Tworld(object):
 
         # Keep popping, if the queue is nonempty.
         if self.queue:
-            tornado.ioloop.IOLoop.instance().add_callback(self.pop_queue)
+            self.ioloop.add_callback(self.pop_queue)
 
     @tornado.gen.coroutine
     def handle_command(self, obj, connid, twwcid, queuetime):
         self.log.info('### handling message %s', obj)
+        ### You would love some kind of command dispatcher here.
 
         if connid == 0:
             # A message not from any player!
