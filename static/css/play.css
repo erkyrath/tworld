@@ -207,8 +207,6 @@
   font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
   font-weight: 100;
   background: #D2D2B6;
-  background: -webkit-linear-gradient(#E8E8C4, #D2D2B6, #D2D2B6, #D2D2B6, #C4C4A8);
-  background: -moz-linear-gradient(#E8E8C4, #D2D2B6, #D2D2B6, #D2D2B6, #C4C4A8);
   border-top-right-radius: 7px;
   border-bottom-left-radius: 4px;
   border-bottom: 1px solid #AAA;
@@ -232,8 +230,6 @@
   font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
   font-weight: 100;
   background: #D2D2B6;
-  background: -webkit-linear-gradient(#E8E8C4, #D2D2B6, #D2D2B6, #D2D2B6, #C4C4A8);
-  background: -moz-linear-gradient(#E8E8C4, #D2D2B6, #D2D2B6, #D2D2B6, #C4C4A8);
   border-top-left-radius: 7px;
   border-top-right-radius: 7px;
   border-bottom: 1px solid #AAA;
