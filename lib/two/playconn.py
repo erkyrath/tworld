@@ -1,5 +1,7 @@
 from bson.objectid import ObjectId
 
+from twcommon import wcproto
+
 class PlayerConnectionTable(object):
     def __init__(self, app):
         # Keep a link to the owning application.
@@ -23,7 +25,7 @@ class PlayerConnectionTable(object):
 
     def add(self, connid, uidstr, email, stream):
         assert connid not in self.map, 'Connection ID already in use!'
-        conn = PlayerConnection(connid, ObjectId(uidstr), email, stream)
+        conn = PlayerConnection(self, connid, ObjectId(uidstr), email, stream)
         self.map[connid] = conn
         return conn
 
@@ -40,11 +42,20 @@ class PlayerConnectionTable(object):
             self.log.debug(' %d: email %s, uid %s (twwcid %d)', connid, conn.email, conn.uid, conn.twwcid)
 
 class PlayerConnection(object):
-    def __init__(self, connid, uid, email, stream):
+    def __init__(self, table, connid, uid, email, stream):
+        self.table = table
         self.connid = connid
         self.uid = uid   # an ObjectId
         self.email = email  # used only for log messages, not DB work
         self.stream = stream   # WebConnIOStream that handles this connection
         self.twwcid = stream.twwcid
         
-
+    def write(self, msg):
+        """Shortcut to send a message to a player via this connection.
+        """
+        try:
+            self.stream.write(wcproto.message(self.connid, msg))
+            return True
+        except Exception as ex:
+            self.table.log.error('Unable to write to %d: %s', self.connid, ex)
+            return False

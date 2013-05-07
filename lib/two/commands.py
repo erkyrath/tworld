@@ -64,9 +64,6 @@ def define_commands():
                 val = 'You say, \u201C%s\u201D' % (cmd.text,)
             else:
                 val = '%s says, \u201C%s\u201D' % (playername, cmd.text,)
-            try:
-                oconn.stream.write(wcproto.message(oconn.connid, {'cmd':'event', 'text':val}))
-            except Exception as ex:
-                app.log.error('Unable to write to %d: %s', oconn.connid, ex)
+            oconn.write({'cmd':'event', 'text':val})
 
     return all_commands
