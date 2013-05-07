@@ -147,39 +147,6 @@ class Tworld(object):
 
         conn = self.playconns.get(connid)
 
-        """####
-        if conn is None:
-            # Newly-established connection. Only 'playeropen' is acceptable.
-            # (Another twwcid case, because there's no conn yet.)
-            stream = self.webconns.get(twwcid)
-            if not stream:
-                self.log.warning('Message from completely unrecognized stream.')
-                return
-            if obj.cmd != 'playeropen':
-                # Pass back an error.
-                try:
-                    stream.write(wcproto.message(connid, {'cmd':'error', 'text':'Tworld has not yet registered this connection.'}))
-                except:
-                    pass
-                return
-            if not self.mongodb:
-                # Reject the players anyhow.
-                try:
-                    stream.write(wcproto.message(0, {'cmd':'playernotok', 'connid':connid, 'text':'The database is not available.'}))
-                except:
-                    pass
-                return
-            # Add entry to player connection table.
-            try:
-                conn = self.playconns.add(connid, obj.uid, obj.email, stream)
-                conn.stream.write(wcproto.message(0, {'cmd':'playerok', 'connid':connid}))
-                self.queue_command({'cmd':'refreshconn', 'connid':connid}, 0, 0)
-                self.log.info('Player %s has connected (uid %s)', conn.email, conn.uid)
-            except Exception as ex:
-                self.log.error('Failed to ack new playeropen: %s', ex)
-            return
-        ####"""
-        
         # Command from a player (via conn). A MessageException here passes
         # an error back to the player.
 

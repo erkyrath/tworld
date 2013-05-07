@@ -20,11 +20,11 @@ class Command:
         return '<Command "%s">' % (self.name,)
 
 
-def command(name, isserver=False, noneedmongo=False, preconnection=False):
+def command(name, **kwargs):
     """Decorator.
     """
     def wrap(func):
-        cmd = Command(name, func, isserver=isserver, noneedmongo=noneedmongo, preconnection=preconnection)
+        cmd = Command(name, func, **kwargs)
         if name in Command.all_commands:
             raise Exception('Command name defined twice: "%s"', name)
         Command.all_commands[name] = cmd
