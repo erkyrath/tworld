@@ -188,7 +188,7 @@ class ServerMgr(object):
                 # Pass the raw message along to the client. (As UTF-8.)
                 try:
                     conn = self.app.twconntable.find(connid)
-                    if not conn.available:
+                    if not conn.available and obj.cmd != 'error':
                         raise Exception('Connection not available')
                     conn.handler.write_message(raw.decode())
                 except Exception as ex:

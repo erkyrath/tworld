@@ -197,6 +197,7 @@ class Tworld(object):
                 # stream in through the object.)
                 if not cmd.preconnection:
                     raise MessageException('Tworld has not yet registered this connection.')
+                assert cmd.name=='playeropen', 'Command not playeropen should have already been rejected'
                 stream = self.webconns.get(twwcid)
                 if not stream:
                     raise MessageException('Message from completely unrecognized stream')

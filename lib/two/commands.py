@@ -54,7 +54,6 @@ def define_commands():
         cmd._stream.write(wcproto.message(0, {'cmd':'playerok', 'connid':connid}))
         app.queue_command({'cmd':'refreshconn', 'connid':connid}, 0, 0)
         app.log.info('Player %s has connected (uid %s)', conn.email, conn.uid)
-        return str(conn) ###
 
     @command('playerclose')
     def cmd_playerclose(app, cmd, conn):
