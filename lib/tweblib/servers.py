@@ -50,6 +50,16 @@ class ServerMgr(object):
         res = tornado.ioloop.PeriodicCallback(self.monitor_tworld_status, 5000)
         res.start()
 
+    def tworld_write(self, connid, msg):
+        """Shortcut for writing to the tworld process. May raise exceptions.
+        """
+        if not self.tworldavailable:
+            raise Exception('Tworld service is not available.')
+        if type(msg) is dict:
+            val = wcproto.message(connid, msg)
+        else:
+            val = wcproto.message(connid, msg, alreadyjson=True)
+        self.tworld.write(val)
 
     @tornado.gen.coroutine
     def monitor_mongo_status(self):
@@ -158,6 +168,9 @@ class ServerMgr(object):
                 continue
             
             (connid, raw, obj) = tup
+
+            ### The code below needs to be split out into a function.
+            ### "continue" everywhere sucks.
 
             # Special case: if we're connecting, only accept 'connectok'
             if not self.tworldavailable:

@@ -367,7 +367,7 @@ class AdminMainHandler(MyRequestHandler):
             raise tornado.web.HTTPError(403, 'You do not have admin access.')
         if (self.get_argument('playerconntable', None)):
             msg = { 'cmd':'logplayerconntable' }
-            self.application.twservermgr.tworld.write(wcproto.message(0, msg))
+            self.application.twservermgr.tworld_write(0, msg)
         self.redirect('/admin')
 
 class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
@@ -408,7 +408,7 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
         # a reply, at which point we'll mark it available.
         try:
             msg = { 'cmd':'playeropen', 'uid':str(uid), 'email':email }
-            self.application.twservermgr.tworld.write(wcproto.message(self.twconnid, msg))
+            self.application.twservermgr.tworld_write(self.twconnid, msg)
         except Exception as ex:
             self.application.twlog.error('Could not write playeropen message to tworld socket: %s', ex)
             self.write_tw_error('Unable to register connection with service: %s' % (ex,))
@@ -442,9 +442,10 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
             self.write_tw_error('Message was too long.')
             return
 
-        # Pass it along to tworld.
+        # Pass it along to tworld. (The tworld_write method is smart when
+        # handed a string containing JSON data.)
         try:
-            self.application.twservermgr.tworld.write(wcproto.message(self.twconnid, msg, alreadyjson=True))
+            self.application.twservermgr.tworld_write(self.twconnid, msg)
         except Exception as ex:
             self.application.twlog.error('Could not pass message to tworld socket: %s', ex)
             self.write_tw_error('Unable to pass command to service: %s' % (ex,))
@@ -454,7 +455,8 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
         # Tell tworld that the connection is closed. (Maybe it never
         # became available, but we'll send the message anyway.)
         try:
-            self.application.twservermgr.tworld.write(wcproto.message(self.twconnid, {'cmd':'playerclose'}))
+            msg = {'cmd':'playerclose'}
+            self.application.twservermgr.tworld_write(self.twconnid, msg)
         except Exception as ex:
             self.application.twlog.error('Could not write playerclose message to tworld socket: %s', ex)
         # Remove the connection from our table.
