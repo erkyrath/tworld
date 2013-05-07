@@ -209,7 +209,6 @@ class Tworld(object):
                 raise MessageException('Tworld has lost contact with the database.')
 
             res = yield tornado.gen.Task(cmd.func, self, obj, conn)
-            self.log.info('### command complete, returned %s', res)
 
         except MessageException as ex:
             # A MessageException is worth logging and sending back to the
