@@ -55,6 +55,8 @@ class MyHandlerMixin:
         Add session-related entries to the template namespace. This is
         required for all the handlers that use the "base.html" template,
         which is all of them.
+        (I suppose I could handle this by the right super implementation
+        of get_template_namespace.)
         """
         map['twsessionstatus'] = self.twsessionstatus
         map['twsession'] = self.twsession
@@ -87,16 +89,14 @@ class MyHandlerMixin:
 class MyErrorHandler(MyHandlerMixin, tornado.web.ErrorHandler):
     """Customization of tornado's ErrorHandler."""
     def get_template_namespace(self):
-        # Call the appropriate super.
-        map = tornado.web.ErrorHandler.get_template_namespace(self)
+        map = super().get_template_namespace()
         map = self.extend_template_namespace(map)
         return map
 
 class MyStaticFileHandler(MyHandlerMixin, tornado.web.StaticFileHandler):
     """Customization of tornado's StaticFileHandler."""
     def get_template_namespace(self):
-        # Call the appropriate super.
-        map = tornado.web.ErrorHandler.get_template_namespace(self)
+        map = super().get_template_namespace()
         map = self.extend_template_namespace(map)
         return map
     
@@ -105,8 +105,7 @@ class MyRequestHandler(MyHandlerMixin, tornado.web.RequestHandler):
     page-specific handlers.
     """
     def get_template_namespace(self):
-        # Call the appropriate super.
-        map = tornado.web.RequestHandler.get_template_namespace(self)
+        map = super().get_template_namespace()
         map = self.extend_template_namespace(map)
         return map
     
@@ -191,8 +190,7 @@ class MainHandler(MyRequestHandler):
         self.redirect('/play')
 
     def get_template_namespace(self):
-        # Call super.
-        map = MyRequestHandler.get_template_namespace(self)
+        map = super().get_template_namespace()
         # Add a couple of default values. The handlers may or may not override
         # these Nones.
         map['formerror'] = None
@@ -278,8 +276,7 @@ class RegisterHandler(MyRequestHandler):
         self.redirect('/play')
         
     def get_template_namespace(self):
-        # Call super.
-        map = MyRequestHandler.get_template_namespace(self)
+        map = super().get_template_namespace()
         # Add a couple of default values. The handlers may or may not override
         # these Nones.
         map['formerror'] = None
