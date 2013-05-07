@@ -74,17 +74,19 @@ class MyHandlerMixin:
             error_text = 'Not permitted'
             if (exc_info):
                 error_text = str(exc_info[1])
-            self.render('error.html', status_code=403, exception=error_text)
+            self.render('error.html', status_code=403, exctitle=None, exception=error_text)
             return
         exception = ''
+        exctitle = None
         if (error_text):
             exception = error_text
         if (exc_info):
+            exctitle = str(exc_info[1])
             ls = [ ln for ln in traceback.format_exception(*exc_info) ]
             if (exception):
                 exception = exception + '\n'
             exception = exception + ''.join(ls)
-        self.render('error.html', status_code=status_code, exception=exception)
+        self.render('error.html', status_code=status_code, exctitle=exctitle, exception=exception)
 
 class MyErrorHandler(MyHandlerMixin, tornado.web.ErrorHandler):
     """Customization of tornado's ErrorHandler."""

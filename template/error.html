@@ -6,7 +6,9 @@ Error {{ status_code }}
 
 {% block body %}
 
-<h2>Error {{ status_code }}</h2>
+<h2>Error {{ status_code }}
+{% if exctitle %} : {{ exctitle }} {% end %}
+</h2>
 
 {% if exception %}
 <pre style="margin-left: 20px;">
