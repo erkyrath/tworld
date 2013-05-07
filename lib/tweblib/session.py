@@ -108,7 +108,7 @@ class SessionMgr(object):
 
         playerfields = yield motor.Op(self.app.mongodb.config.find_one, {'key':'playerfields'})
         if playerfields:
-            player.update(playerfields)
+            player.update(playerfields['val'])
 
         uid = yield motor.Op(self.app.mongodb.players.insert, player)
         if not uid:
