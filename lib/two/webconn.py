@@ -98,8 +98,8 @@ class WebConnIOStream(tornado.iostream.IOStream):
             # Say goodbye to all connections on this stream!
             # But we do this as a queued command. Until it comes around,
             # we might see some write failures.
-            obj = types.SimpleNamespace(cmd='disconnect', twwcid=self.twwcid)
-            self.twtable.app.queue_command(obj, 0, 0)
+            self.twtable.app.queue_command(
+                {'cmd':'disconnect', 'twwcid':self.twwcid}, 0, 0)
         except:
             pass
         self.twtable.log.error('Closed: %s', self)

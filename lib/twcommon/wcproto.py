@@ -17,6 +17,12 @@ import json
 HEADER_LENGTH = 8  # two four-byte fields
 
 def namespace_wrapper(map):
+    """
+    Convert a dict to a SimpleNamespace. If you feed in {'key':'val'},
+    you'll get out an object such that o.key is 'val'.
+    (It's legal to feed in dict keys like 'x.y-z', but the result
+    will have to be read using getattr().)
+    """
     return types.SimpleNamespace(**map)
 
 def check_buffer(buf, namespace=False):

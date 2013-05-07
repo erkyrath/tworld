@@ -38,6 +38,8 @@ class Tworld(object):
         self.mongomgr.init_timers()
 
     def queue_command(self, obj, connid, twwcid):
+        if type(obj) is dict:
+            obj = wcproto.namespace_wrapper(obj)
         # If this command was caused by a message from tweb, twwcid is
         # its ID number. We will rarely need this.
         self.log.info('### received message %s', obj)
@@ -107,6 +109,7 @@ class Tworld(object):
                         continue
                     conn = self.playconns.add(connobj.connid, connobj.uid, connobj.email, stream)
                     stream.write(wcproto.message(0, {'cmd':'playerok', 'connid':conn.connid}))
+                    self.queue_command({'cmd':'refreshconn', 'connid':conn.connid}, 0, 0)
                     self.log.info('Player %s has reappeared (uid %s)', conn.email, conn.uid)
                 return
             if cmd == 'disconnect':
@@ -150,6 +153,7 @@ class Tworld(object):
             try:
                 conn = self.playconns.add(connid, obj.uid, obj.email, stream)
                 conn.stream.write(wcproto.message(0, {'cmd':'playerok', 'connid':connid}))
+                self.queue_command({'cmd':'refreshconn', 'connid':connid}, 0, 0)
                 self.log.info('Player %s has connected (uid %s)', conn.email, conn.uid)
             except Exception as ex:
                 self.log.error('Failed to ack new playeropen: %s', ex)
