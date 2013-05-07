@@ -95,7 +95,6 @@ class Tworld(object):
         throws a full stack trace into the logs.
         """
         self.log.info('### handling message %s', obj)
-        ### You would love some kind of command dispatcher here.
 
         if connid == 0:
             # A message not from any player!
