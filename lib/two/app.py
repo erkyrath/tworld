@@ -146,7 +146,8 @@ class Tworld(object):
             raise Exception('Unknown server command "%s": %s' % (cmd, obj))
 
         conn = self.playconns.get(connid)
-        
+
+        """####
         if conn is None:
             # Newly-established connection. Only 'playeropen' is acceptable.
             # (Another twwcid case, because there's no conn yet.)
@@ -177,6 +178,7 @@ class Tworld(object):
             except Exception as ex:
                 self.log.error('Failed to ack new playeropen: %s', ex)
             return
+        ####"""
         
         # Command from a player (via conn). A MessageException here passes
         # an error back to the player.
@@ -189,7 +191,19 @@ class Tworld(object):
             if cmd.isserver:
                 raise MessageException('Command may not be invoked by a player: "%s"' % (obj.cmd,))
 
-            if cmd.needsmongo and not self.mongodb:
+            if not conn:
+                # Newly-established connection. Only 'playeropen' will be
+                # accepted. (Another twwcid case; we'll have to sneak the
+                # stream in through the object.)
+                if not cmd.preconnection:
+                    raise MessageException('Tworld has not yet registered this connection.')
+                stream = self.webconns.get(twwcid)
+                if not stream:
+                    raise MessageException('Message from completely unrecognized stream')
+                obj._connid = connid
+                obj._stream = stream
+
+            if not cmd.noneedmongo and not self.mongodb:
                 # Guess the database access is not going to work.
                 raise MessageException('Tworld has lost contact with the database.')
 
@@ -197,9 +211,18 @@ class Tworld(object):
             self.log.info('### command complete, returned %s', res)
 
         except MessageException as ex:
+            # A MessageException is worth logging and sending back to the
+            # player, but not splatting out a stack trace.
             self.log.warning('Error message running "%s": %s', obj.cmd, str(ex))
             try:
-                conn.stream.write(wcproto.message(connid, {'cmd':'error', 'text':str(ex)}))
+                # This is slightly hairy, because various error paths can
+                # arrive here with no conn or no connid.
+                if conn:
+                    conn.write({'cmd':'error', 'text':str(ex)})
+                else:
+                    # connid may be zero or nonzero, really
+                    stream = self.webconns.get(twwcid)
+                    stream.write(wcproto.message(connid, {'cmd':'error', 'text':str(ex)}))
             except Exception as ex:
                 pass
 
