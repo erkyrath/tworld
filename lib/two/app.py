@@ -107,43 +107,29 @@ class Tworld(object):
                 # (This is the rare case where we use twwcid; we have no
                 # other path back.)
                 stream = self.webconns.get(twwcid)
-                if not stream:
-                    self.log.warning('Server message from completely unrecognized stream.')
-                    return
+
+            try:
+                if twwcid and not stream:
+                    raise MessageException('Server message from completely unrecognized stream.')
                 
-            cmd = obj.cmd
-            if cmd == 'connect':
-                assert stream is not None, 'Tweb connect command from no stream.'
-                stream.write(wcproto.message(0, {'cmd':'connectok'}))
-                for connobj in obj.connections:
-                    if not self.mongodb:
-                        # Reject the players.
-                        stream.write(wcproto.message(0, {'cmd':'playernotok', 'connid':connobj.connid, 'text':'The database is not available.'}))
-                        continue
-                    conn = self.playconns.add(connobj.connid, connobj.uid, connobj.email, stream)
-                    stream.write(wcproto.message(0, {'cmd':'playerok', 'connid':conn.connid}))
-                    self.queue_command({'cmd':'refreshconn', 'connid':conn.connid}, 0, 0)
-                    self.log.info('Player %s has reappeared (uid %s)', conn.email, conn.uid)
-                return
-            if cmd == 'disconnect':
-                for (connid, conn) in self.playconns.as_dict().items():
-                    if conn.twwcid == obj.twwcid:
-                        try:
-                            self.playconns.remove(connid)
-                        except:
-                            pass
-                self.log.warning('Tweb has disconnected; now %d connections remain', len(self.playconns.as_dict()))
-                return
-            if cmd == 'logplayerconntable':
-                self.playconns.dumplog()
-                return
-            if cmd == 'refreshconn':
-                # Refresh one connection (not all the player's connections!)
-                conn = self.playconns.get(obj.connid)
-                newobj = {'cmd':'refresh', 'locale':'You are in a place.', 'focus':None, 'world':{'world':'Start', 'scope':'(Personal instance)', 'creator':'Created by Somebody'}}
-                conn.stream.write(wcproto.message(obj.connid, newobj))
-                return
-            raise Exception('Unknown server command "%s": %s' % (cmd, obj))
+                cmd = self.all_commands.get(obj.cmd, None)
+                if not cmd:
+                    raise MessageException('Unknown server command: "%s"' % (obj.cmd,))
+            
+                if not cmd.isserver:
+                    raise MessageException('Command must be invoked by a player: "%s"' % (obj.cmd,))
+
+                if not cmd.noneedmongo and not self.mongodb:
+                    # Guess the database access is not going to work.
+                    raise MessageException('Tworld has lost contact with the database.')
+                
+                res = yield tornado.gen.Task(cmd.func, self, obj, stream)
+                
+            except MessageException as ex:
+                self.log.warning('Error message running "%s": %s', obj.cmd, str(ex))
+
+            # End of connid==0 case.
+            return 
 
         conn = self.playconns.get(connid)
 

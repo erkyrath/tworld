@@ -528,6 +528,8 @@ function evhan_websocket_message(ev) {
 
 function websocket_send_json(obj) {
     if (!connected) {
+        /*### Maybe only show this error once. */
+        eventpane_add('Error: You are not connected to the server.', 'EventError');
         console.log('websocket not connected');
         return;
     }

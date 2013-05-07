@@ -21,7 +21,7 @@ class Command:
 
 
 def command(name, **kwargs):
-    """Decorator.
+    """Decorator for command functions.
     """
     def wrap(func):
         cmd = Command(name, func, **kwargs)
@@ -35,8 +35,43 @@ def define_commands():
     """
     Define all the commands which will be used by the server. Return them
     in a dict.
+
+    Note that the third argument will be a IOStream for server commands,
+    but a PlayerConnection for player commands. Never the twain shall
+    meet.
+
+    These functions wind up as entries in the Command.all_commands dict.
+    The arguments to @command wind up as properties of the Command object
+    that wraps the function. Oh, and the function is always a
+    tornado.gen.coroutine -- you don't need to declare that.
     """
 
+    @command('connect', isserver=True, noneedmongo=True)
+    def cmd_connect(app, cmd, stream):
+        assert stream is not None, 'Tweb connect command from no stream.'
+        stream.write(wcproto.message(0, {'cmd':'connectok'}))
+
+        # Accept any connections that tweb is holding.
+        for connobj in cmd.connections:
+            if not app.mongodb:
+                # Reject the players.
+                stream.write(wcproto.message(0, {'cmd':'playernotok', 'connid':connobj.connid, 'text':'The database is not available.'}))
+                continue
+            conn = app.playconns.add(connobj.connid, connobj.uid, connobj.email, stream)
+            stream.write(wcproto.message(0, {'cmd':'playerok', 'connid':conn.connid}))
+            app.queue_command({'cmd':'refreshconn', 'connid':conn.connid}, 0, 0)
+            app.log.info('Player %s has reconnected (uid %s)', conn.email, conn.uid)
+
+    @command('disconnect', isserver=True, noneedmongo=True)
+    def cmd_disconnect(app, cmd, stream):
+        for (connid, conn) in app.playconns.as_dict().items():
+            if conn.twwcid == cmd.twwcid:
+                try:
+                    app.playconns.remove(connid)
+                except:
+                    pass
+        app.log.warning('Tweb has disconnected; now %d connections remain', len(app.playconns.as_dict()))
+    
     @command('playeropen', noneedmongo=True, preconnection=True)
     def cmd_playeropen(app, cmd, conn):
         assert conn is None, 'playeropen command with connection not None'
