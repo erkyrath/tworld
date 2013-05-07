@@ -99,10 +99,13 @@ class Tworld(object):
                 assert stream is not None, 'Tweb connect command from no stream.'
                 stream.write(wcproto.message(0, {'cmd':'connectok'}))
                 for connobj in obj.connections:
+                    if not self.mongodb:
+                        # Reject the players.
+                        stream.write(wcproto.message(0, {'cmd':'playernotok', 'connid':connobj.connid}))
+                        continue
                     conn = self.playconns.add(connobj.connid, connobj.uid, connobj.email, stream)
                     stream.write(wcproto.message(0, {'cmd':'playerok', 'connid':conn.connid}))
                     self.log.info('Player %s has reappeared (uid %s)', conn.email, conn.uid)
-                self.log.info('### sent playerok for %d players', len(obj.connections))
                 return
             if cmd == 'disconnect':
                 for (connid, conn) in self.playconns.as_dict().items():
@@ -134,6 +137,13 @@ class Tworld(object):
                 except:
                     pass
                 return
+            if not self.mongodb:
+                # Reject the players anyhow.
+                try:
+                    stream.write(wcproto.message(0, {'cmd':'playernotok', 'connid':connid}))
+                except:
+                    pass
+                return
             # Add entry to player connection table.
             try:
                 conn = self.playconns.add(connid, obj.uid, obj.email, stream)
@@ -146,6 +156,14 @@ class Tworld(object):
         # This message needs to do something. Something which may
         # involve a lot of database access.
         cmd = obj.cmd
+
+        if not self.mongodb:
+            # Guess the database access is not going to work.
+            try:
+                conn.stream.write(wcproto.message(connid, {'cmd':'error', 'text':'Tworld has lost contact with mongo.'}))
+            except Exception as ex:
+                pass
+            return
         
         if cmd == 'playerclose':
             self.log.info('Player %s has disconnected (uid %s)', conn.email, conn.uid)

@@ -185,6 +185,7 @@ class ServerMgr(object):
                 try:
                     cmd = obj.cmd
                     if cmd == 'playerok':
+                        # accept the connection
                         try:
                             conn = self.app.twconntable.find(obj.connid)
                             if conn.available:
@@ -193,6 +194,17 @@ class ServerMgr(object):
                             conn.available = True
                         except Exception as ex:
                             self.log.error('Unable to process playerok: %s', ex)
+                        continue
+                    if cmd == 'playernotok':
+                        # kill the connection
+                        try:
+                            conn = self.app.twconntable.find(obj.connid)
+                            if conn.available:
+                                raise Exception('Connection is already available')
+                            self.log.info('Player connection rejected by Tworld: %s (connid %d)', conn.email, conn.connid)
+                            conn.close()
+                        except Exception as ex:
+                            self.log.error('Unable to process playernotok: %s', ex)
                         continue
                     raise Exception('Not implemented')
                 except Exception as ex:
