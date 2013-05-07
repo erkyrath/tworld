@@ -42,7 +42,6 @@ class Tworld(object):
             obj = wcproto.namespace_wrapper(obj)
         # If this command was caused by a message from tweb, twwcid is
         # its ID number. We will rarely need this.
-        self.log.info('### received message %s', obj)
         self.queue.append( (obj, connid, twwcid, datetime.datetime.now()) )
         
         if not self.commandbusy:
@@ -123,6 +122,12 @@ class Tworld(object):
                 return
             if cmd == 'logplayerconntable':
                 self.playconns.dumplog()
+                return
+            if cmd == 'refreshconn':
+                # Refresh one connection (not all the player's connections!)
+                conn = self.playconns.get(obj.connid)
+                newobj = {'cmd':'refresh', 'locale':'You are in a place.', 'focus':None, 'world':{'world':'Start', 'scope':'(Personal instance)', 'creator':'Created by Somebody'}}
+                conn.stream.write(wcproto.message(obj.connid, newobj))
                 return
             raise Exception('Unknown server command "%s": %s' % (cmd, obj))
 

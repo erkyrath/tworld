@@ -510,10 +510,20 @@ function evhan_websocket_message(ev) {
         return;
     }
 
+    /*### build a command table!*/
     if (cmd == 'event')
-        eventpane_add(obj.text)
+        eventpane_add(obj.text);
+    if (cmd == 'refresh') {
+        localepane_set(obj.locale);
+        if (obj.focus)
+            focuspane_set(obj.focus);
+        else
+            focuspane_clear();
+        if (obj.world)
+            toolpane_set_world(obj.world.world, obj.world.scope, obj.world.creator);
+    }
     if (cmd == 'error')
-        eventpane_add('Error: ' + obj.text, 'EventError')
+        eventpane_add('Error: ' + obj.text, 'EventError');
 }
 
 function websocket_send_json(obj) {
