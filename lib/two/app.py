@@ -12,11 +12,16 @@ import two.mongomgr
 import motor
 
 from twcommon import wcproto
+from twcommon.excepts import MessageException
+
+import two.commands
 
 class Tworld(object):
     def __init__(self, opts):
         self.opts = opts
         self.log = logging.getLogger('tworld')
+
+        self.all_commands = two.commands.define_commands()
         
         # This will be self.mongomgr.mongo[mongo_database], when that's
         # available.
@@ -67,7 +72,7 @@ class Tworld(object):
         try:
             yield tornado.gen.Task(self.handle_command, obj, connid, twwcid, queuetime)
         except Exception as ex:
-            self.log.error('error handling command: %s', obj, exc_info=True)
+            self.log.error('Error handling command: %s', obj, exc_info=True)
 
         endtime = datetime.datetime.now()
         self.log.info('Finished command in %.3f ms (queued for %.3f ms)',
@@ -82,6 +87,13 @@ class Tworld(object):
 
     @tornado.gen.coroutine
     def handle_command(self, obj, connid, twwcid, queuetime):
+        """
+        Carry out a command. (Usually from a player, but sometimes generated
+        by the server itself.) 99% of tworld's work happens here.
+
+        Any exception raised by this function is considered serious, and
+        throws a full stack trace into the logs.
+        """
         self.log.info('### handling message %s', obj)
         ### You would love some kind of command dispatcher here.
 
@@ -166,18 +178,33 @@ class Tworld(object):
                 self.log.error('Failed to ack new playeropen: %s', ex)
             return
         
-        # This message needs to do something. Something which may
-        # involve a lot of database access.
-        cmd = obj.cmd
+        # Command from a player (via conn). A MessageException here passes
+        # an error back to the player.
 
-        if not self.mongodb:
-            # Guess the database access is not going to work.
+        try:
+            cmd = self.all_commands.get(obj.cmd, None)
+            if not cmd:
+                raise MessageException('Unknown player command: "%s"' % (obj.cmd,))
+
+            if cmd.isserver:
+                raise MessageException('Command may not be invoked by a player: "%s"' % (obj.cmd,))
+
+            if cmd.needsmongo and not self.mongodb:
+                # Guess the database access is not going to work.
+                raise MessageException('Tworld has lost contact with the database.')
+
+            res = yield tornado.gen.Task(cmd.func, self, obj, conn)
+            self.log.info('### command complete, returned %s', res)
+
+        except MessageException as ex:
+            self.log.warning('Error message running "%s": %s', obj.cmd, str(ex))
             try:
-                conn.stream.write(wcproto.message(connid, {'cmd':'error', 'text':'Tworld has lost contact with the database.'}))
+                conn.stream.write(wcproto.message(connid, {'cmd':'error', 'text':str(ex)}))
             except Exception as ex:
                 pass
-            return
-        
+
+
+"""###
         if cmd == 'playerclose':
             self.log.info('Player %s has disconnected (uid %s)', conn.email, conn.uid)
             try:
@@ -207,4 +234,4 @@ class Tworld(object):
                                      upsert=True)
             return
         
-        raise Exception('Unknown player command "%s": %s' % (cmd, obj))
+###"""
