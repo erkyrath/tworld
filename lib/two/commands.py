@@ -35,6 +35,14 @@ def define_commands():
     Define all the commands which will be used by the server. Return them
     in a dict.
     """
+
+    @command('playerclose')
+    def cmd_playerclose(app, cmd, conn):
+        app.log.info('Player %s has disconnected (uid %s)', conn.email, conn.uid)
+        try:
+            app.playconns.remove(conn.connid)
+        except Exception as ex:
+            app.log.error('Failed to remove on playerclose %d: %s', conn.connid, ex)
     
     @command('uiprefs')
     def cmd_uiprefs(app, cmd, conn):

@@ -203,35 +203,3 @@ class Tworld(object):
             except Exception as ex:
                 pass
 
-
-"""###
-        if cmd == 'playerclose':
-            self.log.info('Player %s has disconnected (uid %s)', conn.email, conn.uid)
-            try:
-                self.playconns.remove(connid)
-            except Exception as ex:
-                self.log.error('Failed to remove on playerclose %d: %s', connid, ex)
-            return
-
-        if cmd == 'say':
-            for oconn in self.playconns.all():
-                if conn.uid == oconn.uid:
-                    val = 'You say, \u201C%s\u201D' % (obj.text,)
-                else:
-                    val = '%s says, \u201C%s\u201D' % (conn.email, obj.text,)
-                try:
-                    oconn.stream.write(wcproto.message(oconn.connid, {'cmd':'event', 'text':val}))
-                except Exception as ex:
-                    self.log.error('Unable to write to %d: %s', oconn.connid, ex)
-            return
-
-        if cmd == 'uiprefs':
-            ### Could we handle this in tweb? I guess, if we cared.
-            for (key, val) in obj.map.__dict__.items():
-                res = yield motor.Op(self.mongodb.playprefs.update,
-                                     {'uid':conn.uid, 'key':key},
-                                     {'uid':conn.uid, 'key':key, 'val':val},
-                                     upsert=True)
-            return
-        
-###"""
