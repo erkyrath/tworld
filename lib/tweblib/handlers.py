@@ -13,7 +13,6 @@ import motor
 
 import tweblib.session
 from tweblib.misc import MessageException
-from twcommon import wcproto
 
 class MyHandlerMixin:
     """
@@ -304,7 +303,7 @@ class LogOutHandler(MyRequestHandler):
         ls = [ conn for conn in ls if conn.sessionid == self.twsession['sid'] ]
         for conn in ls:
             try:
-                conn.close()
+                conn.close('Your session has been signed out.')
             except Exception as ex:
                 pass
         # Now reload the session status. Also override the out-of-date

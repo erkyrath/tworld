@@ -106,7 +106,7 @@ class Tworld(object):
                 for connobj in obj.connections:
                     if not self.mongodb:
                         # Reject the players.
-                        stream.write(wcproto.message(0, {'cmd':'playernotok', 'connid':connobj.connid}))
+                        stream.write(wcproto.message(0, {'cmd':'playernotok', 'connid':connobj.connid, 'text':'The database is not available.'}))
                         continue
                     conn = self.playconns.add(connobj.connid, connobj.uid, connobj.email, stream)
                     stream.write(wcproto.message(0, {'cmd':'playerok', 'connid':conn.connid}))
@@ -152,7 +152,7 @@ class Tworld(object):
             if not self.mongodb:
                 # Reject the players anyhow.
                 try:
-                    stream.write(wcproto.message(0, {'cmd':'playernotok', 'connid':connid}))
+                    stream.write(wcproto.message(0, {'cmd':'playernotok', 'connid':connid, 'text':'The database is not available.'}))
                 except:
                     pass
                 return
@@ -173,7 +173,7 @@ class Tworld(object):
         if not self.mongodb:
             # Guess the database access is not going to work.
             try:
-                conn.stream.write(wcproto.message(connid, {'cmd':'error', 'text':'Tworld has lost contact with mongo.'}))
+                conn.stream.write(wcproto.message(connid, {'cmd':'error', 'text':'Tworld has lost contact with the database.'}))
             except Exception as ex:
                 pass
             return

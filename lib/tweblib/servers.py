@@ -215,7 +215,8 @@ class ServerMgr(object):
                             if conn.available:
                                 raise Exception('Connection is already available')
                             self.log.info('Player connection rejected by Tworld: %s (connid %d)', conn.email, conn.connid)
-                            conn.close()
+                            errmsg = getattr(obj, 'text', 'Connection rejected by Tworld')
+                            conn.close(errmsg)
                         except Exception as ex:
                             self.log.error('Unable to process playernotok: %s', ex)
                         continue

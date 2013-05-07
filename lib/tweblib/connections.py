@@ -88,9 +88,13 @@ class Connection(object):
         delta = datetime.datetime.now() - self.lastmsgtime
         return datetime.timedelta(seconds=int(delta.total_seconds()))
 
-    def close(self):
-        ### Maybe this should send a specifiable error message first
+    def close(self, errmsg=None):
+        """Close the connection. Optionally send an error message through
+        first.
+        """
         if self.handler:
+            if (errmsg):
+                self.handler.write_tw_error(errmsg)
             self.handler.close()
         
     def write_tw_error(self, msg):
