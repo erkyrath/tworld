@@ -12,7 +12,7 @@ import tornado.websocket
 import motor
 
 import tweblib.session
-from tweblib.misc import MessageException
+from twcommon/excepts import MessageException
 
 class MyHandlerMixin:
     """
