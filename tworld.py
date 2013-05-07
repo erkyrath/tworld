@@ -29,6 +29,10 @@ tornado.options.define(
     'tworld_port', type=int, default=4001,
     help='port number for communication between tweb and tworld')
 
+tornado.options.define(
+    'mongo_database', type=str, default='tworld',
+    help='name of mongodb database')
+
 # Parse 'em up.
 tornado.options.parse_command_line()
 opts = tornado.options.options
@@ -53,6 +57,5 @@ if opts.debug:
 import two.app
 
 app = two.app.Tworld(opts)
-app.listen()
 
 tornado.ioloop.IOLoop.instance().start()

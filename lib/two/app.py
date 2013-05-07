@@ -7,6 +7,7 @@ import tornado.gen
 
 import two.webconn
 import two.playconn
+import two.mongomgr
 
 from twcommon import wcproto
 
@@ -15,15 +16,24 @@ class Tworld(object):
         self.opts = opts
         self.log = logging.getLogger('tworld')
         
+        # This will be self.mongomgr.mongo[mongo_database], when that's
+        # available.
+        self.mongodb = None
+
         self.webconns = two.webconn.WebConnectionTable(self)
         self.playconns = two.playconn.PlayerConnectionTable(self)
+        self.mongomgr = two.mongomgr.MongoMgr(self)
 
         # The command queue.
         self.queue = []
         self.commandbusy = False
 
-    def listen(self):
+        # When the IOLoop starts, we'll set up periodic tasks.
+        tornado.ioloop.IOLoop.instance().add_callback(self.init_timers)
+        
+    def init_timers(self):
         self.webconns.listen()
+        self.mongomgr.init_timers()
 
     def queue_command(self, obj, connid, twwcid):
         # If this command was caused by a message from tweb, twwcid is
@@ -158,6 +168,7 @@ class Tworld(object):
             return
 
         if cmd == 'uiprefs':
+            ### Could we handle this in tweb? I guess, if we cared.
             self.log.info('### Player set uiprefs %s', obj.map.__dict__)
             ### write them to the database, when we have a database handle
             return

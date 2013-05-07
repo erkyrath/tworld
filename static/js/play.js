@@ -69,7 +69,7 @@ function build_page_structure() {
     $('#submain').append(topcol);
     $('#submain').append(bottomcol);
 
-    toolpane_set_world('(In transition)', NBSP, NBSP);
+    toolpane_set_world('(In transition)', NBSP, '...');
 
     /* Apply the current ui layout preferences. */
     $('#topcol').css({ height: uiprefs.updown_percent+'%' });
