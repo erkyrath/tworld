@@ -60,7 +60,7 @@ def define_commands():
                 continue
             conn = app.playconns.add(connobj.connid, connobj.uid, connobj.email, stream)
             stream.write(wcproto.message(0, {'cmd':'playerok', 'connid':conn.connid}))
-            app.queue_command({'cmd':'refreshconn', 'connid':conn.connid}, 0, 0)
+            app.queue_command({'cmd':'refreshconn', 'connid':conn.connid})
             app.log.info('Player %s has reconnected (uid %s)', conn.email, conn.uid)
 
     @command('disconnect', isserver=True, noneedmongo=True)
@@ -77,7 +77,7 @@ def define_commands():
     def cmd_logplayerconntable(app, cmd, stream):
         app.playconns.dumplog()
         
-    @command('refreshconn', isserver=True, noneedmongo=True)
+    @command('refreshconn', isserver=True)
     def cmd_refreshconn(app, cmd, stream):
         # Refresh one connection (not all the player's connections!)
         conn = app.playconns.get(cmd.connid)
@@ -99,7 +99,7 @@ def define_commands():
             
         conn = app.playconns.add(connid, cmd.uid, cmd.email, cmd._stream)
         cmd._stream.write(wcproto.message(0, {'cmd':'playerok', 'connid':connid}))
-        app.queue_command({'cmd':'refreshconn', 'connid':connid}, 0, 0)
+        app.queue_command({'cmd':'refreshconn', 'connid':connid})
         app.log.info('Player %s has connected (uid %s)', conn.email, conn.uid)
 
     @command('playerclose')
@@ -135,6 +135,10 @@ def define_commands():
     def cmd_meta_help(app, cmd, conn):
         raise MessageException('No slash commands are currently implemented.')
 
+    @command('meta_refresh')
+    def cmd_meta_refresh(app, cmd, conn):
+        app.queue_command({'cmd':'refreshconn', 'connid':conn.connid})
+        
     @command('say')
     def cmd_say(app, cmd, conn):
         res = yield motor.Op(app.mongodb.players.find_one,

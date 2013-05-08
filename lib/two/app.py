@@ -43,7 +43,7 @@ class Tworld(object):
         self.webconns.listen()
         self.mongomgr.init_timers()
 
-    def queue_command(self, obj, connid, twwcid):
+    def queue_command(self, obj, connid=0, twwcid=0):
         if type(obj) is dict:
             obj = wcproto.namespace_wrapper(obj)
         # If this command was caused by a message from tweb, twwcid is
