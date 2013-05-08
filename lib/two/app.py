@@ -198,3 +198,11 @@ class Tworld(object):
             except Exception as ex:
                 pass
 
+
+
+def delay(dur, callback=None):
+    """Delay N seconds. This must be invoked as
+    yield tornado.gen.Task(app.delay, dur)
+    """
+    delta = datetime.timedelta(seconds=dur)
+    return tornado.ioloop.IOLoop.current().add_timeout(delta, callback)
