@@ -4,22 +4,40 @@ import motor
 LEVEL_EXECUTE = 4
 LEVEL_DISPLAY = 3
 LEVEL_MESSAGE = 2
-LEVEL_RAW = 1
+LEVEL_FLAT = 1
+LEVEL_RAW = 0
 
 class EvalPropContext(object):
     def __init__(self, app, wid, iid, locid=None, level=LEVEL_MESSAGE):
         self.app = app
-        self.key = key
         self.wid = wid
         self.iid = iid
-        self.locid = None
+        self.locid = locid
         self.level = level
-        self.raw = None
-        self.accum = []
+        self.accum = None
 
     @tornado.gen.coroutine
-    def eval(self, key):
-        pass ###
+    def eval(self, key, asstring=False):
+        res = yield find_symbol(self.app, self.wid, self.iid, self.locid, key)
+        if self.level is LEVEL_RAW:
+            if (asstring):
+                res = str(res)
+            return res
+        
+        try:
+            if type(res) is dict:
+                otype = res.get('type', None)
+                if otype == 'text':
+                    ls = interp.parse(res.get('text', ''))
+                    res = str(ls) ###
+        except Exception as ex:
+            return '[Exception: %s]' % (ex,)
+
+        if (asstring):
+            if res is None:
+                res = ''
+            res = str(res)
+        return res
 
 @tornado.gen.coroutine
 def find_symbol(app, wid, iid, locid, key):
@@ -98,7 +116,8 @@ def generate_locale(app, conn):
                               {'name':1})
     locid = location['_id']
 
-    localetext = yield find_symbol(app, wid, iid, locid, 'desc')
+    ctx = EvalPropContext(app, wid, iid, locid, level=LEVEL_DISPLAY)
+    localetext = yield ctx.eval('desc', asstring=True)
     
     msg = {'cmd':'refresh',
            'world':{'world':worldname, 'scope':scopename, 'creator':creatorname},
