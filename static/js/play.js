@@ -538,6 +538,8 @@ function evhan_websocket_message(ev) {
     }
     if (cmd == 'error')
         eventpane_add('Error: ' + obj.text, 'EventError');
+    if (cmd == 'message')
+        eventpane_add(obj.text, 'EventMessage');
 }
 
 function websocket_send_json(obj) {

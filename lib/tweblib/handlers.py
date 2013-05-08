@@ -170,7 +170,7 @@ class MainHandler(MyRequestHandler):
             formerror = str(ex)
             self.render('main.html', formerror=formerror, init_name=name)
             return
-            
+        
         if not res:
             formerror = 'The name and password do not match.'
             self.render('main.html', formerror=formerror, init_name=name)

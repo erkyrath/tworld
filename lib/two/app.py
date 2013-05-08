@@ -12,7 +12,7 @@ import two.mongomgr
 import motor
 
 from twcommon import wcproto
-from twcommon.excepts import MessageException
+from twcommon.excepts import MessageException, ErrorMessageException
 
 import two.commands
 
@@ -109,23 +109,25 @@ class Tworld(object):
 
             try:
                 if twwcid and not stream:
-                    raise MessageException('Server message from completely unrecognized stream.')
+                    raise ErrorMessageException('Server message from completely unrecognized stream.')
                 
                 cmd = self.all_commands.get(obj.cmd, None)
                 if not cmd:
-                    raise MessageException('Unknown server command: "%s"' % (obj.cmd,))
+                    raise ErrorMessageException('Unknown server command: "%s"' % (obj.cmd,))
             
                 if not cmd.isserver:
-                    raise MessageException('Command must be invoked by a player: "%s"' % (obj.cmd,))
+                    raise ErrorMessageException('Command must be invoked by a player: "%s"' % (obj.cmd,))
 
                 if not cmd.noneedmongo and not self.mongodb:
                     # Guess the database access is not going to work.
-                    raise MessageException('Tworld has lost contact with the database.')
+                    raise ErrorMessageException('Tworld has lost contact with the database.')
                 
                 res = yield tornado.gen.Task(cmd.func, self, obj, stream)
                 
-            except MessageException as ex:
+            except ErrorMessageException as ex:
                 self.log.warning('Error message running "%s": %s', obj.cmd, str(ex))
+            except MessageException as ex:
+                pass
 
             # End of connid==0 case.
             return 
@@ -138,33 +140,33 @@ class Tworld(object):
         try:
             cmd = self.all_commands.get(obj.cmd, None)
             if not cmd:
-                raise MessageException('Unknown player command: "%s"' % (obj.cmd,))
+                raise ErrorMessageException('Unknown player command: "%s"' % (obj.cmd,))
 
             if cmd.isserver:
-                raise MessageException('Command may not be invoked by a player: "%s"' % (obj.cmd,))
+                raise ErrorMessageException('Command may not be invoked by a player: "%s"' % (obj.cmd,))
 
             if not conn:
                 # Newly-established connection. Only 'playeropen' will be
                 # accepted. (Another twwcid case; we'll have to sneak the
                 # stream in through the object.)
                 if not cmd.preconnection:
-                    raise MessageException('Tworld has not yet registered this connection.')
+                    raise ErrorMessageException('Tworld has not yet registered this connection.')
                 assert cmd.name=='playeropen', 'Command not playeropen should have already been rejected'
                 stream = self.webconns.get(twwcid)
                 if not stream:
-                    raise MessageException('Message from completely unrecognized stream')
+                    raise ErrorMessageException('Message from completely unrecognized stream')
                 obj._connid = connid
                 obj._stream = stream
 
             if not cmd.noneedmongo and not self.mongodb:
                 # Guess the database access is not going to work.
-                raise MessageException('Tworld has lost contact with the database.')
+                raise ErrorMessageException('Tworld has lost contact with the database.')
 
             res = yield tornado.gen.Task(cmd.func, self, obj, conn)
 
-        except MessageException as ex:
-            # A MessageException is worth logging and sending back to the
-            # player, but not splatting out a stack trace.
+        except ErrorMessageException as ex:
+            # An ErrorMessageException is worth logging and sending back
+            # to the player, but not splatting out a stack trace.
             self.log.warning('Error message running "%s": %s', obj.cmd, str(ex))
             try:
                 # This is slightly hairy, because various error paths can
@@ -175,6 +177,20 @@ class Tworld(object):
                     # connid may be zero or nonzero, really
                     stream = self.webconns.get(twwcid)
                     stream.write(wcproto.message(connid, {'cmd':'error', 'text':str(ex)}))
+            except Exception as ex:
+                pass
+
+        except MessageException as ex:
+            # A MessageException is not worth logging.
+            try:
+                # This is slightly hairy, because various error paths can
+                # arrive here with no conn or no connid.
+                if conn:
+                    conn.write({'cmd':'message', 'text':str(ex)})
+                else:
+                    # connid may be zero or nonzero, really
+                    stream = self.webconns.get(twwcid)
+                    stream.write(wcproto.message(connid, {'cmd':'message', 'text':str(ex)}))
             except Exception as ex:
                 pass
 

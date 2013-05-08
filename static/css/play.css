@@ -152,6 +152,11 @@
 
 .EventError {
   font-style: italic;
+  color: #800;
+}
+
+.EventMessage {
+  font-style: italic;
 }
 
 .Input {

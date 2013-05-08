@@ -3,7 +3,7 @@ import tornado.gen
 import motor
 
 from twcommon import wcproto
-from twcommon.excepts import MessageException
+from twcommon.excepts import MessageException, ErrorMessageException
 
 import two.describe
 
