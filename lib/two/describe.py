@@ -12,6 +12,7 @@ def generate_locale(app, conn):
     if not iid:
         msg = {'cmd':'refresh', 'locale':'...', 'focus':None, 'world':{'world':'(In transition)', 'scope':'\u00A0', 'creator':'...'}}
         conn.write(msg)
+        return
         
     instance = yield motor.Op(app.mongodb.instances.find_one,
                               {'_id':iid})
@@ -43,13 +44,47 @@ def generate_locale(app, conn):
         scopename = '(Group: %s)' % (scope['group'],)
     else:
         scopename = '???'
+
+    location = yield motor.Op(app.mongodb.locations.find_one,
+                              {'wid':wid, 'key':playstate['locale']},
+                              {'name':1})
+    locid = location['_id']
+
+    localetext = yield tornado.gen.Task(find_symbol, app, wid, iid, locid, 'desc')
     
     msg = {'cmd':'refresh',
            'world':{'world':worldname, 'scope':scopename, 'creator':creatorname},
-           'localename': 'LOC',
-           'locale': '###.',
+           'localename': location['name'],
+           'locale': localetext,
            'focus': None, ###
            }
     
     conn.write(msg)
     
+@tornado.gen.coroutine
+def find_symbol(app, wid, iid, locid, key):
+    res = yield motor.Op(app.mongodb.instanceprop.find_one,
+                         {'iid':iid, 'locid':locid, 'key':key},
+                         {'val':1})
+    if res:
+        return res['val']
+    
+    res = yield motor.Op(app.mongodb.worldprop.find_one,
+                         {'wid':wid, 'locid':locid, 'key':key},
+                         {'val':1})
+    if res:
+        return res['val']
+    
+    res = yield motor.Op(app.mongodb.instanceprop.find_one,
+                         {'iid':iid, 'locid':None, 'key':key},
+                         {'val':1})
+    if res:
+        return res['val']
+    
+    res = yield motor.Op(app.mongodb.worldprop.find_one,
+                         {'wid':wid, 'locid':None, 'key':key},
+                         {'val':1})
+    if res:
+        return res['val']
+    
+    return ''
