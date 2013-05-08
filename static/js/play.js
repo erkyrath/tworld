@@ -148,7 +148,7 @@ function toolpane_set_world(world, scope, creator) {
     $('#tool_title_creator').text(creator);
 }
 
-function localepane_set(text) {
+function localepane_set(text, title) {
     var parals = text.split('\n');
     var contentls = [];
     for (var ix=0; ix<parals.length; ix++) {
@@ -161,6 +161,13 @@ function localepane_set(text) {
 
     var localeel = $('#localepane');
     localeel.empty();
+
+    if (title) {
+        var titleel = $('<h2>');
+        titleel.text(title);
+        localeel.append(titleel);
+    }
+
     for (var ix=0; ix<contentls.length; ix++) {
         localeel.append(contentls[ix]);
     }
@@ -521,7 +528,7 @@ function evhan_websocket_message(ev) {
     if (cmd == 'event')
         eventpane_add(obj.text);
     if (cmd == 'refresh') {
-        localepane_set(obj.locale);
+        localepane_set(obj.locale, obj.localename);
         if (obj.focus)
             focuspane_set(obj.focus);
         else

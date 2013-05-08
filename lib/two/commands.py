@@ -5,6 +5,8 @@ import motor
 from twcommon import wcproto
 from twcommon.excepts import MessageException
 
+import two.describe
+
 class Command:
     # As commands are defined with the @command decorator, they are stuffed
     # in this dict.
@@ -81,8 +83,7 @@ def define_commands():
     def cmd_refreshconn(app, cmd, stream):
         # Refresh one connection (not all the player's connections!)
         conn = app.playconns.get(cmd.connid)
-        msg = {'cmd':'refresh', 'locale':'You are in a place.', 'focus':None, 'world':{'world':'Start', 'scope':'(Personal instance)', 'creator':'Created by Somebody'}}
-        conn.write(msg)
+        yield two.describe.generate_locale(app, conn)
     
     @command('playeropen', noneedmongo=True, preconnection=True)
     def cmd_playeropen(app, cmd, conn):
