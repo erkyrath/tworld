@@ -130,7 +130,8 @@ def define_commands():
         if not newcmd:
             raise MessageException('Command \u201C/%s\u201D not understood. Try \u201C/help\u201D.' % (key,))
         cmd._args = ls[1:]
-        yield tornado.gen.Task(newcmd.func, app, cmd, conn)
+        res = yield newcmd.func(app, cmd, conn)
+        return res
 
     @command('meta_help')
     def cmd_meta_help(app, cmd, conn):

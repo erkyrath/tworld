@@ -70,7 +70,7 @@ class Tworld(object):
         starttime = datetime.datetime.now()
 
         try:
-            yield tornado.gen.Task(self.handle_command, obj, connid, twwcid, queuetime)
+            yield self.handle_command(obj, connid, twwcid, queuetime)
         except Exception as ex:
             self.log.error('Error handling command: %s', obj, exc_info=True)
 
@@ -122,7 +122,9 @@ class Tworld(object):
                     # Guess the database access is not going to work.
                     raise ErrorMessageException('Tworld has lost contact with the database.')
                 
-                res = yield tornado.gen.Task(cmd.func, self, obj, stream)
+                res = yield cmd.func(self, obj, stream)
+                if res is not None:
+                    self.log.info('Command "%s" result: %s', obj.cmd, res)
                 
             except ErrorMessageException as ex:
                 self.log.warning('Error message running "%s": %s', obj.cmd, str(ex))
@@ -162,7 +164,9 @@ class Tworld(object):
                 # Guess the database access is not going to work.
                 raise ErrorMessageException('Tworld has lost contact with the database.')
 
-            res = yield tornado.gen.Task(cmd.func, self, obj, conn)
+            res = yield cmd.func(self, obj, conn)
+            if res is not None:
+                self.log.info('Command "%s" result: %s', obj.cmd, res)
 
         except ErrorMessageException as ex:
             # An ErrorMessageException is worth logging and sending back

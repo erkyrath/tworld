@@ -1,6 +1,54 @@
 import tornado.gen
 import motor
 
+LEVEL_EXECUTE = 4
+LEVEL_DISPLAY = 3
+LEVEL_MESSAGE = 2
+LEVEL_RAW = 1
+
+class EvalPropContext(object):
+    def __init__(self, app, wid, iid, locid=None, level=LEVEL_MESSAGE):
+        self.app = app
+        self.key = key
+        self.wid = wid
+        self.iid = iid
+        self.locid = None
+        self.level = level
+        self.raw = None
+        self.accum = []
+
+    @tornado.gen.coroutine
+    def eval(self, key):
+        pass ###
+
+@tornado.gen.coroutine
+def find_symbol(app, wid, iid, locid, key):
+    res = yield motor.Op(app.mongodb.instanceprop.find_one,
+                         {'iid':iid, 'locid':locid, 'key':key},
+                         {'val':1})
+    if res:
+        return res['val']
+    
+    res = yield motor.Op(app.mongodb.worldprop.find_one,
+                         {'wid':wid, 'locid':locid, 'key':key},
+                         {'val':1})
+    if res:
+        return res['val']
+    
+    res = yield motor.Op(app.mongodb.instanceprop.find_one,
+                         {'iid':iid, 'locid':None, 'key':key},
+                         {'val':1})
+    if res:
+        return res['val']
+    
+    res = yield motor.Op(app.mongodb.worldprop.find_one,
+                         {'wid':wid, 'locid':None, 'key':key},
+                         {'val':1})
+    if res:
+        return res['val']
+
+    return None
+
 @tornado.gen.coroutine
 def generate_locale(app, conn):
     playstate = yield motor.Op(app.mongodb.playstate.find_one,
@@ -39,7 +87,7 @@ def generate_locale(app, conn):
         scopeowner = yield motor.Op(app.mongodb.players.find_one,
                                     {'_id':scope['uid']},
                                     {'name':1})
-        scopename = '(Personal instance, %s)' % (scopeowner['name'],)
+        scopename = '(Personal instance: %s)' % (scopeowner['name'],)
     elif scope['type'] == 'grp':
         scopename = '(Group: %s)' % (scope['group'],)
     else:
@@ -50,7 +98,7 @@ def generate_locale(app, conn):
                               {'name':1})
     locid = location['_id']
 
-    localetext = yield tornado.gen.Task(find_symbol, app, wid, iid, locid, 'desc')
+    localetext = yield find_symbol(app, wid, iid, locid, 'desc')
     
     msg = {'cmd':'refresh',
            'world':{'world':worldname, 'scope':scopename, 'creator':creatorname},
@@ -61,30 +109,3 @@ def generate_locale(app, conn):
     
     conn.write(msg)
     
-@tornado.gen.coroutine
-def find_symbol(app, wid, iid, locid, key):
-    res = yield motor.Op(app.mongodb.instanceprop.find_one,
-                         {'iid':iid, 'locid':locid, 'key':key},
-                         {'val':1})
-    if res:
-        return res['val']
-    
-    res = yield motor.Op(app.mongodb.worldprop.find_one,
-                         {'wid':wid, 'locid':locid, 'key':key},
-                         {'val':1})
-    if res:
-        return res['val']
-    
-    res = yield motor.Op(app.mongodb.instanceprop.find_one,
-                         {'iid':iid, 'locid':None, 'key':key},
-                         {'val':1})
-    if res:
-        return res['val']
-    
-    res = yield motor.Op(app.mongodb.worldprop.find_one,
-                         {'wid':wid, 'locid':None, 'key':key},
-                         {'val':1})
-    if res:
-        return res['val']
-    
-    return ''
