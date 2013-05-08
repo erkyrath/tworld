@@ -266,6 +266,8 @@ function focuspane_set(text)
 }
 
 function submit_line_input(val) {
+    val = jQuery.trim(val);
+
     var historylast = null;
     if (eventhistory.length)
         historylast = eventhistory[eventhistory.length-1];
@@ -287,8 +289,13 @@ function submit_line_input(val) {
     inputel.val('');
 
     if (val) {
-        console.log('### input: ' + val);
-        websocket_send_json({ cmd:'say', text:val });
+        var start = val.charAt(0);
+        if (start == ':')
+            websocket_send_json({ cmd:'pose', text:jQuery.trim(val.slice(1)) });
+        else if (start == '/')
+            websocket_send_json({ cmd:'meta', text:jQuery.trim(val.slice(1)) });
+        else
+            websocket_send_json({ cmd:'say', text:val });
     }
 }
 

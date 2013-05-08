@@ -3,6 +3,7 @@ import tornado.gen
 import motor
 
 from twcommon import wcproto
+from twcommon.excepts import MessageException
 
 class Command:
     # As commands are defined with the @command decorator, they are stuffed
@@ -118,17 +119,49 @@ def define_commands():
                                  {'uid':conn.uid, 'key':key, 'val':val},
                                  upsert=True)
 
+    @command('meta')
+    def cmd_meta(app, cmd, conn):
+        ls = cmd.text.split()
+        if not ls:
+            raise MessageException('You must supply a command after the slash. Try \u201C/help\u201D.')
+        key = ls[0]
+        newcmd = Command.all_commands.get('meta_'+key)
+        if not newcmd:
+            raise MessageException('Command \u201C/%s\u201D not understood. Try \u201C/help\u201D.' % (key,))
+        cmd._args = ls[1:]
+        yield tornado.gen.Task(newcmd.func, app, cmd, conn)
+
+    @command('meta_help')
+    def cmd_meta_help(app, cmd, conn):
+        raise MessageException('No slash commands are currently implemented.')
+
     @command('say')
     def cmd_say(app, cmd, conn):
         res = yield motor.Op(app.mongodb.players.find_one,
                              {'_id':conn.uid},
                              {'name':1})
         playername = res['name']
+        if cmd.text.endswith('?'):
+            (say, says) = ('ask', 'asks')
+        elif cmd.text.endswith('!'):
+            (say, says) = ('exclaim', 'exclaims')
+        else:
+            (say, says) = ('say', 'says')
         for oconn in app.playconns.all():
             if conn.uid == oconn.uid:
-                val = 'You say, \u201C%s\u201D' % (cmd.text,)
+                val = 'You %s, \u201C%s\u201D' % (say, cmd.text,)
             else:
-                val = '%s says, \u201C%s\u201D' % (playername, cmd.text,)
+                val = '%s %s, \u201C%s\u201D' % (playername, says, cmd.text,)
+            oconn.write({'cmd':'event', 'text':val})
+
+    @command('pose')
+    def cmd_pose(app, cmd, conn):
+        res = yield motor.Op(app.mongodb.players.find_one,
+                             {'_id':conn.uid},
+                             {'name':1})
+        playername = res['name']
+        val = '%s %s' % (playername, cmd.text,)
+        for oconn in app.playconns.all():
             oconn.write({'cmd':'event', 'text':val})
 
     return Command.all_commands
