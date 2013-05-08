@@ -42,7 +42,7 @@ class SessionMgr(object):
         names nor email addresses are duplicated.
         """
         if (not self.app.mongodb):
-            raise MessageException('Database not available')
+            raise MessageException('Database not available.')
 
         if ('@' in name):
             key = 'email'
@@ -76,7 +76,7 @@ class SessionMgr(object):
         canonicalized, as much as possible.
         """
         if (not self.app.mongodb):
-            raise MessageException('Database not available')
+            raise MessageException('Database not available.')
 
         # Check for collisions first.
         try:
@@ -115,7 +115,6 @@ class SessionMgr(object):
             raise MessageException('Unable to create player.')
 
         # Create the playstate entry.
-        
         playstate = {
             '_id': uid,
             'iid': None,
