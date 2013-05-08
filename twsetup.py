@@ -69,6 +69,12 @@ db.locations.create_index([('wid', pymongo.ASCENDING), ('key', pymongo.ASCENDING
 # Compound index
 db.instances.create_index([('wid', pymongo.ASCENDING), ('scid', pymongo.ASCENDING)], unique=True)
 
+# Compound index
+db.worldprop.create_index([('wid', pymongo.ASCENDING), ('locid', pymongo.ASCENDING), ('key', pymongo.ASCENDING)], unique=True)
+
+# Compound index
+db.instanceprop.create_index([('iid', pymongo.ASCENDING), ('locid', pymongo.ASCENDING), ('key', pymongo.ASCENDING)], unique=True)
+
 
 # Create some config entries if they don't exist, but leave them alone
 # if they do exist.
