@@ -1,22 +1,24 @@
+import re
 
 def parse(text):
     if type(text) is not str:
         raise ValueError('interpolated text must be string')
     res = []
 
-ident_char_set = set()
-ident_char_set.add('_')
-for ch in range(ord('a'), ord('z')+1):
-    ident_char_set.add(chr(ch))
-for ch in range(ord('0'), ord('9')+1):
-    ident_char_set.add(chr(ch))
-ident_char_plus_space_set = ident_char_set | set([' '])
+re_nonidentchars = re.compile('[^a-z0-9_ ]+')
+re_extrawhite = re.compile('  +')
+re_startdigit = re.compile('^[0-9]')
 
 def sluggify(text):
+    ### Would be nice to follow Py3 identifier rules here, for Unicode.
+    ### Maybe turn space to _ first, then remove extra underscores? But several *real* underscores in a row should not collapse. I think we're turning punctuation to space, trim, remove extra, then to _.
     text = text.lower()
-    ls = [ ch for ch in text if ch in ident_char_plus_space_set ]
-    while (ls and ls[-1] == ' '):
-        ls.pop()
-    while (ls and ls[0] == ' '):
-        ls.pop(0)
-    return ''.join(ls)
+    text = re_nonidentchars.sub(' ', text)
+    text = re_extrawhite.sub(' ', text)
+    text = text.strip()
+    text = text.replace(' ', '_')
+    if not text or re_startdigit.match(text):
+        text = '_' + text
+    return text
+
+### Unit test

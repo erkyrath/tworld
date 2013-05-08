@@ -1,6 +1,8 @@
 import tornado.gen
 import motor
 
+import two.interp
+
 LEVEL_EXECUTE = 4
 LEVEL_DISPLAY = 3
 LEVEL_MESSAGE = 2
@@ -28,7 +30,7 @@ class EvalPropContext(object):
             if type(res) is dict:
                 otype = res.get('type', None)
                 if otype == 'text':
-                    ls = interp.parse(res.get('text', ''))
+                    ls = two.interp.parse(res.get('text', ''))
                     res = str(ls) ###
         except Exception as ex:
             return '[Exception: %s]' % (ex,)
