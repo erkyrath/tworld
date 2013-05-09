@@ -148,48 +148,6 @@ function toolpane_set_world(world, scope, creator) {
     $('#tool_title_creator').text(creator);
 }
 
-/*### This is terrible. Redo, with sensible nest-counting. */
-function parse_description(desc, parentel) {
-    if (!jQuery.isArray(desc))
-        desc = [ desc ];
-    
-    var curpara = null;
-    for (var ix=0; ix<desc.length; ix++) {
-        var str = desc[ix];
-        if (curpara === null) {
-            curpara = $('<p>');
-            parentel.append(curpara);
-        }
-
-        var el = null;
-        if (jQuery.isArray(str)) {
-            if (str[0] == 'link') {
-                el = $('<a>', {href:'#'});
-                el.on('click', {target:str[1]}, evhan_click_action);
-                for (ix++; ix<desc.length; ix++) {
-                    str = desc[ix];
-                    if (jQuery.isArray(str)) {
-                        break; /*### endlink? */
-                    }
-                    var subel = $('<span>');
-                    subel.text(str);
-                    el.append(subel);
-                }
-            }
-            if (str[0] == 'para') {
-                curpara = null;
-            }
-        }
-        else {
-            el = $('<span>');
-            el.text(str);
-        }
-
-        if (el !== null)
-            curpara.append(el);
-    }
-}
-
 function localepane_set(desc, title) {
     var localeel = $('#localepane');
     localeel.empty();
@@ -307,6 +265,67 @@ function focuspane_set(text)
     var newpane = build_focuspane(contentls);
     $('#leftcol').append(newpane);
     newpane.slideDown(200, function() { newpane.removeClass('FocusPaneAnimating'); } );
+}
+
+/*### This is terrible. Redo, with sensible nest-counting. */
+function parse_description(desc, parentel) {
+    if (!jQuery.isArray(desc))
+        desc = [ desc ];
+    
+    var curpara = null;
+    for (var ix=0; ix<desc.length; ix++) {
+        var str = desc[ix];
+        if (curpara === null) {
+            curpara = $('<p>');
+            parentel.append(curpara);
+        }
+
+        var el = null;
+        if (jQuery.isArray(str)) {
+            if (str[0] == 'link') {
+                el = $('<a>', {href:'#'});
+                el.on('click', {target:str[1]}, evhan_click_action);
+                for (ix++; ix<desc.length; ix++) {
+                    str = desc[ix];
+                    if (jQuery.isArray(str)) {
+                        break; /*### endlink? */
+                    }
+                    var subel = $('<span>');
+                    subel.text(str);
+                    el.append(subel);
+                }
+            }
+            if (str[0] == 'para') {
+                curpara = null;
+            }
+        }
+        else {
+            el = $('<span>');
+            el.text(str);
+        }
+
+        if (el !== null)
+            curpara.append(el);
+    }
+}
+
+/* Run a function (no arguments) in timeout seconds. Returns a value that
+   can be passed to cancel_delayed_func(). */
+function delay_func(timeout, func)
+{
+    return window.setTimeout(func, timeout*1000);
+}
+
+/* Cancel a delayed function. */
+function cancel_delayed_func(val)
+{
+    window.clearTimeout(val);
+}
+
+/* Run a function (no arguments) "soon". */
+function defer_func(func)
+{
+    return window.setTimeout(func, 0.01*1000);
 }
 
 function submit_line_input(val) {
@@ -596,25 +615,6 @@ function websocket_send_json(obj) {
 
     val = JSON.stringify(obj);
     websocket.send(val);
-}
-
-/* Run a function (no arguments) in timeout seconds. Returns a value that
-   can be passed to cancel_delayed_func(). */
-function delay_func(timeout, func)
-{
-    return window.setTimeout(func, timeout*1000);
-}
-
-/* Cancel a delayed function. */
-function cancel_delayed_func(val)
-{
-    window.clearTimeout(val);
-}
-
-/* Run a function (no arguments) "soon". */
-function defer_func(func)
-{
-    return window.setTimeout(func, 0.01*1000);
 }
 
 
