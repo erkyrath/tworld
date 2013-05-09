@@ -104,6 +104,14 @@
   color: #A30;
 }
 
+.StyleEmph {
+  font-style: italic;
+}
+
+.StyleFixed {
+  font-family: monospace;
+}
+
 .FocusPane {
   /* display: none; */
   /* background: #FFFFF4; */
@@ -134,6 +142,16 @@
 #eventpane a:hover {
   text-decoration: underline;
   color: #A30;
+}
+
+#localepane a.ExternalLink {
+  color: #00F;
+  background-color: inherit;
+}
+
+#focuspane a.ExternalLink {
+  color: #00F;
+  background-color: inherit;
 }
 
 .Event {

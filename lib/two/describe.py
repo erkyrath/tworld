@@ -3,7 +3,6 @@ import motor
 
 import two.interp
 
-LEVEL_EXECUTE = 4
 LEVEL_DISPLAY = 3
 LEVEL_MESSAGE = 2
 LEVEL_FLAT = 1
@@ -38,7 +37,7 @@ class EvalPropContext(object):
                             res.append(['link', el.target])
                             self.availtargets.add(el.target)
                         elif isinstance(el, two.interp.EndLink):
-                            res.append(['endlink'])
+                            res.append(['/link'])
                         elif isinstance(el, two.interp.Interpolate):
                             res.append('[[###]]')
                         else:

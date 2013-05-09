@@ -259,50 +259,174 @@ function focuspane_set(desc)
     newpane.slideDown(200, function() { newpane.removeClass('FocusPaneAnimating'); } );
 }
 
-/*### This is terrible. Redo, with sensible nest-counting. */
+/* Transform a description array (a JSONable array of strings and array tags)
+   into a list of DOM elements. You can also pass in a raw string, which
+   will be treated as a single unstyled paragraph.
+
+   The description array is roughly parallel to HTML markup, with beginning
+   and end tags for styles, and paragraph tags between (not around) paragraphs.
+   We don't rely on jQuery's HTML-to-DOM features, though. We're going to
+   build it ourselves, with verbose error reporting. (Authors will build
+   this stuff interactively, and they deserve explicit bad-format warnings!)
+*/
 function parse_description(desc) {
     if (!jQuery.isArray(desc))
         desc = [ desc ];
 
-    var resls = [];
-    
-    var curpara = null;
+    var parals = [];
+    var objstack = [];
+    var elstack = [];
+
+    /* It's easier if we keep a "current paragraph" around at all times.
+       But we'll need to keep track of whether it's empty, because empty
+       paragraphs shouldn't appear in the output. */
+    var curpara = $('<p>');
+    var curparasize = 0;
+    var curinlink = false;
+    parals.push(curpara);
+
     for (var ix=0; ix<desc.length; ix++) {
-        var str = desc[ix];
-        if (curpara === null) {
-            curpara = $('<p>');
-            resls.push(curpara);
-        }
-
+        var obj = desc[ix];
         var el = null;
-        if (jQuery.isArray(str)) {
-            if (str[0] == 'link') {
-                el = $('<a>', {href:'#'});
-                el.on('click', {target:str[1]}, evhan_click_action);
-                for (ix++; ix<desc.length; ix++) {
-                    str = desc[ix];
-                    if (jQuery.isArray(str)) {
-                        break; /*### endlink? */
-                    }
-                    var subel = $('<span>');
-                    subel.text(str);
-                    el.append(subel);
-                }
-            }
-            if (str[0] == 'para') {
-                curpara = null;
-            }
-        }
-        else {
-            el = $('<span>');
-            el.text(str);
-        }
+        var parent;
 
-        if (el !== null)
-            curpara.append(el);
+        /* If we are going to add a new node, it will go on the most deeply-
+           nested style, *or* the top-level paragraph (if there are no nested
+           styles). Work this out now. */
+        if (elstack.length == 0)
+            parent = curpara;
+        else
+            parent = elstack[elstack.length-1];
+
+        if (jQuery.isArray(obj)) {
+            var objtag = obj[0];
+
+            if (objtag == 'para') {
+                if (objstack.length > 0) {
+                    el = create_text_node('[Unclosed tags at end of paragraph]');
+                    parent.append(el);
+                    curparasize++;
+                    objstack.length = 0;
+                    elstack.length = 0;
+                }
+
+                if (curparasize == 0) {
+                    /* We're already at the start of a fresh paragraph.
+                       Just keep using it. */
+                    continue;
+                }
+
+                curpara = $('<p>');
+                curparasize = 0;
+                curinlink = false;
+                parals.push(curpara);
+                continue;
+            }
+
+            if (objtag[0] == '/') {
+                /* End an outstanding span. */
+                if (objstack.length == 0) {
+                    el = create_text_node('[End tag with no start tag]');
+                    parent.append(el);
+                    curparasize++;
+                    continue;
+                }
+
+                var startobj = objstack[objstack.length-1];
+                if (objtag == '/link') {
+                    if (startobj[0] != 'link')
+                        el = create_text_node('[Mismatched end of link]');
+                    curinlink = false;
+                }
+                else if (objtag == '/exlink') {
+                    if (startobj[0] != 'exlink')
+                        el = create_text_node('[Mismatched end of external link]');
+                    curinlink = false;
+                }
+                else if (objtag == '/style') {
+                    if (startobj[0] != 'style')
+                        el = create_text_node('[Mismatched end of style]');
+                }
+                else {
+                    el = create_text_node('[Unrecognized end tag '+objtag+']');
+                }
+
+                if (el !== null) {
+                    /* Paste on the error message. */
+                    parent.append(el);
+                    curparasize++;
+                }
+
+                objstack.length = objstack.length-1;
+                elstack.length = elstack.length-1;
+                continue;
+            }
+            else {
+                /* Start a new span. */
+                if (objtag == 'style') {
+                    el = $('<span>');
+                    var styleclass = description_style_classes[obj[1]];
+                    if (!styleclass)
+                        el.append(create_text_node('[Unrecognized style name]'));
+                    else
+                        el.addClass(styleclass);
+                    objstack.push(obj);
+                    elstack.push(el);
+                }
+                else if (objtag == 'link') {
+                    if (curinlink)
+                        parent.append(create_text_node('[Nested links]'));
+                    el = $('<a>', {href:'#'});
+                    el.on('click', {target:obj[1]}, evhan_click_action);
+                    objstack.push(obj);
+                    elstack.push(el);
+                    curinlink = true;
+                }
+                else if (objtag == 'exlink') {
+                    /* External link -- distinct class, and opens in a new
+                       window. */
+                    if (curinlink)
+                        parent.append(create_text_node('[Nested links]'));
+                    el = $('<a>', { 'class': 'ExternalLink', 'target': '_blank', href:obj[1] });
+                    objstack.push(obj);
+                    elstack.push(el);
+                    curinlink = true;
+                }
+                else {
+                    el = create_text_node('[Unrecognized tag '+objtag+']');
+                }
+
+                parent.append(el);
+                curparasize++;
+            }
+        }        
+        else {
+            el = create_text_node(obj);
+            parent.append(el);
+            curparasize++;
+        }
     }
 
-    return resls;
+    if (objstack.length > 0) {
+        el = create_text_node('[Unclosed tags at end of text]');
+        curpara.append(el);
+        curparasize++;
+    }
+
+    if (curparasize == 0 && parals.length > 0) {
+        /* The last paragraph never got any content. Remove it from
+           the list. */
+        parals.length = parals.length - 1;
+    }
+
+    return parals;
+}
+
+/* Create a plain text DOM node. Yeah, I do this sometimes. jQuery doesn't
+   have a wrapper for this DOM operation. */
+function create_text_node(val)
+{
+    return document.createTextNode(val);
 }
 
 /* Run a function (no arguments) in timeout seconds. Returns a value that
