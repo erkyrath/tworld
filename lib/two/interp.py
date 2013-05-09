@@ -23,6 +23,8 @@ class Link(InterpNode):
         return (isinstance(obj, Link) and self.target == obj.target)
     def __ne__(self, obj):
         return not (isinstance(obj, Link) and self.target == obj.target)
+    def describe(self):
+        return ['link', self.target]
         
 class EndLink(InterpNode):
     def __repr__(self):
@@ -31,6 +33,8 @@ class EndLink(InterpNode):
         return (isinstance(obj, EndLink))
     def __ne__(self, obj):
         return not (isinstance(obj, EndLink))
+    def describe(self):
+        return ['/link']
 
 class ParaBreak(InterpNode):
     def __repr__(self):

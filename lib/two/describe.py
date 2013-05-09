@@ -41,21 +41,26 @@ class EvalPropContext(object):
         which are found in links in the description. Dependencies are
         also accumulated.
         """
+        # Initialize per-invocation fields.
+        self.accum = None
+        self.linktargets = None
+        self.dependencies = None
+        
         res = yield self.evalkey(key)
 
-        # At this point, if the value was a {text}, the accum will be an
-        # array rather than None. That's how we tell the difference.
+        # At this point, if the value was a {text}, the accum will contain
+        # the desired description.
         
         if (self.level == LEVEL_RAW):
             return res
         if (self.level == LEVEL_FLAT):
             return str(res)
         if (self.level == LEVEL_MESSAGE):
-            if self.accum is not None:
+            if is_text_object(res):
                 return ''.join([ str(val) for val in self.accum ])
             return str(res)
         if (self.level == LEVEL_DISPLAY):
-            if self.accum is not None:
+            if is_text_object(res):
                 return self.accum
             return str(res)
         raise Exception('unrecognized eval level: %d' % (self.level,))
@@ -90,7 +95,7 @@ class EvalPropContext(object):
                 self.dependencies = set()
             else:
                 assert self.accum is not None, 'EvalPropContext.accum should not be None at depth nonzero'
-                
+
             nodls = interp.parse(res.get('text', ''))
             for nod in nodls:
                 if not (isinstance(nod, interp.InterpNode)):
