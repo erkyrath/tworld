@@ -17,6 +17,7 @@ class EvalPropContext(object):
         self.locid = locid
         self.level = level
         self.accum = None
+        self.availtargets = set()
 
     @tornado.gen.coroutine
     def eval(self, key, asstring=False):
@@ -31,7 +32,17 @@ class EvalPropContext(object):
                 otype = res.get('type', None)
                 if otype == 'text':
                     ls = two.interp.parse(res.get('text', ''))
-                    res = str(ls) ###
+                    res = []
+                    for el in ls:
+                        if isinstance(el, two.interp.Link):
+                            res.append(['link', el.target])
+                            self.availtargets.add(el.target)
+                        elif isinstance(el, two.interp.EndLink):
+                            res.append(['endlink'])
+                        elif isinstance(el, two.interp.Interpolate):
+                            res.append('[[###]]')
+                        else:
+                            res.append(el)
         except Exception as ex:
             return '[Exception: %s]' % (ex,)
 
@@ -119,7 +130,7 @@ def generate_locale(app, conn):
     locid = location['_id']
 
     ctx = EvalPropContext(app, wid, iid, locid, level=LEVEL_DISPLAY)
-    localetext = yield ctx.eval('desc', asstring=True)
+    localetext = yield ctx.eval('desc')
     
     msg = {'cmd':'refresh',
            'world':{'world':worldname, 'scope':scopename, 'creator':creatorname},

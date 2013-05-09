@@ -148,15 +148,46 @@ function toolpane_set_world(world, scope, creator) {
     $('#tool_title_creator').text(creator);
 }
 
-function localepane_set(text, title) {
-    var parals = text.split('\n');
+function localepane_set(ls, title) {
+    /*### This is terrible. Redo, with sensible nest-counting. */
+    if (!jQuery.isArray(ls))
+        ls = [ ls ];
+    
     var contentls = [];
-    for (var ix=0; ix<parals.length; ix++) {
-        if (parals[ix].length == 0)
-            continue;
-        var el = $('<p>');
-        el.text(parals[ix]);
-        contentls.push(el);
+    var curpara = null;
+    for (var ix=0; ix<ls.length; ix++) {
+        var str = ls[ix];
+        if (curpara === null) {
+            curpara = $('<p>');
+            contentls.push(curpara);
+        }
+
+        var el = null;
+        if (jQuery.isArray(str)) {
+            if (str[0] == 'link') {
+                el = $('<a>', {href:'#'});
+                el.on('click', {target:str[1]}, evhan_click_action);
+                for (ix++; ix<ls.length; ix++) {
+                    str = ls[ix];
+                    if (jQuery.isArray(str)) {
+                        break; /*### endlink? */
+                    }
+                    var subel = $('<span>');
+                    subel.text(str);
+                    el.append(subel);
+                }
+            }
+            if (str[0] == 'para') {
+                curpara = null;
+            }
+        }
+        else {
+            el = $('<span>');
+            el.text(str);
+        }
+
+        if (el !== null)
+            curpara.append(el);
     }
 
     var localeel = $('#localepane');
@@ -451,6 +482,12 @@ function evhan_input_keypress(ev) {
     return true;
 }
 
+function evhan_click_action(ev) {
+    ev.preventDefault();
+
+    var target = ev.data.target;
+    console.log('### action: ' + target);
+}
 
 function handle_leftright_resize(ev, ui) {
     var parentwidth = $('#submain').width();
