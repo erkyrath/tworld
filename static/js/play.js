@@ -148,18 +148,17 @@ function toolpane_set_world(world, scope, creator) {
     $('#tool_title_creator').text(creator);
 }
 
-function localepane_set(ls, title) {
-    /*### This is terrible. Redo, with sensible nest-counting. */
-    if (!jQuery.isArray(ls))
-        ls = [ ls ];
+/*### This is terrible. Redo, with sensible nest-counting. */
+function parse_description(desc, parentel) {
+    if (!jQuery.isArray(desc))
+        desc = [ desc ];
     
-    var contentls = [];
     var curpara = null;
-    for (var ix=0; ix<ls.length; ix++) {
-        var str = ls[ix];
+    for (var ix=0; ix<desc.length; ix++) {
+        var str = desc[ix];
         if (curpara === null) {
             curpara = $('<p>');
-            contentls.push(curpara);
+            parentel.append(curpara);
         }
 
         var el = null;
@@ -167,8 +166,8 @@ function localepane_set(ls, title) {
             if (str[0] == 'link') {
                 el = $('<a>', {href:'#'});
                 el.on('click', {target:str[1]}, evhan_click_action);
-                for (ix++; ix<ls.length; ix++) {
-                    str = ls[ix];
+                for (ix++; ix<desc.length; ix++) {
+                    str = desc[ix];
                     if (jQuery.isArray(str)) {
                         break; /*### endlink? */
                     }
@@ -189,7 +188,9 @@ function localepane_set(ls, title) {
         if (el !== null)
             curpara.append(el);
     }
+}
 
+function localepane_set(desc, title) {
     var localeel = $('#localepane');
     localeel.empty();
 
@@ -199,8 +200,13 @@ function localepane_set(ls, title) {
         localeel.append(titleel);
     }
 
-    for (var ix=0; ix<contentls.length; ix++) {
-        localeel.append(contentls[ix]);
+    try {
+        parse_description(desc, localeel);
+    }
+    catch (ex) {
+        var el = $('<p>');
+        el.text('[Error rendering description: ' + ex + ']');
+        localeel.append(el);
     }
 }
 
@@ -487,6 +493,7 @@ function evhan_click_action(ev) {
 
     var target = ev.data.target;
     console.log('### action: ' + target);
+    websocket_send_json({ cmd:'action', text:target });
 }
 
 function handle_leftright_resize(ev, ui) {
