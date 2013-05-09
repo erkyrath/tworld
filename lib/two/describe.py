@@ -1,7 +1,7 @@
 import tornado.gen
 import motor
 
-import two.interp
+from two import interp
 
 LEVEL_DISPLAY = 3
 LEVEL_MESSAGE = 2
@@ -16,41 +16,107 @@ class EvalPropContext(object):
         self.locid = locid
         self.level = level
         self.accum = None
-        self.availtargets = set()
+        self.linktargets = None
+        self.dependencies = None
 
     @tornado.gen.coroutine
-    def eval(self, key, asstring=False):
-        res = yield find_symbol(self.app, self.wid, self.iid, self.locid, key)
-        if self.level is LEVEL_RAW:
-            if (asstring):
-                res = str(res)
-            return res
+    def eval(self, key):
+        """
+        Look up and return a symbol, in this context. After the call,
+        dependencies will contain the symbol (and any others checked when
+        putting together the result).
+
+        The result type depends on the level:
+
+        RAW: Python object direct from Mongo.
+        FLAT: A string.
+        MESSAGE: A string. ({text} objects produce strings from the flattened,
+        de-styled, de-linked description.)
+        DISPLAY: A string or, for {text} objects, a description.
+
+        (A description is an array of strings and tag-arrays, JSONable and
+        passable to the client.)
+
+        For the {text} case, this also accumulates a set of link-targets
+        which are found in links in the description. Dependencies are
+        also accumulated.
+        """
+        res = yield self.evalkey(key)
+
+        # At this point, if the value was a {text}, the accum will be an
+        # array rather than None. That's how we tell the difference.
         
+        if (self.level == LEVEL_RAW):
+            return res
+        if (self.level == LEVEL_FLAT):
+            return str(res)
+        if (self.level == LEVEL_MESSAGE):
+            if self.accum is not None:
+                return ''.join([ str(val) for val in self.accum ])
+            return str(res)
+        if (self.level == LEVEL_DISPLAY):
+            if self.accum is not None:
+                return self.accum
+            return str(res)
+        raise Exception('unrecognized eval level: %d' % (self.level,))
+        
+    @tornado.gen.coroutine
+    def evalkey(self, key, depth=0):
+        """
+        Look up a symbol, adding it to the accumulated content. If the
+        result contains interpolated strings, this calls itself recursively.
+
+        Returns an object or description array. (The latter only at
+        MESSAGE or DISPLAY level.)
+
+        The top-level call to evalkey() may set up the description accumulator
+        and linktargets. Lower-level calls use the existing ones.
+        """
+        res = yield find_symbol(self.app, self.wid, self.iid, self.locid, key)
+
+        if not(is_text_object(res)
+               and self.level in (LEVEL_MESSAGE, LEVEL_DISPLAY)):
+            # For most cases, the type returned by the database is the
+            # type we want.
+            return res
+
+        # But at MESSAGE/DISPLAY level, a {text} object is parsed out.
+
         try:
-            if type(res) is dict:
-                otype = res.get('type', None)
-                if otype == 'text':
-                    ls = two.interp.parse(res.get('text', ''))
-                    res = []
-                    for el in ls:
-                        if isinstance(el, two.interp.Link):
-                            ### should randomize target names
-                            res.append(['link', el.target])
-                            self.availtargets.add(el.target)
-                        elif isinstance(el, two.interp.EndLink):
-                            res.append(['/link'])
-                        elif isinstance(el, two.interp.Interpolate):
-                            res.append('[[###]]')
-                        else:
-                            res.append(el)
+            if (depth == 0):
+                assert self.accum is None, 'EvalPropContext.accum should be None at depth zero'
+                self.accum = []
+                self.linktargets = {}
+                self.dependencies = set()
+            else:
+                assert self.accum is not None, 'EvalPropContext.accum should not be None at depth nonzero'
+                
+            nodls = interp.parse(res.get('text', ''))
+            for nod in nodls:
+                if not (isinstance(nod, interp.InterpNode)):
+                    # String.
+                    self.accum.append(nod)
+                    continue
+                if isinstance(nod, interp.Interpolate):
+                    ### Should execute code here, but right now we only
+                    ### allow symbol lookup.
+                    subres = self.evalkey(self, nod.expr, depth+1)
+                    # {text} objects have already added their contents to
+                    # the accum array.
+                    if not is_text_object(subres):
+                        # Anything not a {text} object gets interpolated as
+                        # a string.
+                        self.accum.append(str(subres))
+                    continue
+                self.accum.append(nod.describe())
+            
         except Exception as ex:
             return '[Exception: %s]' % (ex,)
 
-        if (asstring):
-            if res is None:
-                res = ''
-            res = str(res)
         return res
+
+def is_text_object(res):
+    return (type(res) is dict and res.get('type', None) == 'text')
 
 @tornado.gen.coroutine
 def find_symbol(app, wid, iid, locid, key):

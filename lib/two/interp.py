@@ -1,9 +1,10 @@
 import re
 
-re_bracketgroup = re.compile('[[]+')
-re_closeorbarorinterp = re.compile(']|[|]|[[]')
+class InterpNode(object):
+    def describe(self):
+        return repr(self)
 
-class Interpolate(object):
+class Interpolate(InterpNode):
     def __init__(self, expr):
         self.expr = expr
     def __repr__(self):
@@ -13,7 +14,7 @@ class Interpolate(object):
     def __ne__(self, obj):
         return not (isinstance(obj, Interpolate) and self.expr == obj.expr)
 
-class Link(object):
+class Link(InterpNode):
     def __init__(self, target=None):
         self.target = target
     def __repr__(self):
@@ -23,13 +24,27 @@ class Link(object):
     def __ne__(self, obj):
         return not (isinstance(obj, Link) and self.target == obj.target)
         
-class EndLink(object):
+class EndLink(InterpNode):
     def __repr__(self):
         return '<EndLink>'
     def __eq__(self, obj):
         return (isinstance(obj, EndLink))
     def __ne__(self, obj):
         return not (isinstance(obj, EndLink))
+
+class ParaBreak(InterpNode):
+    def __repr__(self):
+        return '<ParaBreak>'
+    def __eq__(self, obj):
+        return (isinstance(obj, ParaBreak))
+    def __ne__(self, obj):
+        return not (isinstance(obj, ParaBreak))
+
+### LineBreak
+### If, Else, Elif, End
+
+re_bracketgroup = re.compile('[[]+')
+re_closeorbarorinterp = re.compile(']|[|]|[[]')
 
 def parse(text):
     if type(text) is not str:
@@ -120,13 +135,13 @@ re_startdigit = re.compile('^[0-9]')
 
 def sluggify(text):
     ### Would be nice to follow Py3 identifier rules here, for Unicode.
-    ### Maybe turn space to _ first, then remove extra underscores? But several *real* underscores in a row should not collapse. I think we're turning punctuation to space, trim, remove extra, then to _.
     text = text.lower()
-    text = re_nonidentchars.sub(' ', text)
-    text = re_extrawhite.sub(' ', text)
+    text = re_nonidentchars.sub(' ', text)  # Punctuation to spaces
+    text = re_extrawhite.sub(' ', text)     # Remove redundant spaces
     text = text.strip()
     text = text.replace(' ', '_')
     if not text or re_startdigit.match(text):
+        # Must not be empty or start with a digit
         text = '_' + text
     return text
 
