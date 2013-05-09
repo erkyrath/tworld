@@ -82,6 +82,7 @@ def define_commands():
     @command('refreshconn', isserver=True)
     def cmd_refreshconn(app, cmd, stream):
         # Refresh one connection (not all the player's connections!)
+        ### Probably oughta be a player command, not a server command.
         conn = app.playconns.get(cmd.connid)
         yield two.describe.generate_locale(app, conn)
     
@@ -170,4 +171,12 @@ def define_commands():
         for oconn in app.playconns.all():
             oconn.write({'cmd':'event', 'text':val})
 
+    @command('action')
+    def cmd_action(app, cmd, conn):
+        raise MessageException('### You clicked "%s".' % (cmd.action,))
+        
+    @command('dropfocus')
+    def cmd_dropfocus(app, cmd, conn):
+        raise MessageException('### You dropped focus.')
+        
     return Command.all_commands

@@ -93,8 +93,8 @@ function build_focuspane(contentls)
     focusoutline.append($('<div>', { 'class': 'InvisibleBelowPara' }));
     focuspane.append(focusoutline);
 
-    /* ### make this close control look and act nicer */
-    focuscornercontrol.on('click', function() { focuspane_clear(); });
+    /* ### make this close control look and act nicer. */
+    focuscornercontrol.on('click', evhan_click_dropfocus);
 
     return focuspane;
 }
@@ -158,13 +158,17 @@ function localepane_set(desc, title) {
         localeel.append(titleel);
     }
 
+    var contentls;
     try {
-        parse_description(desc, localeel);
+        contentls = parse_description(desc);
     }
     catch (ex) {
         var el = $('<p>');
         el.text('[Error rendering description: ' + ex + ']');
-        localeel.append(el);
+        contentls = [ el ];
+    }
+    for (var ix=0; ix<contentls.length; ix++) {
+        localeel.append(contentls[ix]);
     }
 }
 
@@ -233,28 +237,16 @@ function focuspane_clear()
     }
 }
 
-function focuspane_set(text)
+function focuspane_set(desc)
 {
-    var parals = text.split('\n');
-    var count = 0;
-
-    /* We do work here to make sure that there are no empty paragraphs.
-       Really the server should do this, and if the text is entirely blank,
-       convert to a clear command. */
-    var contentls = [];
-    for (var ix=0; ix<parals.length; ix++) {
-        if (parals[ix].length == 0)
-            continue;
-        var el = $('<p>');
-        el.text(parals[ix]);
-        contentls.push(el);
-        count++;
+    var contentls;
+    try {
+        contentls = parse_description(desc);
     }
-    if (!count) {
+    catch (ex) {
         var el = $('<p>');
-        el.text(NBSP);
-        contentls.push(el);
-        count++;
+        el.text('[Error rendering description: ' + ex + ']');
+        contentls = [ el ];
     }
 
     /* Clear out old panes and slide in the new one. (It will have the
@@ -268,16 +260,18 @@ function focuspane_set(text)
 }
 
 /*### This is terrible. Redo, with sensible nest-counting. */
-function parse_description(desc, parentel) {
+function parse_description(desc) {
     if (!jQuery.isArray(desc))
         desc = [ desc ];
+
+    var resls = [];
     
     var curpara = null;
     for (var ix=0; ix<desc.length; ix++) {
         var str = desc[ix];
         if (curpara === null) {
             curpara = $('<p>');
-            parentel.append(curpara);
+            resls.push(curpara);
         }
 
         var el = null;
@@ -307,6 +301,8 @@ function parse_description(desc, parentel) {
         if (el !== null)
             curpara.append(el);
     }
+
+    return resls;
 }
 
 /* Run a function (no arguments) in timeout seconds. Returns a value that
@@ -512,7 +508,13 @@ function evhan_click_action(ev) {
 
     var target = ev.data.target;
     console.log('### action: ' + target);
-    websocket_send_json({ cmd:'action', text:target });
+    websocket_send_json({ cmd:'action', action:target });
+}
+
+function evhan_click_dropfocus(ev) {
+    ev.preventDefault();
+
+    websocket_send_json({ cmd:'dropfocus' });
 }
 
 function handle_leftright_resize(ev, ui) {
