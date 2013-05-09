@@ -173,10 +173,26 @@ def define_commands():
 
     @command('action')
     def cmd_action(app, cmd, conn):
-        raise MessageException('### You clicked "%s".' % (cmd.action,))
+        ### This is scaffolding. Do not keep.
+        yield motor.Op(app.mongodb.playstate.update,
+                       {'_id':conn.uid},
+                       {'$set':{'focus':cmd.action}})
+        yield two.describe.generate_locale(app, conn) ### total refresh in lieu of getting this right.
         
     @command('dropfocus')
     def cmd_dropfocus(app, cmd, conn):
-        raise MessageException('### You dropped focus.')
+        playstate = yield motor.Op(app.mongodb.playstate.find_one,
+                                   {'_id':conn.uid},
+                                   {'focus':1})
+        app.log.info('### playstate: %s', playstate)
+        if playstate['focus'] is None:
+            # Just in case...
+            conn.write({'cmd':'clearfocus'})
+            return
+        yield motor.Op(app.mongodb.playstate.update,
+                       {'_id':conn.uid},
+                       {'$set':{'focus':None}})
+        ### Ought to call some nice generic update operation here, but...
+        conn.write({'cmd':'clearfocus'})
         
     return Command.all_commands

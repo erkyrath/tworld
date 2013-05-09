@@ -601,6 +601,12 @@ function evhan_websocket_message(ev) {
         if (obj.world)
             toolpane_set_world(obj.world.world, obj.world.scope, obj.world.creator);
     }
+    if (cmd == 'clearfocus') {
+        focuspane_clear();
+    }
+    if (cmd == 'setfocus') {
+        focuspane_set(obj.desc);
+    }
     if (cmd == 'error')
         eventpane_add('Error: ' + obj.text, 'EventError');
     if (cmd == 'message')

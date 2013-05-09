@@ -131,12 +131,16 @@ def generate_locale(app, conn):
 
     ctx = EvalPropContext(app, wid, iid, locid, level=LEVEL_DISPLAY)
     localetext = yield ctx.eval('desc')
+
+    focustext = None
+    if playstate['focus']:
+        focustext = yield ctx.eval(playstate['focus'])
     
     msg = {'cmd':'refresh',
            'world':{'world':worldname, 'scope':scopename, 'creator':creatorname},
            'localename': location['name'],
            'locale': localetext,
-           'focus': None, ###
+           'focus': focustext,
            }
     
     conn.write(msg)
