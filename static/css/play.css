@@ -123,13 +123,7 @@
 }
 
 .FocusPane a {
-  text-decoration: none;
   color: #A30; /* inherit? */
-}
-
-.FocusPane a:hover {
-  text-decoration: underline;
-  color: #A30;
 }
 
 #eventpane a {
