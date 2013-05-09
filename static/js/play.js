@@ -401,9 +401,12 @@ function parse_description(desc) {
             }
         }        
         else {
-            el = create_text_node(obj);
-            parent.append(el);
-            curparasize++;
+            /* String. */
+            if (obj.length) {
+                el = create_text_node(obj);
+                parent.append(el);
+                curparasize++;
+            }
         }
     }
 

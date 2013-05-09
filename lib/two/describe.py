@@ -57,12 +57,12 @@ class EvalPropContext(object):
             return str(res)
         if (self.level == LEVEL_MESSAGE):
             if is_text_object(res):
-                return ''.join([ str(val) for val in self.accum ])
+                return ''.join([ str_or_null(val) for val in self.accum ])
             return str(res)
         if (self.level == LEVEL_DISPLAY):
             if is_text_object(res):
                 return self.accum
-            return str(res)
+            return str_or_null(res)
         raise Exception('unrecognized eval level: %d' % (self.level,))
         
     @tornado.gen.coroutine
@@ -105,13 +105,13 @@ class EvalPropContext(object):
                 if isinstance(nod, interp.Interpolate):
                     ### Should execute code here, but right now we only
                     ### allow symbol lookup.
-                    subres = self.evalkey(self, nod.expr, depth+1)
+                    subres = yield self.evalkey(nod.expr, depth+1)
                     # {text} objects have already added their contents to
                     # the accum array.
                     if not is_text_object(subres):
                         # Anything not a {text} object gets interpolated as
                         # a string.
-                        self.accum.append(str(subres))
+                        self.accum.append(str_or_null(subres))
                     continue
                 self.accum.append(nod.describe())
             
@@ -122,6 +122,11 @@ class EvalPropContext(object):
 
 def is_text_object(res):
     return (type(res) is dict and res.get('type', None) == 'text')
+
+def str_or_null(res):
+    if res is None:
+        return ''
+    return str(res)
 
 @tornado.gen.coroutine
 def find_symbol(app, wid, iid, locid, key):
