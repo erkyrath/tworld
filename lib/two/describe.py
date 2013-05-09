@@ -100,7 +100,8 @@ class EvalPropContext(object):
             for nod in nodls:
                 if not (isinstance(nod, interp.InterpNode)):
                     # String.
-                    self.accum.append(nod)
+                    if nod:
+                        self.accum.append(nod)
                     continue
                 if isinstance(nod, interp.Interpolate):
                     ### Should execute code here, but right now we only

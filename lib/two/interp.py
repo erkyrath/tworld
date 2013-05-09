@@ -43,12 +43,36 @@ class ParaBreak(InterpNode):
         return (isinstance(obj, ParaBreak))
     def __ne__(self, obj):
         return not (isinstance(obj, ParaBreak))
+    def describe(self):
+        return ['para']
 
 ### LineBreak
 ### If, Else, Elif, End
 
 re_bracketgroup = re.compile('[[]+')
 re_closeorbarorinterp = re.compile(']|[|]|[[]')
+re_twolinebreaks = re.compile('[ \t]*\n[ \t]*\n[ \t\n]*')
+
+def append_text_with_paras(dest, text, start, end):
+    if (end <= start):
+        return
+
+    text = text[start:end]
+
+    ls = re_twolinebreaks.split(text)
+    if len(ls) <= 1:
+        # No double line breaks found.
+        dest.extend(ls)
+        return
+
+    first = True
+    for el in ls:
+        if first:
+            first = False
+        else:
+            dest.append(ParaBreak())
+        if el:
+            dest.append(el)
 
 def parse(text):
     if type(text) is not str:
@@ -63,8 +87,7 @@ def parse(text):
             pos = len(text)
         else:
             pos = match.start()
-        if (pos > start):
-            res.append(text[start:pos])
+        append_text_with_paras(res, text, start, pos)
         if not match:
             break
         start = pos
@@ -95,8 +118,7 @@ def parse(text):
                 raise ValueError('link missing ]')
             pos = match.start()
             if text[pos] == ']':
-                if pos > start:
-                    res.append(text[start:pos])
+                append_text_with_paras(res, text, start, pos)
                 chunk = text[linkstart:pos]
                 curlink.target = sluggify(chunk)
                 curlink = None
@@ -104,8 +126,7 @@ def parse(text):
                 start = pos+1
                 break
             if text[pos] == '|':
-                if pos > start:
-                    res.append(text[start:pos])
+                append_text_with_paras(res, text, start, pos)
                 start = pos+1
                 pos = text.find(']', start)
                 if pos < 0:
@@ -120,8 +141,7 @@ def parse(text):
                 raise ValueError('links cannot be nested')
             # [[ inside the [
             # Read a complete top-level [[...]] interpolation.
-            if pos > start:
-                res.append(text[start:pos])
+            append_text_with_paras(res, text, start, pos)
             start = pos+2
             pos = text.find(']]', start)
             if (pos < 0):
@@ -191,6 +211,15 @@ class TestInterpModule(unittest.TestCase):
         
         ls = parse('[One [[two]] three[[four]][[five]].| foobar ]')
         self.assertEqual(ls, [Link('foobar'), 'One ', Interpolate('two'), ' three', Interpolate('four'), Interpolate('five'), '.', EndLink()])
+
+        ls = parse('One.\nTwo.')
+        self.assertEqual(ls, ['One.\nTwo.'])
+
+        ls = parse('One.\n\nTwo.')
+        self.assertEqual(ls, ['One.', ParaBreak(), 'Two.'])
+
+        ls = parse('\nOne. \n \n Two.\n\n\nThree. \n\t\n  ')
+        self.assertEqual(ls, ['\nOne.', ParaBreak(), 'Two.', ParaBreak(), 'Three.', ParaBreak()])
 
         self.assertRaises(ValueError, parse, '[bar')
         self.assertRaises(ValueError, parse, '[[bar')
