@@ -8,17 +8,28 @@ class Interpolate(object):
         self.expr = expr
     def __repr__(self):
         return '<Interpolate "%s">' % (self.expr,)
+    def __eq__(self, obj):
+        return (isinstance(obj, Interpolate) and self.expr == obj.expr)
+    def __ne__(self, obj):
+        return not (isinstance(obj, Interpolate) and self.expr == obj.expr)
 
 class Link(object):
     def __init__(self, target=None):
         self.target = target
     def __repr__(self):
         return '<Link "%s">' % (self.target,)
+    def __eq__(self, obj):
+        return (isinstance(obj, Link) and self.target == obj.target)
+    def __ne__(self, obj):
+        return not (isinstance(obj, Link) and self.target == obj.target)
         
 class EndLink(object):
-    pass
     def __repr__(self):
         return '<EndLink>'
+    def __eq__(self, obj):
+        return (isinstance(obj, EndLink))
+    def __ne__(self, obj):
+        return not (isinstance(obj, EndLink))
 
 def parse(text):
     if type(text) is not str:
@@ -119,4 +130,53 @@ def sluggify(text):
         text = '_' + text
     return text
 
-### Unit test
+
+
+import unittest
+
+class TestInterpModule(unittest.TestCase):
+    
+    def test_sluggify(self):
+        tests = [
+            ('', '_'), (' ', '_'), ('  ', '_'), ('  ', '_'),
+            ('_', '_'), ('__', '__'), ('___', '___'),
+            ('.', '_'), ('..', '_'), ('. . .', '_'),
+            (' _ ', '_'), (' _  _ ', '___'),
+            ('a', 'a'), ('Hello', 'hello'), ('  one  two  ', 'one_two'),
+            ('a-Z_0-9', 'a_z_0_9'), ('95', '_95'), ('.001a', '_001a'),
+            ]
+        for (val, res) in tests:
+            self.assertEqual(sluggify(val), res)
+
+    def test_parse(self):
+        ls = parse('hello')
+        self.assertEqual(ls, ['hello'])
+        
+        ls = parse('[[hello]]')
+        self.assertEqual(ls, [Interpolate('hello')])
+
+        ls = parse('One [[two]] three[[four]][[five]].')
+        self.assertEqual(ls, ['One ', Interpolate('two'), ' three', Interpolate('four'), Interpolate('five'), '.'])
+        
+        ls = parse('[[ x = [] ]]')
+        self.assertEqual(ls, [Interpolate('x = []')])
+
+        ls = parse('[hello]')
+        self.assertEqual(ls, [Link('hello'), 'hello', EndLink()])
+
+        ls = parse('[Go to sleep.]')
+        self.assertEqual(ls, [Link('go_to_sleep'), 'Go to sleep.', EndLink()])
+
+        ls = parse('One [two] three[FOUR|half][FIVE].')
+        self.assertEqual(ls, ['One ', Link('two'), 'two', EndLink(), ' three', Link('half'), 'FOUR', EndLink(), Link('five'), 'FIVE', EndLink(), '.'])
+        
+        ls = parse('[One [[two]] three[[four]][[five]].| foobar ]')
+        self.assertEqual(ls, [Link('foobar'), 'One ', Interpolate('two'), ' three', Interpolate('four'), Interpolate('five'), '.', EndLink()])
+
+        self.assertRaises(ValueError, parse, '[bar')
+        self.assertRaises(ValueError, parse, '[[bar')
+        self.assertRaises(ValueError, parse, '[ [x] ]')
+        
+
+if __name__ == '__main__':
+    unittest.main()
