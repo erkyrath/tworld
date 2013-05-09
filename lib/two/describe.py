@@ -34,6 +34,7 @@ class EvalPropContext(object):
                     res = []
                     for el in ls:
                         if isinstance(el, two.interp.Link):
+                            ### should randomize target names
                             res.append(['link', el.target])
                             self.availtargets.add(el.target)
                         elif isinstance(el, two.interp.EndLink):
