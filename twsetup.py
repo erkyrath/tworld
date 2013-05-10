@@ -31,13 +31,6 @@ tornado.options.define(
 tornado.options.parse_command_line()
 opts = tornado.options.options
 
-tornado.options.define(
-    'python_path', type=str,
-    help='Python modules directory (optional)')
-
-if opts.python_path:
-    sys.path.insert(0, opts.python_path)
-
 
 client = pymongo.MongoClient()
 db = client[opts.mongo_database]
