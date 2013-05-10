@@ -183,10 +183,11 @@ def parse_prop(prop):
         if not val:
             error('%s must be followed by a value' % (key,))
             return None
-        val = sluggify(val.strip())
         if key == 'move':
+            val = sluggify(val.strip())
             return {'type':'move', 'loc':val}
         elif key == 'focus':
+            val = sluggify(val.strip())
             return {'type':'focus', 'key':val}
         elif key == 'event':
             return {'type':'event', 'text':val}
