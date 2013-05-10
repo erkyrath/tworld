@@ -31,15 +31,27 @@ tornado.options.define(
 
 tornado.options.define(
     'remove', type=bool,
-    help='remove the named room or room.prop')
+    help='only remove the named room or room.prop')
 
 tornado.options.define(
     'display', type=bool,
-    help='remove the named room or room.prop')
+    help='only display the named room or room.prop')
 
 # Parse 'em up.
 args = tornado.options.parse_command_line()
 opts = tornado.options.options
+
+# But tornado options don't support options after arguments. Hack to work
+# around this.
+if '--display' in args:
+    args.remove('--display')
+    opts.display = True
+if '--remove' in args:
+    args.remove('--remove')
+    opts.remove = True
+if '--removeworld' in args:
+    args.remove('--removeworld')
+    opts.removeworld = True
 
 if opts.python_path:
     sys.path.insert(0, opts.python_path)
@@ -58,7 +70,9 @@ class World(object):
         self.copyable = True
         self.instancing = 'standard'
         self.props = {}
+        self.proplist = []
         self.locations = {}
+        self.locationlist = []
 
 class Location(object):
     def __init__(self, name, key=None):
@@ -68,6 +82,7 @@ class Location(object):
         else:
             self.key = key
         self.props = {}
+        self.proplist = []
     def __repr__(self):
         return '<Location %s: "%s">' % (self.key, self.name)
 
@@ -104,6 +119,7 @@ def parse_world(filename):
                 error('Location defined twice: %s' % (lockey,))
             curloc = Location(locname, lockey)
             world.locations[lockey] = curloc
+            world.locationlist.append(lockey)
             curprop = 'desc'
             continue
 
@@ -147,11 +163,13 @@ def parse_world(filename):
             if key in world.props:
                 error('World key defined twice: %s' % (key,))
             world.props[key] = propval
+            world.proplist.append(key)
             curprop = key
         else:
             if key in curloc.props:
                 error('Location key defined twice in %s: %s' % (curloc.key, key,))
             curloc.props[key] = propval
+            curloc.proplist.append(key)
             curprop = key
             
     fl.close()
@@ -196,6 +214,9 @@ def append_to_prop(dic, key, ln):
     else:
         error('Cannot append to property %s' % (key,))
 
+def prop_to_string(val):
+    return str(val)
+        
 errorcount = 0
 
 def error(msg):
@@ -208,8 +229,52 @@ filename = args.pop(0)
 world = parse_world(filename)
 
 if errorcount:
-    print('%d errors; not writing to database.' % (errorcount,))
+    print('%d errors; stopping here.' % (errorcount,))
     sys.exit(1)
+
+if opts.display:
+    if not args:
+        args = ['.'] + world.locationlist
+    for val in args:
+        if '.' in val:
+            lockey, dummy, key = val.partition('.')
+        else:
+            lockey, key = (val, None)
+        if not key:
+            key = None
+
+        if not lockey:
+            print('* (world properties)')
+            print()
+            if key is None:
+                for key in world.proplist:
+                    print('%s: %s' % (key, prop_to_string(world.props[key])))
+                    print()
+            else:
+                if key not in world.props:
+                    error('Property not found in %s: %s' % ('*', key))
+                    continue
+                print('%s: %s' % (key, prop_to_string(world.props[key])))
+                print()
+            continue
+            
+        loc = world.locations.get(lockey, None)
+        if loc is None:
+            error('Location not found: %s' % (lockey,))
+            continue
+        
+        print('* %s: %s' % (loc.key, loc.name))
+        print()
+        if key is None:
+            for key in loc.proplist:
+                print('%s: %s' % (key, prop_to_string(loc.props[key])))
+                print()
+        else:
+            if key not in loc.props:
+                error('Property not found in %s: %s' % (loc.key, key))
+                continue
+            print('%s: %s' % (key, prop_to_string(loc.props[key])))
+            print()
 
 #client = pymongo.MongoClient()
 #db = client[opts.mongo_database]
