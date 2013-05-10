@@ -1,3 +1,5 @@
+import random
+
 import tornado.gen
 import motor
 
@@ -9,6 +11,8 @@ LEVEL_FLAT = 1
 LEVEL_RAW = 0
 
 class EvalPropContext(object):
+    link_code_counter = 1
+    
     def __init__(self, app, wid, iid, locid=None, level=LEVEL_MESSAGE):
         self.app = app
         self.wid = wid
@@ -102,6 +106,12 @@ class EvalPropContext(object):
                     # String.
                     if nod:
                         self.accum.append(nod)
+                    continue
+                if isinstance(nod, interp.Link):
+                    code = str(EvalPropContext.link_code_counter) + hex(random.getrandbits(32))[2:]
+                    EvalPropContext.link_code_counter = EvalPropContext.link_code_counter + 1
+                    self.linktargets[code] = nod.target
+                    self.accum.append( ['link', code] )
                     continue
                 if isinstance(nod, interp.Interpolate):
                     ### Should execute code here, but right now we only
@@ -206,12 +216,18 @@ def generate_locale(app, conn):
                               {'name':1})
     locid = location['_id']
 
+    conn.localeactions.clear()
     ctx = EvalPropContext(app, wid, iid, locid, level=LEVEL_DISPLAY)
     localetext = yield ctx.eval('desc')
+    if ctx.linktargets:
+        conn.localeactions.update(ctx.linktargets)
 
     focustext = None
+    conn.focusactions.clear()
     if playstate['focus']:
         focustext = yield ctx.eval(playstate['focus'])
+        if ctx.linktargets:
+            conn.focusactions.update(ctx.linktargets)
     
     msg = {'cmd':'refresh',
            'world':{'world':worldname, 'scope':scopename, 'creator':creatorname},

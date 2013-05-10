@@ -49,6 +49,11 @@ class PlayerConnection(object):
         self.email = email  # used only for log messages, not DB work
         self.stream = stream   # WebConnIOStream that handles this connection
         self.twwcid = stream.twwcid
+
+        # Map action codes to bits of script, for the player's current
+        # location (and focus).
+        self.localeactions = {}
+        self.focusactions = {}
         
     def write(self, msg):
         """Shortcut to send a message to a player via this connection.

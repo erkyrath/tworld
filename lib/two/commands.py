@@ -142,6 +142,14 @@ def define_commands():
     def cmd_meta_refresh(app, cmd, conn):
         app.queue_command({'cmd':'refreshconn', 'connid':conn.connid})
         
+    @command('meta_actionmaps')
+    def cmd_meta_actionmaps(app, cmd, conn):
+        ### debug
+        val = 'Locale action map: %s' % (conn.localeactions,)
+        conn.write({'cmd':'message', 'text':val})
+        val = 'Focus action map: %s' % (conn.focusactions,)
+        conn.write({'cmd':'message', 'text':val})
+        
     @command('say')
     def cmd_say(app, cmd, conn):
         res = yield motor.Op(app.mongodb.players.find_one,
@@ -173,6 +181,12 @@ def define_commands():
 
     @command('action')
     def cmd_action(app, cmd, conn):
+        # First check that the action is one currently visible to the player.
+        action = conn.localeactions.get(cmd.action)
+        if action is None:
+            action = conn.focusactions.get(cmd.action)
+        if action is None:
+            raise ErrorMessageException('Action is not available.')
         ### This is scaffolding. Do not keep.
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':conn.uid},

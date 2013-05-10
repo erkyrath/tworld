@@ -376,8 +376,9 @@ function parse_description(desc) {
                 else if (objtag == 'link') {
                     if (curinlink)
                         parent.append(create_text_node('[Nested links]'));
-                    el = $('<a>', {href:'#'});
-                    el.on('click', {target:obj[1]}, evhan_click_action);
+                    var target = obj[1];
+                    el = $('<a>', {href:'#'+target});
+                    el.on('click', {target:target}, evhan_click_action);
                     objstack.push(obj);
                     elstack.push(el);
                     curinlink = true;
