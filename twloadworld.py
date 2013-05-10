@@ -127,8 +127,12 @@ def parse_world(filename):
 
         if isindent and curprop is not None:
             if not curloc:
+                if curprop not in world.proplist:
+                    world.proplist.append(curprop)
                 append_to_prop(world.props, curprop, ln)
             else:
+                if curprop not in curloc.proplist:
+                    curloc.proplist.append(curprop)
                 append_to_prop(curloc.props, curprop, ln)
             continue
 

@@ -292,6 +292,7 @@ def perform_action(app, conn, target):
                        {'$set':{'focus':target}})
     elif restype == 'focus':
         # Set focus to the given symbol
+        ### if already at focus, leave it?
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':conn.uid},
                        {'$set':{'focus':res.get('key', None)}})
