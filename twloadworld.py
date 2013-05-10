@@ -5,6 +5,7 @@ import os
 import json
 import datetime
 
+from bson.objectid import ObjectId
 import pymongo
 
 import tornado.options
@@ -81,6 +82,7 @@ class Location(object):
             self.key = sluggify(name)
         else:
             self.key = key
+        self.locid = None
         self.props = {}
         self.proplist = []
     def __repr__(self):
@@ -294,8 +296,152 @@ if opts.display:
             print('%s: %s' % (key, prop_to_string(loc.props[key])))
             print()
 
-#client = pymongo.MongoClient()
-#db = client[opts.mongo_database]
+    sys.exit(0)
 
+client = pymongo.MongoClient()
+db = client[opts.mongo_database]
 
+dbcreator = db.players.find_one({'name':world.creator})
+if not dbcreator:
+    error('Creator %s not found in database.' % (world.creator,))
 
+world.creatoruid = dbcreator['_id']
+
+if not world.wid:
+    # Look for a world with this name. If not found, create it. If found,
+    # use it (if the creator matches)
+    dbworld = db.worlds.find_one({'name':world.name})
+    if dbworld and dbworld.get('creator') != world.creatoruid:
+        error('Found world "%s", but it was not created by %s.' % (world.name, world.creator))
+        sys.exit(1)
+else:
+    # If the world with this wid does not exist, we'll have to create it.
+    dbworld = db.worlds.find_one({'_id':ObjectId(world.wid)})
+
+if dbworld:
+    wid = dbworld['_id']
+    print('Found world "%s" (%s)' % (dbworld['name'], wid))
+else:
+    dbworld = {
+        'creator': world.creatoruid,
+        'name': world.name,
+        'copyable': True,
+        'instancing': world.instancing,
+        }
+    wid = db.worlds.insert(dbworld)
+    dbworld = db.worlds.find_one({'_id':wid})
+    if not dbworld:
+        error('Unable to create world!')
+        sys.exit(1)
+    print('Created world "%s" (%s)' % (dbworld['name'], wid))
+
+if opts.remove:
+    if not args:
+        error('Use --removeworld to remove the entire world.')
+        sys.exit(1)
+    for val in args:
+        if '.' in val:
+            lockey, dummy, key = val.partition('.')
+        else:
+            lockey, key = (val, None)
+        if not key:
+            key = None
+
+        if not lockey:
+            if key is None:
+                db.worldprop.remove({'wid':wid, 'locid':None})
+                print('removing all world properties')
+            else:
+                db.worldprop.remove({'wid':wid, 'locid':None, 'key':key})
+                print('removing world property: %s' % (key,))
+            continue
+            
+        loc = world.locations.get(lockey, None)
+        if loc is None:
+            error('Location not found: %s' % (lockey,))
+            continue
+        
+        if not loc.locid:
+            dbloc = db.locations.find_one({'wid':wid, 'key':lockey})
+            if dbloc:
+                loc.locid = dbloc['_id']
+            else:
+                error('Location does not exist in database: %s' % (lockey,))
+                continue
+            
+        if key is None:
+            db.worldprop.remove({'wid':wid, 'locid':loc.locid})
+            print('removing all properties in %s' % (lockey,))
+        else:
+            db.worldprop.remove({'wid':wid, 'locid':loc.locid, 'key':key})
+            print('removing property in %s: %s' % (lockey, key,))
+
+    sys.exit(0)
+
+# The adding-stuff-to-the-database case.
+if not args:
+    args = ['.'] + world.locationlist
+for val in args:
+    if '.' in val:
+        lockey, dummy, key = val.partition('.')
+    else:
+        lockey, key = (val, None)
+    if not key:
+        key = None
+
+    if not lockey:
+        # World properties
+        if key is None:
+            # All world properties
+            for key in world.props:
+                val = world.props[key]
+                print('Writing world property: %s' % (key,))
+                db.worldprop.update({'wid':wid, 'locid':None, 'key':key},
+                                    {'wid':wid, 'locid':None, 'key':key, 'val':val},
+                                    upsert=True)
+        else:
+            if key not in world.props:
+                error('Property not found in %s: %s' % ('*', key))
+                continue
+            val = world.props[key]
+            print('Writing world property: %s' % (key,))
+            db.worldprop.update({'wid':wid, 'locid':None, 'key':key},
+                                {'wid':wid, 'locid':None, 'key':key, 'val':val},
+                                upsert=True)
+        continue
+    
+    loc = world.locations.get(lockey, None)
+    if loc is None:
+        error('Location not found: %s' % (lockey,))
+        continue
+    
+    if not loc.locid:
+        dbloc = db.locations.find_one({'wid':wid, 'key':lockey})
+        if dbloc:
+            loc.locid = dbloc['_id']
+        else:
+            print('Creating location: %s' % (loc.key,))
+            dbloc = {
+                'wid': wid,
+                'key': loc.key,
+                'name': loc.name,
+                }
+            loc.locid = db.locations.insert(dbloc)
+            
+    if key is None:
+        for key in loc.props:
+            val = loc.props[key]
+            print('Writing property in %s: %s' % (loc.key, key,))
+            db.worldprop.update({'wid':wid, 'locid':loc.locid, 'key':key},
+                                {'wid':wid, 'locid':loc.locid, 'key':key, 'val':val},
+                                upsert=True)
+    else:
+        if key not in loc.props:
+            error('Property not found in %s: %s' % (loc.key, key))
+            continue
+        val = loc.props[key]
+        print('Writing property in %s: %s' % (loc.key, key,))
+        db.worldprop.update({'wid':wid, 'locid':loc.locid, 'key':key},
+                            {'wid':wid, 'locid':loc.locid, 'key':key, 'val':val},
+                            upsert=True)
+        
