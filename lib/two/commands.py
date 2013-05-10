@@ -187,11 +187,7 @@ def define_commands():
             action = conn.focusactions.get(cmd.action)
         if action is None:
             raise ErrorMessageException('Action is not available.')
-        ### This is scaffolding. Do not keep.
-        yield motor.Op(app.mongodb.playstate.update,
-                       {'_id':conn.uid},
-                       {'$set':{'focus':cmd.action}})
-        yield two.describe.generate_locale(app, conn) ### total refresh in lieu of getting this right.
+        res = yield two.describe.perform_action(app, conn, action)
         
     @command('dropfocus')
     def cmd_dropfocus(app, cmd, conn):

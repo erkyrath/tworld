@@ -52,6 +52,9 @@ class PlayerConnection(object):
 
         # Map action codes to bits of script, for the player's current
         # location (and focus).
+        # (We don't try to keep these in the database, because if the
+        # server crashes, it'll regenerate all this stuff for the connected
+        # players as soon as it comes back.)
         self.localeactions = {}
         self.focusactions = {}
         

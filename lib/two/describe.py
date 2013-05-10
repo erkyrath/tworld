@@ -3,6 +3,7 @@ import random
 import tornado.gen
 import motor
 
+from twcommon.excepts import MessageException, ErrorMessageException
 from two import interp
 
 LEVEL_DISPLAY = 3
@@ -167,6 +168,7 @@ def find_symbol(app, wid, iid, locid, key):
 
     return None
 
+
 @tornado.gen.coroutine
 def generate_locale(app, conn):
     playstate = yield motor.Op(app.mongodb.playstate.find_one,
@@ -238,3 +240,68 @@ def generate_locale(app, conn):
     
     conn.write(msg)
     
+
+@tornado.gen.coroutine
+def perform_action(app, conn, target):
+    playstate = yield motor.Op(app.mongodb.playstate.find_one,
+                               {'_id':conn.uid},
+                               {'iid':1, 'locale':1, 'focus':1})
+    app.log.info('### playstate: %s', playstate)
+    
+    iid = playstate['iid']
+    if not iid:
+        # In the void, there should be no actions.
+        raise ErrorMessageException('You are between worlds.')
+        
+    instance = yield motor.Op(app.mongodb.instances.find_one,
+                              {'_id':iid})
+    wid = instance['wid']
+    scid = instance['scid']
+
+    location = yield motor.Op(app.mongodb.locations.find_one,
+                              {'wid':wid, 'key':playstate['locale']},
+                              {'name':1})
+    locid = location['_id']
+
+    ### if the target is not a symbol, execute it directly
+    
+    res = yield find_symbol(app, wid, iid, locid, target)
+    if res is None:
+        raise ErrorMessageException('Action not defined: "%s"' % (target,))
+
+    if type(res) is not dict:
+        raise ErrorMessageException('Action "%s" is defined as a plain value: %s' % (target, res))
+    restype = res.get('type', None)
+
+    if restype == 'event':
+        # Display an event.
+        ### This should go through parse_description! (LEVEL_MESSAGE)
+        ### Have an other-people field too.
+        val = res.get('text', None)
+        if val:
+            conn.write({'cmd':'event', 'text':val})
+        return
+
+    if restype == 'code':
+        raise ErrorMessageException('Code events are not yet supported.') ###
+    
+    if restype == 'text':
+        # Set focus to this symbol-name
+        yield motor.Op(app.mongodb.playstate.update,
+                       {'_id':conn.uid},
+                       {'$set':{'focus':target}})
+    elif restype == 'focus':
+        # Set focus to the given symbol
+        yield motor.Op(app.mongodb.playstate.update,
+                       {'_id':conn.uid},
+                       {'$set':{'focus':res.get('key', None)}})
+    elif restype == 'move':
+        # Set locale to the given symbol
+        ### Check that the locale exists?
+        yield motor.Op(app.mongodb.playstate.update,
+                       {'_id':conn.uid},
+                       {'$set':{'locale':res.get('loc', None), 'focus':None}})
+
+    ### total refresh, which is not right. Be more clever.
+    yield generate_locale(app, conn) 
+
