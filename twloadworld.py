@@ -190,6 +190,8 @@ def parse_prop(prop):
             return {'type':'event', 'text':val}
         elif key == 'text':
             return {'type':'text', 'text':val}
+        elif key == 'code':
+            return {'type':'code', 'text':val}
         else:
             error('Unknown special property type: *%s' % (key,))
             return None
@@ -215,7 +217,23 @@ def append_to_prop(dic, key, ln):
         error('Cannot append to property %s' % (key,))
 
 def prop_to_string(val):
-    return str(val)
+    if type(val) is not dict:
+        return json.dumps(val)
+    key = val.get('type', None)
+    if key == 'move':
+        return '*move %s' % (val['loc'],)
+    if key == 'focus':
+        return '*focus %s' % (val['key'],)
+    if key == 'event':
+        return '*event %s' % (val['text'],)
+    if key == 'text':
+        val = val['text']
+        if '\n\n' in val:
+            return val.replace('\n\n', '\n\t')
+        return val
+    if key == 'code':
+        return '*code %s' % (val['text'],)
+    return json.dumps(val)
         
 errorcount = 0
 
