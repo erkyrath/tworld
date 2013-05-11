@@ -5,7 +5,7 @@ import motor
 from twcommon import wcproto
 from twcommon.excepts import MessageException, ErrorMessageException
 
-import two.describe
+import two.execute
 from two.task import DIRTY_ALL, DIRTY_LOCALE, DIRTY_FOCUS
 
 class Command:
@@ -211,7 +211,7 @@ def define_commands():
             action = conn.focusactions.get(cmd.action)
         if action is None:
             raise ErrorMessageException('Action is not available.')
-        res = yield two.describe.perform_action(app, conn, action)
+        res = yield two.execute.perform_action(app, conn, action)
         
     @command('dropfocus', doeswrite=True)
     def cmd_dropfocus(app, task, cmd, conn):

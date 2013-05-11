@@ -2,7 +2,7 @@ import datetime
 
 import tornado.gen
 
-import two.describe
+import two.execute
 from twcommon.excepts import MessageException, ErrorMessageException
 
 DIRTY_LOCALE = 1
@@ -225,7 +225,7 @@ class Task(object):
             try:
                 conn = self.app.playconns.get(connid)
                 ### Do this more efficiently, with dirty bits!
-                yield two.describe.generate_locale(self.app, conn)
+                yield two.execute.generate_locale(self.app, conn)
             except Exception as ex:
                 self.log.error('Error updating while resolving task: %s', self.cmdobj, exc_info=True)
         
