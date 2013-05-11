@@ -2,6 +2,7 @@ import datetime
 
 import tornado.gen
 
+import two.describe
 from twcommon.excepts import MessageException, ErrorMessageException
 
 DIRTY_LOCALE = 1
@@ -97,6 +98,10 @@ class Task(object):
                 if not cmd.noneedmongo and not self.app.mongodb:
                     # Guess the database access is not going to work.
                     raise ErrorMessageException('Tworld has lost contact with the database.')
+
+                if cmd.doeswrite:
+                    # May cause display changes.
+                    self.set_writable()
                 
                 res = yield cmd.func(self.app, self, self.cmdobj, stream)
                 if res is not None:
@@ -140,6 +145,10 @@ class Task(object):
                 # Guess the database access is not going to work.
                 raise ErrorMessageException('Tworld has lost contact with the database.')
 
+            if cmd.doeswrite:
+                # May cause display changes.
+                self.set_writable()
+                
             res = yield cmd.func(self.app, self, self.cmdobj, conn)
             if res is not None:
                 self.log.info('Command "%s" result: %s', cmdname, res)
@@ -176,7 +185,7 @@ class Task(object):
 
     @tornado.gen.coroutine
     def resolve(self):
-        if not self.iswritable():
+        if not self.is_writable():
             return
         
         # Detach the update map. From this point on, the task is nonwritable
@@ -211,7 +220,14 @@ class Task(object):
         if not updateconns:
             return
 
-        self.log('### Must resolve updates: %s', updateconns)
+        self.log.info('### Must resolve updates: %s', updateconns)
+        for (connid, dirty) in updateconns.items():
+            try:
+                conn = self.app.playconns.get(connid)
+                ### Do this more efficiently, with dirty bits!
+                yield two.describe.generate_locale(self.app, conn)
+            except Exception as ex:
+                self.log.error('Error updating while resolving task: %s', self.cmdobj, exc_info=True)
         
 
 def delay(dur, callback=None):

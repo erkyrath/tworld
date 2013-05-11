@@ -172,6 +172,8 @@ def find_symbol(app, wid, iid, locid, key):
 
 @tornado.gen.coroutine
 def generate_locale(app, conn):
+    assert conn is not None, 'generate_locale: conn is None'
+    
     playstate = yield motor.Op(app.mongodb.playstate.find_one,
                                {'_id':conn.uid},
                                {'iid':1, 'locid':1, 'focus':1})

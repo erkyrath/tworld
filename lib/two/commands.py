@@ -6,18 +6,20 @@ from twcommon import wcproto
 from twcommon.excepts import MessageException, ErrorMessageException
 
 import two.describe
+from two.task import DIRTY_ALL
 
 class Command:
     # As commands are defined with the @command decorator, they are stuffed
     # in this dict.
     all_commands = {}
 
-    def __init__(self, name, func, isserver=False, noneedmongo=False, preconnection=False):
+    def __init__(self, name, func, isserver=False, noneedmongo=False, preconnection=False, doeswrite=False):
         self.name = name
         self.func = tornado.gen.coroutine(func)
         self.isserver = isserver
         self.noneedmongo = noneedmongo
         self.preconnection = preconnection
+        self.doeswrite = doeswrite
         
     def __repr__(self):
         return '<Command "%s">' % (self.name,)
@@ -79,12 +81,12 @@ def define_commands():
     def cmd_logplayerconntable(app, task, cmd, stream):
         app.playconns.dumplog()
         
-    @command('refreshconn', isserver=True)
+    @command('refreshconn', isserver=True, doeswrite=True)
     def cmd_refreshconn(app, task, cmd, stream):
         # Refresh one connection (not all the player's connections!)
         ### Probably oughta be a player command, not a server command.
         conn = app.playconns.get(cmd.connid)
-        yield two.describe.generate_locale(app, conn)
+        task.set_conn_dirty(conn, DIRTY_ALL)
     
     @command('playeropen', noneedmongo=True, preconnection=True)
     def cmd_playeropen(app, task, cmd, conn):
@@ -115,6 +117,9 @@ def define_commands():
     @command('uiprefs')
     def cmd_uiprefs(app, task, cmd, conn):
         # Could we handle this in tweb? I guess, if we cared.
+        # Note that this command isn't marked writable, because it only
+        # writes to an obscure collection that never affects anybody's
+        # display.
         for (key, val) in cmd.map.__dict__.items():
             res = yield motor.Op(app.mongodb.playprefs.update,
                                  {'uid':conn.uid, 'key':key},
