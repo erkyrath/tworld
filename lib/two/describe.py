@@ -231,7 +231,7 @@ def generate_locale(app, conn):
 
     locname = location['name']
 
-    conn.localeactions.clear() ### should be at top
+    conn.localeactions.clear() ### should be at top ### and localedependencies too!
     ctx = EvalPropContext(app, wid, iid, locid, level=LEVEL_DISPLAY)
     localetext = yield ctx.eval('desc')
     if ctx.linktargets:

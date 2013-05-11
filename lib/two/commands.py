@@ -151,6 +151,16 @@ def define_commands():
         val = 'Focus action map: %s' % (conn.focusactions,)
         conn.write({'cmd':'message', 'text':val})
 
+    @command('meta_dependencies')
+    def cmd_meta_dependencies(app, task, cmd, conn):
+        ### debug
+        val = 'Locale dependency set: %s' % (conn.localedependencies,)
+        conn.write({'cmd':'message', 'text':val})
+        val = 'Focus dependency set: %s' % (conn.focusdependencies,)
+        conn.write({'cmd':'message', 'text':val})
+        val = 'Populace dependency set: %s' % (conn.populacedependencies,)
+        conn.write({'cmd':'message', 'text':val})
+        
     @command('meta_exception')
     def cmd_meta_exception(app, task, cmd, conn):
         ### debug

@@ -15,21 +15,33 @@ class PlayerConnectionTable(object):
         # support a single tweb, so I am ignoring the problem.
 
     def get(self, connid):
+        """Look up a player connection by its ID. Returns None if not found.
+        """
         return self.map.get(connid, None)
 
     def all(self):
-        return self.map.values()
+        """A (non-dynamic) list of all player connections.
+        """
+        return list(self.map.values())
 
     def as_dict(self):
+        """A (non-dynamic) map of all player connections.
+        """
         return dict(self.map)
 
     def add(self, connid, uidstr, email, stream):
+        """Add a new player connection. This should only be invoked
+        from the "connect" and "playeropen" commands.
+        """
         assert connid not in self.map, 'Connection ID already in use!'
         conn = PlayerConnection(self, connid, ObjectId(uidstr), email, stream)
         self.map[connid] = conn
         return conn
 
     def remove(self, connid):
+        """Remove a dead player connection. This should only be invoked
+        from the "disconnect" and "playerconnect" commands.
+        """
         conn = self.map[connid]
         del self.map[connid]
         conn.connid = None
@@ -57,6 +69,13 @@ class PlayerConnection(object):
         # players as soon as it comes back.)
         self.localeactions = {}
         self.focusactions = {}
+
+        # Sets of what change keys will cause the location (focus, etc)
+        # text to change.
+        self.localedependencies = set()
+        self.focusdependencies = set()
+        self.populacedependencies = set()
+        
         
     def write(self, msg):
         """Shortcut to send a message to a player via this connection.

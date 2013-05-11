@@ -66,10 +66,20 @@ class Tworld(object):
         task = two.task.Task(self, cmdobj, connid, twwcid, queuetime)
         self.commandbusy = True
 
+        # Handle the command.
         try:
             yield task.handle()
         except Exception as ex:
             self.log.error('Error handling task: %s', cmdobj, exc_info=True)
+
+        # Resolve all changes resulting from the command. We do this
+        # in a separate try block, so that if the command died partway,
+        # we still display the partial effects.
+        if task.is_writable():
+            try:
+                yield task.resolve()
+            except Exception as ex:
+                self.log.error('Error resolving task: %s', cmdobj, exc_info=True)
 
         starttime = task.starttime
         endtime = datetime.datetime.now()

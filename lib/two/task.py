@@ -4,6 +4,11 @@ import tornado.gen
 
 from twcommon.excepts import MessageException, ErrorMessageException
 
+DIRTY_LOCALE = 1
+DIRTY_FOCUS = 2
+DIRTY_POPULACE = 4
+DIRTY_ALL = 7  # All of the above
+
 class Task(object):
     def __init__(self, app, cmdobj, connid, twwcid, queuetime):
         self.app = app
@@ -20,12 +25,37 @@ class Task(object):
         # When we started working on the command:
         self.starttime = datetime.datetime.now()
 
+        # This will be a set of change keys.
+        self.changeset = None
+        # This will map connection IDs to a bitmask of dirty bits.
+        # Values in this map should always be nonzero; if a connection
+        # is non-dirty, it should not be in the map.
+        self.updateconns = None
+
     def close(self):
         """Clean up any large member variables. This probably reduces
         ref cycles, or if not, keeps my brain tidy.
         """
         self.app = None
         self.cmdobj = None
+        self.updateconns = None
+        self.changeset = None
+
+    def is_writable(self):
+        return (self.updateconns is not None)
+
+    def set_writable(self):
+        self.changeset = set()
+        self.updateconns = {}
+
+    def set_data_change(self, key):
+        assert self.is_writable(), 'set_data_change: Task was never set writable'
+        self.changeset.add(key)
+        
+    def set_conn_dirty(self, conn, dirty):
+        assert self.is_writable(), 'set_conn_dirty: Task was never set writable'
+        val = self.updateconns.get(conn.connid, 0) | dirty
+        self.updateconns[conn.connid] = val
 
     @tornado.gen.coroutine
     def handle(self):
@@ -144,7 +174,45 @@ class Task(object):
             except Exception as ex:
                 pass
 
+    @tornado.gen.coroutine
+    def resolve(self):
+        if not self.iswritable():
+            return
+        
+        # Detach the update map. From this point on, the task is nonwritable
+        # again!
+        updateconns = self.updateconns
+        changeset = self.changeset
+        self.updateconns = None
+        self.changeset = None
 
+        # If nobody needs updating, we're done.
+        if not (changeset or updateconns):
+            return
+
+        connections = self.app.playconns.all()
+
+        # Go through the data changes, setting dirty bits as needed.
+        # (But we try to do as little work as possible.)
+        if changeset:
+            for conn in connections:
+                dirty = updateconns.get(conn.id, 0)
+                if not (dirty & DIRTY_LOCALE):
+                    if not conn.localedependencies.isdisjoint(changeset):
+                        dirty |= DIRTY_LOCALE
+                if not (dirty & DIRTY_FOCUS):
+                    if not conn.focusdependencies.isdisjoint(changeset):
+                        dirty |= DIRTY_FOCUS
+                ### populace?
+                if dirty:
+                    updateconns[conn.id] = dirty
+
+        # Again, we might be done.
+        if not updateconns:
+            return
+
+        self.log('### Must resolve updates: %s', updateconns)
+        
 
 def delay(dur, callback=None):
     """Delay N seconds. This must be invoked as
