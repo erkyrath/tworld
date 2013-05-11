@@ -1,0 +1,12 @@
+Requirements:
+
+Python 3 (3.3 or later)
+MongoDB (2.4 or later)
+Tornado (3.0 or later)
+PyMongo (2.5 or later)
+Motor (0.1)
+
+Typically you will install Python 3 and MongoDB with your package manager;
+on MacOS, I use Homebrew. Python comes with its own package manager, pip3;
+use this to install Tornado, PyMongo, and Motor.
+
