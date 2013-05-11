@@ -173,7 +173,7 @@ def find_symbol(app, wid, iid, locid, key):
 def generate_locale(app, conn):
     playstate = yield motor.Op(app.mongodb.playstate.find_one,
                                {'_id':conn.uid},
-                               {'iid':1, 'locale':1, 'focus':1})
+                               {'iid':1, 'locid':1, 'focus':1})
     app.log.info('### playstate: %s', playstate)
     
     iid = playstate['iid']
@@ -213,19 +213,31 @@ def generate_locale(app, conn):
     else:
         scopename = '???'
 
+    locid = playstate['locid']
     location = yield motor.Op(app.mongodb.locations.find_one,
-                              {'wid':wid, 'key':playstate['locale']},
-                              {'name':1})
-    locid = location['_id']
+                              {'_id':locid},
+                              {'wid':1, 'name':1})
 
-    conn.localeactions.clear()
+    if not location or location['wid'] != wid:
+        msg = {'cmd':'refresh',
+               'world':{'world':worldname, 'scope':scopename, 'creator':creatorname},
+               'localename': None,
+               'locale': '[Location not found]',
+               'focus': None,
+           }
+        conn.write(msg)
+        return
+
+    locname = location['name']
+
+    conn.localeactions.clear() ### should be at top
     ctx = EvalPropContext(app, wid, iid, locid, level=LEVEL_DISPLAY)
     localetext = yield ctx.eval('desc')
     if ctx.linktargets:
         conn.localeactions.update(ctx.linktargets)
 
     focustext = None
-    conn.focusactions.clear()
+    conn.focusactions.clear() ### should be at top
     if playstate['focus']:
         focustext = yield ctx.eval(playstate['focus'])
         if ctx.linktargets:
@@ -233,7 +245,7 @@ def generate_locale(app, conn):
     
     msg = {'cmd':'refresh',
            'world':{'world':worldname, 'scope':scopename, 'creator':creatorname},
-           'localename': location['name'],
+           'localename': locname,
            'locale': localetext,
            'focus': focustext,
            }
@@ -245,7 +257,7 @@ def generate_locale(app, conn):
 def perform_action(app, conn, target):
     playstate = yield motor.Op(app.mongodb.playstate.find_one,
                                {'_id':conn.uid},
-                               {'iid':1, 'locale':1, 'focus':1})
+                               {'iid':1, 'locid':1, 'focus':1})
     app.log.info('### playstate: %s', playstate)
     
     iid = playstate['iid']
@@ -258,10 +270,7 @@ def perform_action(app, conn, target):
     wid = instance['wid']
     scid = instance['scid']
 
-    location = yield motor.Op(app.mongodb.locations.find_one,
-                              {'wid':wid, 'key':playstate['locale']},
-                              {'name':1})
-    locid = location['_id']
+    locid = playstate['locid']
 
     ### if the target is not a symbol, execute it directly
     
@@ -298,10 +307,15 @@ def perform_action(app, conn, target):
                        {'$set':{'focus':res.get('key', None)}})
     elif restype == 'move':
         # Set locale to the given symbol
-        ### Check that the locale exists?
+        lockey = res.get('loc', None)
+        location = yield motor.Op(app.mongodb.locations.find_one,
+                                  {'wid':wid, 'key':lockey},
+                                  {'_id':1})
+        if not location:
+            raise ErrorMessageException('No such location: %s' % (lockey,))
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':conn.uid},
-                       {'$set':{'locale':res.get('loc', None), 'focus':None}})
+                       {'$set':{'locid':location['_id'], 'focus':None}})
 
     ### total refresh, which is not right. Be more clever.
     yield generate_locale(app, conn) 

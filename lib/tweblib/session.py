@@ -118,7 +118,7 @@ class SessionMgr(object):
         playstate = {
             '_id': uid,
             'iid': None,
-            'locale': None,
+            'locid': None,
             'focus': None,
             }
         

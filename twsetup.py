@@ -113,7 +113,7 @@ else:
     playstate = {
         '_id': adminuid,
         'iid': None,
-        'locale': None,
+        'locid': None,
         'focus': None,
         }
     db.playstate.insert(playstate)
