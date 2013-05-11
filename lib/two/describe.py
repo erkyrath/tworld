@@ -23,6 +23,7 @@ class EvalPropContext(object):
         self.accum = None
         self.linktargets = None
         self.dependencies = None
+        ### Will need CPU-limiting someday.
 
     @tornado.gen.coroutine
     def eval(self, key):

@@ -5,16 +5,14 @@ import logging
 import tornado.ioloop
 import tornado.gen
 
+import motor
+
 import two.webconn
 import two.playconn
 import two.mongomgr
-
-import motor
-
-from twcommon import wcproto
-from twcommon.excepts import MessageException, ErrorMessageException
-
 import two.commands
+import two.task
+from twcommon import wcproto
 
 class Tworld(object):
     def __init__(self, opts):
@@ -65,144 +63,25 @@ class Tworld(object):
 
         self.commandbusy = True
 
-        (obj, connid, twwcid, queuetime) = self.queue.pop(0)
+        (cmdobj, connid, twwcid, queuetime) = self.queue.pop(0)
 
-        starttime = datetime.datetime.now()
+        task = two.task.Task(self, cmdobj, connid, twwcid, queuetime)
 
         try:
-            yield self.handle_command(obj, connid, twwcid, queuetime)
+            yield task.handle()
         except Exception as ex:
-            self.log.error('Error handling command: %s', obj, exc_info=True)
+            self.log.error('Error handling task: %s', cmdobj, exc_info=True)
 
+        starttime = task.starttime
         endtime = datetime.datetime.now()
         self.log.info('Finished command in %.3f ms (queued for %.3f ms)',
                       (endtime-starttime).total_seconds() * 1000,
                       (starttime-queuetime).total_seconds() * 1000)
-        
+
+        task.close()
         self.commandbusy = False
 
         # Keep popping, if the queue is nonempty.
         if self.queue:
             self.ioloop.add_callback(self.pop_queue)
 
-    @tornado.gen.coroutine
-    def handle_command(self, obj, connid, twwcid, queuetime):
-        """
-        Carry out a command. (Usually from a player, but sometimes generated
-        by the server itself.) 99% of tworld's work happens here.
-
-        Any exception raised by this function is considered serious, and
-        throws a full stack trace into the logs.
-        """
-        self.log.info('### handling message %s', obj)
-
-        if connid == 0:
-            # A message not from any player!
-            if twwcid == 0:
-                # Internal message, from tworld itself.
-                stream = None
-            else:
-                # This is from tweb, not relayed from a player.
-                # (This is the rare case where we use twwcid; we have no
-                # other path back.)
-                stream = self.webconns.get(twwcid)
-
-            try:
-                if twwcid and not stream:
-                    raise ErrorMessageException('Server message from completely unrecognized stream.')
-                
-                cmd = self.all_commands.get(obj.cmd, None)
-                if not cmd:
-                    raise ErrorMessageException('Unknown server command: "%s"' % (obj.cmd,))
-            
-                if not cmd.isserver:
-                    raise ErrorMessageException('Command must be invoked by a player: "%s"' % (obj.cmd,))
-
-                if not cmd.noneedmongo and not self.mongodb:
-                    # Guess the database access is not going to work.
-                    raise ErrorMessageException('Tworld has lost contact with the database.')
-                
-                res = yield cmd.func(self, obj, stream)
-                if res is not None:
-                    self.log.info('Command "%s" result: %s', obj.cmd, res)
-                
-            except ErrorMessageException as ex:
-                self.log.warning('Error message running "%s": %s', obj.cmd, str(ex))
-            except MessageException as ex:
-                pass
-
-            # End of connid==0 case.
-            return 
-
-        conn = self.playconns.get(connid)
-
-        # Command from a player (via conn). A MessageException here passes
-        # an error back to the player.
-
-        try:
-            cmd = self.all_commands.get(obj.cmd, None)
-            if not cmd:
-                raise ErrorMessageException('Unknown player command: "%s"' % (obj.cmd,))
-
-            if cmd.isserver:
-                raise ErrorMessageException('Command may not be invoked by a player: "%s"' % (obj.cmd,))
-
-            if not conn:
-                # Newly-established connection. Only 'playeropen' will be
-                # accepted. (Another twwcid case; we'll have to sneak the
-                # stream in through the object.)
-                if not cmd.preconnection:
-                    raise ErrorMessageException('Tworld has not yet registered this connection.')
-                assert cmd.name=='playeropen', 'Command not playeropen should have already been rejected'
-                stream = self.webconns.get(twwcid)
-                if not stream:
-                    raise ErrorMessageException('Message from completely unrecognized stream')
-                obj._connid = connid
-                obj._stream = stream
-
-            if not cmd.noneedmongo and not self.mongodb:
-                # Guess the database access is not going to work.
-                raise ErrorMessageException('Tworld has lost contact with the database.')
-
-            res = yield cmd.func(self, obj, conn)
-            if res is not None:
-                self.log.info('Command "%s" result: %s', obj.cmd, res)
-
-        except ErrorMessageException as ex:
-            # An ErrorMessageException is worth logging and sending back
-            # to the player, but not splatting out a stack trace.
-            self.log.warning('Error message running "%s": %s', obj.cmd, str(ex))
-            try:
-                # This is slightly hairy, because various error paths can
-                # arrive here with no conn or no connid.
-                if conn:
-                    conn.write({'cmd':'error', 'text':str(ex)})
-                else:
-                    # connid may be zero or nonzero, really
-                    stream = self.webconns.get(twwcid)
-                    stream.write(wcproto.message(connid, {'cmd':'error', 'text':str(ex)}))
-            except Exception as ex:
-                pass
-
-        except MessageException as ex:
-            # A MessageException is not worth logging.
-            try:
-                # This is slightly hairy, because various error paths can
-                # arrive here with no conn or no connid.
-                if conn:
-                    conn.write({'cmd':'message', 'text':str(ex)})
-                else:
-                    # connid may be zero or nonzero, really
-                    stream = self.webconns.get(twwcid)
-                    stream.write(wcproto.message(connid, {'cmd':'message', 'text':str(ex)}))
-            except Exception as ex:
-                pass
-
-
-
-def delay(dur, callback=None):
-    """Delay N seconds. This must be invoked as
-    yield tornado.gen.Task(app.delay, dur)
-    """
-    delta = datetime.timedelta(seconds=dur)
-    return tornado.ioloop.IOLoop.current().add_timeout(delta, callback)

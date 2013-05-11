@@ -39,7 +39,7 @@ def define_commands():
     Define all the commands which will be used by the server. Return them
     in a dict.
 
-    Note that the third argument will be a IOStream for server commands,
+    Note that the last argument will be a IOStream for server commands,
     but a PlayerConnection for player commands. Never the twain shall
     meet.
 
@@ -50,7 +50,7 @@ def define_commands():
     """
 
     @command('connect', isserver=True, noneedmongo=True)
-    def cmd_connect(app, cmd, stream):
+    def cmd_connect(app, task, cmd, stream):
         assert stream is not None, 'Tweb connect command from no stream.'
         stream.write(wcproto.message(0, {'cmd':'connectok'}))
 
@@ -66,7 +66,7 @@ def define_commands():
             app.log.info('Player %s has reconnected (uid %s)', conn.email, conn.uid)
 
     @command('disconnect', isserver=True, noneedmongo=True)
-    def cmd_disconnect(app, cmd, stream):
+    def cmd_disconnect(app, task, cmd, stream):
         for (connid, conn) in app.playconns.as_dict().items():
             if conn.twwcid == cmd.twwcid:
                 try:
@@ -76,18 +76,18 @@ def define_commands():
         app.log.warning('Tweb has disconnected; now %d connections remain', len(app.playconns.as_dict()))
     
     @command('logplayerconntable', isserver=True, noneedmongo=True)
-    def cmd_logplayerconntable(app, cmd, stream):
+    def cmd_logplayerconntable(app, task, cmd, stream):
         app.playconns.dumplog()
         
     @command('refreshconn', isserver=True)
-    def cmd_refreshconn(app, cmd, stream):
+    def cmd_refreshconn(app, task, cmd, stream):
         # Refresh one connection (not all the player's connections!)
         ### Probably oughta be a player command, not a server command.
         conn = app.playconns.get(cmd.connid)
         yield two.describe.generate_locale(app, conn)
     
     @command('playeropen', noneedmongo=True, preconnection=True)
-    def cmd_playeropen(app, cmd, conn):
+    def cmd_playeropen(app, task, cmd, conn):
         assert conn is None, 'playeropen command with connection not None'
         connid = cmd._connid
         
@@ -105,7 +105,7 @@ def define_commands():
         app.log.info('Player %s has connected (uid %s)', conn.email, conn.uid)
 
     @command('playerclose')
-    def cmd_playerclose(app, cmd, conn):
+    def cmd_playerclose(app, task, cmd, conn):
         app.log.info('Player %s has disconnected (uid %s)', conn.email, conn.uid)
         try:
             app.playconns.remove(conn.connid)
@@ -113,7 +113,7 @@ def define_commands():
             app.log.error('Failed to remove on playerclose %d: %s', conn.connid, ex)
     
     @command('uiprefs')
-    def cmd_uiprefs(app, cmd, conn):
+    def cmd_uiprefs(app, task, cmd, conn):
         # Could we handle this in tweb? I guess, if we cared.
         for (key, val) in cmd.map.__dict__.items():
             res = yield motor.Op(app.mongodb.playprefs.update,
@@ -122,7 +122,7 @@ def define_commands():
                                  upsert=True)
 
     @command('meta')
-    def cmd_meta(app, cmd, conn):
+    def cmd_meta(app, task, cmd, conn):
         ls = cmd.text.split()
         if not ls:
             raise MessageException('You must supply a command after the slash. Try \u201C/help\u201D.')
@@ -131,28 +131,33 @@ def define_commands():
         if not newcmd:
             raise MessageException('Command \u201C/%s\u201D not understood. Try \u201C/help\u201D.' % (key,))
         cmd._args = ls[1:]
-        res = yield newcmd.func(app, cmd, conn)
+        res = yield newcmd.func(app, task, cmd, conn)
         return res
 
     @command('meta_help')
-    def cmd_meta_help(app, cmd, conn):
+    def cmd_meta_help(app, task, cmd, conn):
         raise MessageException('No slash commands are currently implemented.')
 
     @command('meta_refresh')
-    def cmd_meta_refresh(app, cmd, conn):
+    def cmd_meta_refresh(app, task, cmd, conn):
         conn.write({'cmd':'message', 'text':'Refreshing display...'})
         app.queue_command({'cmd':'refreshconn', 'connid':conn.connid})
         
     @command('meta_actionmaps')
-    def cmd_meta_actionmaps(app, cmd, conn):
+    def cmd_meta_actionmaps(app, task, cmd, conn):
         ### debug
         val = 'Locale action map: %s' % (conn.localeactions,)
         conn.write({'cmd':'message', 'text':val})
         val = 'Focus action map: %s' % (conn.focusactions,)
         conn.write({'cmd':'message', 'text':val})
-        
+
+    @command('meta_exception')
+    def cmd_meta_exception(app, task, cmd, conn):
+        ### debug
+        raise Exception('You asked for an exception.')
+
     @command('say')
-    def cmd_say(app, cmd, conn):
+    def cmd_say(app, task, cmd, conn):
         res = yield motor.Op(app.mongodb.players.find_one,
                              {'_id':conn.uid},
                              {'name':1})
@@ -173,7 +178,7 @@ def define_commands():
                 oconn.write({'cmd':'event', 'text':oval})
 
     @command('pose')
-    def cmd_pose(app, cmd, conn):
+    def cmd_pose(app, task, cmd, conn):
         res = yield motor.Op(app.mongodb.players.find_one,
                              {'_id':conn.uid},
                              {'name':1})
@@ -184,7 +189,7 @@ def define_commands():
             oconn.write({'cmd':'event', 'text':val})
 
     @command('action')
-    def cmd_action(app, cmd, conn):
+    def cmd_action(app, task, cmd, conn):
         # First check that the action is one currently visible to the player.
         action = conn.localeactions.get(cmd.action)
         if action is None:
@@ -194,7 +199,7 @@ def define_commands():
         res = yield two.describe.perform_action(app, conn, action)
         
     @command('dropfocus')
-    def cmd_dropfocus(app, cmd, conn):
+    def cmd_dropfocus(app, task, cmd, conn):
         playstate = yield motor.Op(app.mongodb.playstate.find_one,
                                    {'_id':conn.uid},
                                    {'focus':1})
