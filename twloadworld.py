@@ -26,9 +26,10 @@ tornado.options.define(
     'mongo_database', type=str, default='tworld',
     help='name of mongodb database')
 
-tornado.options.define(
-    'removeworld', type=bool,
-    help='remove world completely')
+###
+#tornado.options.define(
+#    'removeworld', type=bool,
+#    help='remove world completely')
 
 tornado.options.define(
     'remove', type=bool,
@@ -38,12 +39,19 @@ tornado.options.define(
     'display', type=bool,
     help='only display the named room or room.prop')
 
+tornado.options.define(
+    'check', type=bool,
+    help='only check consistency of the file')
+
 # Parse 'em up.
 args = tornado.options.parse_command_line()
 opts = tornado.options.options
 
 # But tornado options don't support options after arguments. Hack to work
 # around this.
+if '--check' in args:
+    args.remove('--check')
+    opts.check = True
 if '--display' in args:
     args.remove('--display')
     opts.display = True
@@ -57,6 +65,7 @@ if '--removeworld' in args:
 if opts.python_path:
     sys.path.insert(0, opts.python_path)
 
+import two.interp
 from two.interp import sluggify
 
 if not args:
@@ -74,6 +83,36 @@ class World(object):
         self.proplist = []
         self.locations = {}
         self.locationlist = []
+
+    def check_symbols_used(self):
+        self.symbolsused = set()
+        all_interp_props = []
+        for (key, propval) in self.props.items():
+            if is_interp_text(propval):
+                all_interp_props.append( (propval['text'], None) )
+        for (lockey, loc) in self.locations.items():
+            for (key, propval) in loc.props.items():
+                if is_interp_text(propval):
+                    all_interp_props.append( (propval['text'], lockey) )
+            
+
+        for (text, lockey) in all_interp_props:
+            for nod in two.interp.parse(text):
+                if isinstance(nod, two.interp.Link):
+                    self.symbolsused.add( (nod.target, lockey) )
+                if isinstance(nod, two.interp.Interpolate):
+                    self.symbolsused.add( (nod.expr, lockey) )
+
+        for (symbol, lockey) in self.symbolsused:
+            if lockey is None:
+                loc = None
+            else:
+                loc = self.locations[lockey]
+            if loc and symbol in loc.props:
+                continue
+            if symbol in self.props:
+                continue
+            print('Warning: symbol "%s" in %s is not defined.' % (symbol, lockey,))
 
 class Location(object):
     def __init__(self, name, key=None):
@@ -179,6 +218,7 @@ def parse_world(filename):
             curprop = key
             
     fl.close()
+    world.check_symbols_used()
     return world
 
 def parse_prop(prop):
@@ -241,7 +281,11 @@ def prop_to_string(val):
     if key == 'code':
         return '*code %s' % (val['text'],)
     return json.dumps(val)
-        
+
+def is_interp_text(res):
+    ### events also?
+    return (type(res) is dict and res.get('type', None) == 'text')
+
 errorcount = 0
 
 def error(msg):
@@ -301,6 +345,7 @@ if opts.display:
             print('%s: %s' % (key, prop_to_string(loc.props[key])))
             print()
 
+if opts.display or opts.check:
     sys.exit(0)
 
 client = pymongo.MongoClient()
