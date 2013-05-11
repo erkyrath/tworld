@@ -140,6 +140,7 @@ def define_commands():
 
     @command('meta_refresh')
     def cmd_meta_refresh(app, cmd, conn):
+        conn.write({'cmd':'message', 'text':'Refreshing display...'})
         app.queue_command({'cmd':'refreshconn', 'connid':conn.connid})
         
     @command('meta_actionmaps')
