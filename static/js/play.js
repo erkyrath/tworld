@@ -106,9 +106,11 @@ function setup_event_handlers() {
     inputel.on('keypress', evhan_input_keypress);
     inputel.on('keydown', evhan_input_keydown);
     
-    $('#leftcol').resizable( { handles:'e', containment:'parent', distance: 10,
+    $('#leftcol').resizable( { handles:'e', containment:'parent', 
+          distance: 4,
           resize:handle_leftright_resize, stop:handle_leftright_doneresize } );
-    $('#topcol').resizable( { handles:'s', containment:'parent', distance: 10,
+    $('#topcol').resizable( { handles:'s', containment:'parent',
+          distance: 4,
           resize:handle_updown_resize, stop:handle_updown_doneresize } );
     
     $('div.ui-resizable-handle').append('<div class="ResizingThumb">');
