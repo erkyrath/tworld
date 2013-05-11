@@ -6,7 +6,7 @@ from twcommon import wcproto
 from twcommon.excepts import MessageException, ErrorMessageException
 
 import two.describe
-from two.task import DIRTY_ALL
+from two.task import DIRTY_ALL, DIRTY_LOCALE, DIRTY_FOCUS
 
 class Command:
     # As commands are defined with the @command decorator, they are stuffed
@@ -203,7 +203,7 @@ def define_commands():
             ### same location!
             oconn.write({'cmd':'event', 'text':val})
 
-    @command('action')
+    @command('action', doeswrite=True)
     def cmd_action(app, task, cmd, conn):
         # First check that the action is one currently visible to the player.
         action = conn.localeactions.get(cmd.action)
@@ -213,20 +213,15 @@ def define_commands():
             raise ErrorMessageException('Action is not available.')
         res = yield two.describe.perform_action(app, conn, action)
         
-    @command('dropfocus')
+    @command('dropfocus', doeswrite=True)
     def cmd_dropfocus(app, task, cmd, conn):
         playstate = yield motor.Op(app.mongodb.playstate.find_one,
                                    {'_id':conn.uid},
                                    {'focus':1})
         app.log.info('### playstate: %s', playstate)
-        if playstate['focus'] is None:
-            # Just in case...
-            conn.write({'cmd':'clearfocus'})
-            return
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':conn.uid},
                        {'$set':{'focus':None}})
-        ### Ought to call some nice generic update operation here, but...
-        conn.write({'cmd':'clearfocus'})
+        task.set_conn_dirty(conn, DIRTY_FOCUS)
         
     return Command.all_commands
