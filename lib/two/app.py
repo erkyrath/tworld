@@ -61,11 +61,10 @@ class Tworld(object):
             self.log.warning('pop_queue called when already empty!')
             return
 
-        self.commandbusy = True
-
         (cmdobj, connid, twwcid, queuetime) = self.queue.pop(0)
 
         task = two.task.Task(self, cmdobj, connid, twwcid, queuetime)
+        self.commandbusy = True
 
         try:
             yield task.handle()
@@ -78,8 +77,8 @@ class Tworld(object):
                       (endtime-starttime).total_seconds() * 1000,
                       (starttime-queuetime).total_seconds() * 1000)
 
-        task.close()
         self.commandbusy = False
+        task.close()
 
         # Keep popping, if the queue is nonempty.
         if self.queue:
