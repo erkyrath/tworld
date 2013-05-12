@@ -19,6 +19,17 @@ class PlayerConnectionTable(object):
         """
         return self.map.get(connid, None)
 
+    def get_for_uid(self, uid):
+        """Return all player connections matching the given user id, or
+        None.
+        ### This will have to be made efficient, because I bet we're going
+        to call it a whole lot.
+        """
+        res = [ conn for conn in self.map.values() if conn.uid == uid ]
+        if res:
+            return res
+        return None
+
     def all(self):
         """A (non-dynamic) list of all player connections.
         """

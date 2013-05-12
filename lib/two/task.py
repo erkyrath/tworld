@@ -1,14 +1,17 @@
 import datetime
 
 import tornado.gen
+from bson.objectid import ObjectId
 
 import two.execute
+from two.playconn import PlayerConnection
 from twcommon.excepts import MessageException, ErrorMessageException
 
-DIRTY_LOCALE = 1
-DIRTY_FOCUS = 2
-DIRTY_POPULACE = 4
-DIRTY_ALL = 7  # All of the above
+DIRTY_WORLD = 0x01  # Instance, really
+DIRTY_LOCALE = 0x02
+DIRTY_FOCUS = 0x04
+DIRTY_POPULACE = 0x08
+DIRTY_ALL = 0x0F  # All of the above
 
 class Task(object):
     def __init__(self, app, cmdobj, connid, twwcid, queuetime):
@@ -53,10 +56,20 @@ class Task(object):
         assert self.is_writable(), 'set_data_change: Task was never set writable'
         self.changeset.add(key)
         
-    def set_conn_dirty(self, conn, dirty):
-        assert self.is_writable(), 'set_conn_dirty: Task was never set writable'
-        val = self.updateconns.get(conn.connid, 0) | dirty
-        self.updateconns[conn.connid] = val
+    def set_conns_dirty(self, conns, dirty):
+        # conns may be a PlayerConnection, or a list of them, or a uid
+        # (an ObjectId), or None.
+        assert self.is_writable(), 'set_conns_dirty: Task was never set writable'
+        if isinstance(conns, PlayerConnection):
+            conns = ( conns, )
+        elif isinstance(conns, ObjectId):
+            conns = self.app.playconns.get_for_uid(conns)
+
+        if conns is None:
+            return
+        for conn in conns:
+            val = self.updateconns.get(conn.connid, 0) | dirty
+            self.updateconns[conn.connid] = val
 
     @tornado.gen.coroutine
     def handle(self):

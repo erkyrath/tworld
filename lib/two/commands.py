@@ -86,7 +86,7 @@ def define_commands():
         # Refresh one connection (not all the player's connections!)
         ### Probably oughta be a player command, not a server command.
         conn = app.playconns.get(cmd.connid)
-        task.set_conn_dirty(conn, DIRTY_ALL)
+        task.set_conns_dirty(conn, DIRTY_ALL)
     
     @command('playeropen', noneedmongo=True, preconnection=True)
     def cmd_playeropen(app, task, cmd, conn):
@@ -222,6 +222,6 @@ def define_commands():
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':conn.uid},
                        {'$set':{'focus':None}})
-        task.set_conn_dirty(conn, DIRTY_FOCUS)
+        task.set_conns_dirty(conn.uid, DIRTY_FOCUS)
         
     return Command.all_commands
