@@ -258,6 +258,14 @@ def append_to_prop(dic, key, ln):
     elif type(val) is str:
         val += ('\n\n' + ln)
         dic[key] = val
+    elif type(val) is dict and ln.startswith('-'):
+        subkey, dummy, subval = ln[1:].partition(':')
+        if not dummy:
+            error('Continuation *line must contain a colon')
+            return
+        subkey = subkey.strip()
+        subval = subval.strip()
+        val[subkey] = subval
     elif type(val) is dict and 'text' in val:
         # Covers {text}, {event}, {code}
         val['text'] += ('\n\n' + ln)
@@ -273,7 +281,10 @@ def prop_to_string(val):
     if key == 'focus':
         return '*focus %s' % (val['key'],)
     if key == 'event':
-        return '*event %s' % (val['text'],)
+        res = '*event %s' % (val['text'],)
+        if 'otext' in val:
+            res += ('\n\t- otext: ' + val['otext'])
+        return res
     if key == 'text':
         val = val['text']
         if '\n\n' in val:

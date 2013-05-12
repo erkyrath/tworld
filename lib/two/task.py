@@ -73,9 +73,11 @@ class Task(object):
                 val = self.updateconns.get(obj.connid, 0) | dirty
                 self.updateconns[obj.connid] = val
             elif isinstance(obj, ObjectId):
-                for conn in self.app.playconns.get_for_uid(obj):
-                    val = self.updateconns.get(conn.connid, 0) | dirty
-                    self.updateconns[conn.connid] = val
+                subls = self.app.playconns.get_for_uid(obj)
+                if subls:
+                    for conn in subls:
+                        val = self.updateconns.get(conn.connid, 0) | dirty
+                        self.updateconns[conn.connid] = val
             else:
                 self.log.warning('write_event: unrecognized %s', obj)
         
@@ -92,8 +94,10 @@ class Task(object):
             if isinstance(obj, PlayerConnection):
                 obj.write({'cmd':'event', 'text':text})
             elif isinstance(obj, ObjectId):
-                for conn in self.app.playconns.get_for_uid(obj):
-                    conn.write({'cmd':'event', 'text':text})
+                subls = self.app.playconns.get_for_uid(obj)
+                if subls:
+                    for conn in subls:
+                        conn.write({'cmd':'event', 'text':text})
             else:
                 self.log.warning('write_event: unrecognized %s', obj)
             

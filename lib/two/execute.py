@@ -341,12 +341,17 @@ def perform_action(app, task, conn, target):
 
     if restype == 'event':
         # Display an event.
-        ### Have an other-people field too.
         val = res.get('text', None)
         if val:
             ctx = EvalPropContext(app, wid, iid, locid, level=LEVEL_MESSAGE)
             newval = yield ctx.eval(val, lookup=False)
             task.write_event(conn.uid, newval)
+        val = res.get('otext', None)
+        if val:
+            others = yield task.find_locale_players(notself=True)
+            ctx = EvalPropContext(app, wid, iid, locid, level=LEVEL_MESSAGE)
+            newval = yield ctx.eval(val, lookup=False)
+            task.write_event(others, newval)
         return
 
     if restype == 'code':
