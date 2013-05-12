@@ -722,14 +722,19 @@ function evhan_websocket_message(ev) {
     /*### build a command table!*/
     if (cmd == 'event')
         eventpane_add(obj.text);
-    if (cmd == 'refresh') {
-        localepane_set(obj.locale, obj.localename);
-        if (obj.focus)
-            focuspane_set(obj.focus);
-        else
-            focuspane_clear();
-        if (obj.world)
+    if (cmd == 'update') {
+        if (obj.world !== undefined) {
             toolpane_set_world(obj.world.world, obj.world.scope, obj.world.creator);
+        }
+        if (obj.focus !== undefined) {
+            if (obj.focus)
+                focuspane_set(obj.focus);
+            else
+                focuspane_clear();
+        }
+        if (obj.locale !== undefined) {
+            localepane_set(obj.locale.desc, obj.locale.name);
+        }
     }
     if (cmd == 'clearfocus') {
         focuspane_clear();

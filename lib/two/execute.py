@@ -180,6 +180,10 @@ def find_symbol(app, wid, iid, locid, key):
 @tornado.gen.coroutine
 def generate_update(app, conn, dirty):
     assert conn is not None, 'generate_update: conn is None'
+    if not dirty:
+        return
+
+    msg = { 'cmd': 'update' }
     
     playstate = yield motor.Op(app.mongodb.playstate.find_one,
                                {'_id':conn.uid},
@@ -188,77 +192,84 @@ def generate_update(app, conn, dirty):
     
     iid = playstate['iid']
     if not iid:
-        msg = {'cmd':'refresh', 'locale':'...', 'focus':None, 'world':{'world':'(In transition)', 'scope':'\u00A0', 'creator':'...'}}
+        msg['world'] = {'world':'(In transition)', 'scope':'\u00A0', 'creator':'...'}
+        msg['focus'] = False ### probably needs to be something for linking out of the void
+        msg['locale'] = { 'desc': '...' }
         conn.write(msg)
         return
-        
+
     instance = yield motor.Op(app.mongodb.instances.find_one,
                               {'_id':iid})
     wid = instance['wid']
     scid = instance['scid']
-
-    scope = yield motor.Op(app.mongodb.scopes.find_one,
-                           {'_id':scid})
-    world = yield motor.Op(app.mongodb.worlds.find_one,
-                           {'_id':wid},
-                           {'creator':1, 'name':1})
-    
-    worldname = world['name']
-    
-    creator = yield motor.Op(app.mongodb.players.find_one,
-                             {'_id':world['creator']},
-                             {'name':1})
-    creatorname = 'Created by %s' % (creator['name'],)
-    
-    if scope['type'] == 'glob':
-        scopename = '(Global instance)'
-    elif scope['type'] == 'pers':
-        ### Probably leave off the name if it's you
-        scopeowner = yield motor.Op(app.mongodb.players.find_one,
-                                    {'_id':scope['uid']},
-                                    {'name':1})
-        scopename = '(Personal instance: %s)' % (scopeowner['name'],)
-    elif scope['type'] == 'grp':
-        scopename = '(Group: %s)' % (scope['group'],)
-    else:
-        scopename = '???'
-
     locid = playstate['locid']
-    location = yield motor.Op(app.mongodb.locations.find_one,
-                              {'_id':locid},
-                              {'wid':1, 'name':1})
 
-    if not location or location['wid'] != wid:
-        msg = {'cmd':'refresh',
-               'world':{'world':worldname, 'scope':scopename, 'creator':creatorname},
-               'localename': None,
-               'locale': '[Location not found]',
-               'focus': None,
-           }
-        conn.write(msg)
-        return
-
-    locname = location['name']
-
-    conn.localeactions.clear() ### should be at top ### and localedependencies too!
-    ctx = EvalPropContext(app, wid, iid, locid, level=LEVEL_DISPLAY)
-    localetext = yield ctx.eval('desc')
-    if ctx.linktargets:
-        conn.localeactions.update(ctx.linktargets)
-
-    focustext = None
-    conn.focusactions.clear() ### should be at top
-    if playstate['focus']:
-        focustext = yield ctx.eval(playstate['focus'])
-        if ctx.linktargets:
-            conn.focusactions.update(ctx.linktargets)
+    if dirty & DIRTY_WORLD:
+        scope = yield motor.Op(app.mongodb.scopes.find_one,
+                               {'_id':scid})
+        world = yield motor.Op(app.mongodb.worlds.find_one,
+                               {'_id':wid},
+                               {'creator':1, 'name':1})
     
-    msg = {'cmd':'refresh',
-           'world':{'world':worldname, 'scope':scopename, 'creator':creatorname},
-           'localename': locname,
-           'locale': localetext,
-           'focus': focustext,
-           }
+        worldname = world['name']
+    
+        creator = yield motor.Op(app.mongodb.players.find_one,
+                                 {'_id':world['creator']},
+                                 {'name':1})
+        creatorname = 'Created by %s' % (creator['name'],)
+    
+        if scope['type'] == 'glob':
+            scopename = '(Global instance)'
+        elif scope['type'] == 'pers':
+        ### Probably leave off the name if it's you
+            scopeowner = yield motor.Op(app.mongodb.players.find_one,
+                                        {'_id':scope['uid']},
+                                        {'name':1})
+            scopename = '(Personal instance: %s)' % (scopeowner['name'],)
+        elif scope['type'] == 'grp':
+            scopename = '(Group: %s)' % (scope['group'],)
+        else:
+            scopename = '???'
+
+        msg['world'] = {'world':worldname, 'scope':scopename, 'creator':creatorname}
+
+    if dirty & DIRTY_LOCALE:
+        conn.localeactions.clear()
+        conn.localedependencies.clear()
+        
+        ctx = EvalPropContext(app, wid, iid, locid, level=LEVEL_DISPLAY)
+        localedesc = yield ctx.eval('desc')
+        
+        if ctx.linktargets:
+            conn.localeactions.update(ctx.linktargets)
+        if ctx.dependencies:
+            conn.localedependencies.update(ctx.dependencies)
+
+        location = yield motor.Op(app.mongodb.locations.find_one,
+                                  {'_id':locid},
+                                  {'wid':1, 'name':1})
+
+        if not location or location['wid'] != wid:
+            locname = '[Location not found]'
+        else:
+            locname = location['name']
+
+        msg['locale'] = { 'name': locname, 'desc': localedesc }
+
+    if dirty & DIRTY_FOCUS:
+        conn.focusactions.clear()
+        conn.focusdependencies.clear()
+
+        focusdesc = False
+        if playstate['focus']:
+            ctx = EvalPropContext(app, wid, iid, locid, level=LEVEL_DISPLAY)
+            focusdesc = yield ctx.eval(playstate['focus'])
+            if ctx.linktargets:
+                conn.focusactions.update(ctx.linktargets)
+            if ctx.dependencies:
+                conn.focusdependencies.update(ctx.dependencies)
+
+        msg['focus'] = focusdesc
     
     conn.write(msg)
     
