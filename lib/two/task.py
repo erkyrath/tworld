@@ -277,16 +277,18 @@ class Task(object):
         # (But we try to do as little work as possible.)
         if changeset:
             for conn in connections:
-                dirty = updateconns.get(conn.id, 0)
+                dirty = updateconns.get(conn.connid, 0)
                 if not (dirty & DIRTY_LOCALE):
                     if not conn.localedependencies.isdisjoint(changeset):
                         dirty |= DIRTY_LOCALE
+                if not (dirty & DIRTY_POPULACE):
+                    if not conn.populacedependencies.isdisjoint(changeset):
+                        dirty |= DIRTY_POPULACE
                 if not (dirty & DIRTY_FOCUS):
                     if not conn.focusdependencies.isdisjoint(changeset):
                         dirty |= DIRTY_FOCUS
-                ### populace?
                 if dirty:
-                    updateconns[conn.id] = dirty
+                    updateconns[conn.connid] = dirty
 
         # Again, we might be done.
         if not updateconns:

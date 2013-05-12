@@ -80,6 +80,7 @@ class PlayerConnection(object):
         # players as soon as it comes back.)
         self.localeactions = {}
         self.focusactions = {}
+        self.populaceactions = {}
 
         # Sets of what change keys will cause the location (focus, etc)
         # text to change.

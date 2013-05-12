@@ -13,7 +13,15 @@ LEVEL_FLAT = 1
 LEVEL_RAW = 0
 
 class EvalPropContext(object):
-    link_code_counter = 1
+    link_code_counter = 0
+
+    @staticmethod
+    def build_action_key():
+        """Return a random (hex digit) string which will never repeat.
+        Okay, it is vastly unlikely to repeat.
+        """
+        EvalPropContext.link_code_counter = EvalPropContext.link_code_counter + 1
+        return str(EvalPropContext.link_code_counter) + hex(random.getrandbits(32))[2:]
     
     def __init__(self, app, wid, iid, locid=None, level=LEVEL_MESSAGE):
         self.app = app
@@ -117,10 +125,9 @@ class EvalPropContext(object):
                         self.accum.append(nod)
                     continue
                 if isinstance(nod, interp.Link):
-                    code = str(EvalPropContext.link_code_counter) + hex(random.getrandbits(32))[2:]
-                    EvalPropContext.link_code_counter = EvalPropContext.link_code_counter + 1
-                    self.linktargets[code] = nod.target
-                    self.accum.append( ['link', code] )
+                    ackey = EvalPropContext.build_action_key()
+                    self.linktargets[ackey] = nod.target
+                    self.accum.append( ['link', ackey] )
                     continue
                 if isinstance(nod, interp.Interpolate):
                     ### Should execute code here, but right now we only
@@ -265,6 +272,9 @@ def generate_update(app, conn, dirty):
         msg['locale'] = { 'name': locname, 'desc': localedesc }
 
     if dirty & DIRTY_POPULACE:
+        conn.populaceactions.clear()
+        conn.populacedependencies.clear()
+        
         # Build a list of all the other people in the location.
         cursor = app.mongodb.playstate.find({'iid':iid, 'locid':locid},
                                             {'_id':1, 'lastmoved':1})
@@ -277,6 +287,10 @@ def generate_update(app, conn, dirty):
                 # If no lastmoved field, set it to the beginning of time.
                 ostate['lastmoved'] = datetime.datetime.min
             people.append(ostate)
+            ackey = 'play' + EvalPropContext.build_action_key()
+            ostate['_ackey'] = ackey
+            conn.populaceactions[ackey] = ('player', ostate['_id'])
+            conn.populacedependencies.add( ('playstate', ostate['_id'], 'locid') )
         for ostate in people:
             oplayer = yield motor.Op(app.mongodb.players.find_one,
                                      {'_id':ostate['_id']},
@@ -288,16 +302,22 @@ def generate_update(app, conn, dirty):
         else:
             # Sort the list by lastmoved.
             people.sort(key=lambda ostate:ostate['lastmoved'])
-            names = [ ostate['name'] for ostate in people ]
-            template = 'You see %s here.'  # Location property? Routine?
-            if len(people) == 1:
-                populacedesc = template % (names[0],)
-            else:
-                names[-1] = 'and ' + names[-1]
-                if len(people) == 2:
-                    populacedesc = template % (' '.join(names),)
-                else:
-                    populacedesc = template % (', '.join(names),)
+            populacedesc = [ 'You see ' ]  # Location property? Routine?
+            pos = 0
+            numpeople = len(people)
+            for ostate in people:
+                if pos > 0:
+                    if numpeople == 2:
+                        populacedesc.append(' and ')
+                    elif pos >= numpeople-2:
+                        populacedesc.append(', and ')
+                    else:
+                        populacedesc.append(', ')
+                populacedesc.append(['link', ostate['_ackey']])
+                populacedesc.append(ostate['name'])
+                populacedesc.append(['/link'])
+                pos += 1
+            populacedesc.append(' here.')
 
         msg['populace'] = populacedesc
 
@@ -387,17 +407,16 @@ def perform_action(app, task, conn, target):
         if not location:
             raise ErrorMessageException('No such location: %s' % (lockey,))
         
-        # We set everybody in the starting *and* ending room DIRTY_POPULACE.
-        others = yield task.find_locale_players(notself=True)
-        if others:
-            task.set_dirty(others, DIRTY_POPULACE)
-            
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':conn.uid},
                        {'$set':{'locid':location['_id'], 'focus':None,
                                 'lastmoved': task.starttime }})
         task.set_dirty(conn.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_POPULACE)
+        task.set_data_change( ('playstate', conn.uid, 'locid') )
         
+        # We set everybody in the destination room DIRTY_POPULACE.
+        # (Players in the starting room have a dependency, which is already
+        # covered.)
         others = yield task.find_locale_players(notself=True)
         if others:
             task.set_dirty(others, DIRTY_POPULACE)

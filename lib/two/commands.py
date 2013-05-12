@@ -153,6 +153,8 @@ def define_commands():
         ### debug
         val = 'Locale action map: %s' % (conn.localeactions,)
         conn.write({'cmd':'message', 'text':val})
+        val = 'Populace action map: %s' % (conn.populaceactions,)
+        conn.write({'cmd':'message', 'text':val})
         val = 'Focus action map: %s' % (conn.focusactions,)
         conn.write({'cmd':'message', 'text':val})
 
@@ -161,9 +163,9 @@ def define_commands():
         ### debug
         val = 'Locale dependency set: %s' % (conn.localedependencies,)
         conn.write({'cmd':'message', 'text':val})
-        val = 'Focus dependency set: %s' % (conn.focusdependencies,)
-        conn.write({'cmd':'message', 'text':val})
         val = 'Populace dependency set: %s' % (conn.populacedependencies,)
+        conn.write({'cmd':'message', 'text':val})
+        val = 'Focus dependency set: %s' % (conn.focusdependencies,)
         conn.write({'cmd':'message', 'text':val})
         
     @command('meta_exception')
@@ -206,6 +208,8 @@ def define_commands():
         action = conn.localeactions.get(cmd.action)
         if action is None:
             action = conn.focusactions.get(cmd.action)
+        if action is None:
+            action = conn.populaceactions.get(cmd.action)
         if action is None:
             raise ErrorMessageException('Action is not available.')
         res = yield two.execute.perform_action(app, task, conn, action)
