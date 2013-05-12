@@ -52,6 +52,9 @@ db.sessions.create_index('sid', unique=True)
 db.players.create_index('email', unique=True)
 db.players.create_index('name', unique=True)
 
+# Compound index
+db.playstate.create_index([('iid', pymongo.ASCENDING), ('locid', pymongo.ASCENDING)])
+
 db.playprefs.create_index('uid')  # not unique
 # Compound index
 db.playprefs.create_index([('uid', pymongo.ASCENDING), ('key', pymongo.ASCENDING)], unique=True)
