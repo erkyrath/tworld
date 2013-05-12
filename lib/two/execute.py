@@ -326,6 +326,8 @@ def generate_update(app, conn, dirty):
         conn.focusdependencies.clear()
 
         focusdesc = False
+        specialflag = False
+        
         focusobj = playstate.get('focus', None)
         
         if focusobj is None:
@@ -340,6 +342,18 @@ def generate_update(app, conn, dirty):
                     focusdesc = 'There is no such person.'
                 else:
                     focusdesc = '%s is %s' % (player.get('name', '???'), player.get('desc', '...'))
+            elif restype == 'selfdesc':
+                player = yield motor.Op(app.mongodb.players.find_one,
+                                        {'_id':conn.uid},
+                                        {'name':1, 'pronoun':1, 'desc':1})
+                if not player:
+                    focusdesc = 'There is no such person.'
+                else:
+                    focusdesc = ['selfdesc',
+                                 player.get('name', '???'),
+                                 player.get('pronoun', 'it'),
+                                 player.get('desc', '...')]
+                    specialflag = True
             else:
                 focusdesc = '[Focus: %s]' % (focusobj,)
         else:
@@ -351,6 +365,8 @@ def generate_update(app, conn, dirty):
                 conn.focusdependencies.update(ctx.dependencies)
 
         msg['focus'] = focusdesc
+        if specialflag:
+            msg['focusspecial'] = True
     
     conn.write(msg)
     
