@@ -1,4 +1,5 @@
 import random
+import datetime
 
 import tornado.gen
 import motor
@@ -256,6 +257,43 @@ def generate_update(app, conn, dirty):
 
         msg['locale'] = { 'name': locname, 'desc': localedesc }
 
+    if dirty & DIRTY_POPULACE:
+        cursor = app.mongodb.playstate.find({'iid':iid, 'locid':locid},
+                                            {'_id':1, 'lastmoved':1})
+        # Build a list of all the other people in the location.
+        people = []
+        while (yield cursor.fetch_next):
+            ostate = cursor.next_object()
+            if ostate['_id'] == conn.uid:
+                continue
+            if not ostate.get('lastmoved', None):
+                # If no lastmoved field, set it to the beginning of time.
+                ostate['lastmoved'] = datetime.datetime.min
+            people.append(ostate)
+        for ostate in people:
+            oplayer = yield motor.Op(app.mongodb.players.find_one,
+                                     {'_id':ostate['_id']},
+                                     {'name':1})
+            ostate['name'] = oplayer.get('name', '???')
+
+        if not people:
+            populacedesc = False
+        else:
+            # Sort the list by lastmoved.
+            people.sort(key=lambda ostate:ostate['lastmoved'])
+            names = [ ostate['name'] for ostate in people ]
+            template = 'You see %s here.'  # Location property? Routine?
+            if len(people) == 1:
+                populacedesc = template % (names[0],)
+            else:
+                names[-1] = 'and ' + names[-1]
+                if len(people) == 2:
+                    populacedesc = template % (' '.join(names),)
+                else:
+                    populacedesc = template % (', '.join(names),)
+
+        msg['populace'] = populacedesc
+
     if dirty & DIRTY_FOCUS:
         conn.focusactions.clear()
         conn.focusdependencies.clear()
@@ -339,9 +377,11 @@ def perform_action(app, task, conn, target):
             raise ErrorMessageException('No such location: %s' % (lockey,))
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':conn.uid},
-                       {'$set':{'locid':location['_id'], 'focus':None}})
-        task.set_dirty(conn.uid, DIRTY_FOCUS | DIRTY_LOCALE)
+                       {'$set':{'locid':location['_id'], 'focus':None,
+                                'lastmoved': task.starttime }})
+        task.set_dirty(conn.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_POPULACE)
+        ### DIRTY_POPULACE on everybody in the same room!
 
 
 # Late imports, to avoid circularity
-from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_FOCUS
+from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_POPULACE, DIRTY_FOCUS
