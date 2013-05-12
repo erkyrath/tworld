@@ -167,7 +167,50 @@ def sluggify(text):
         text = '_' + text
     return text
 
+# These routines will probably go somewhere else
 
+pronoun_map_we = {
+    'he': 'he',
+    'she': 'she',
+    'it': 'it',
+    'they': 'they',
+    'name': '', # suffix
+    }
+pronoun_map_us = {
+    'he': 'him',
+    'she': 'her',
+    'it': 'it',
+    'they': 'them',
+    'name': '', # suffix
+    }
+pronoun_map_our = {
+    'he': 'his',
+    'she': 'her',
+    'it': 'its',
+    'they': 'their',
+    'name': "'s", # suffix
+    }
+pronoun_map_ours = {
+    'he': 'his',
+    'she': 'hers',
+    'it': 'its',
+    'they': 'theirs',
+    'name': "'s", # suffix
+    }
+pronoun_map_ourself = {
+    'he': 'himself',
+    'she': 'herself',
+    'it': 'itself',
+    'they': 'themself',
+    'name': '', # suffix
+    }
+
+def pronoun_map(player, map):
+    if not player:
+        player = { 'name': 'nobody', 'pronoun': 'it' }
+    if player['pronoun'] == 'name':
+        return player['name'] + map['name']
+    return map[player['pronoun']]
 
 import unittest
 

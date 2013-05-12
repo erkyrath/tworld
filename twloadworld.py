@@ -259,6 +259,7 @@ def append_to_prop(dic, key, ln):
         val += ('\n\n' + ln)
         dic[key] = val
     elif type(val) is dict and 'text' in val:
+        # Covers {text}, {event}, {code}
         val['text'] += ('\n\n' + ln)
     else:
         error('Cannot append to property %s' % (key,))
