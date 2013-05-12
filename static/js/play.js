@@ -37,6 +37,9 @@ function build_page_structure() {
     var bottomcol = $('<div>', { id: 'bottomcol' });
     var eventpane = $('<div>', { id: 'eventpane' });
 
+    localepane.append($('<div>', { id: 'localepane_locale' }));
+    localepane.append($('<div>', { id: 'localepane_populace' }));
+
     var tooloutline = $('<div>', { 'class': 'ToolOutline' });
     var toolheader = $('<div>', { 'class': 'ToolTitleBar' });
     tooloutline.append(toolheader);
@@ -137,10 +140,11 @@ function display_error(msg) {
     var el = $('<div>', { 'class':'BlockError'} );
     el.text(msg);
 
-    var localeel = $('#localepane');
+    var localeel = $('#localepane_locale');
     localeel.empty();
     localeel.append(el);
 
+    $('#localepane_populace').empty();
     focuspane_clear();
 }
 
@@ -150,8 +154,8 @@ function toolpane_set_world(world, scope, creator) {
     $('#tool_title_creator').text(creator);
 }
 
-function localepane_set(desc, title) {
-    var localeel = $('#localepane');
+function localepane_set_locale(desc, title) {
+    var localeel = $('#localepane_locale');
     localeel.empty();
 
     if (title) {
@@ -159,6 +163,27 @@ function localepane_set(desc, title) {
         titleel.text(title);
         localeel.append(titleel);
     }
+
+    var contentls;
+    try {
+        contentls = parse_description(desc);
+    }
+    catch (ex) {
+        var el = $('<p>');
+        el.text('[Error rendering description: ' + ex + ']');
+        contentls = [ el ];
+    }
+    for (var ix=0; ix<contentls.length; ix++) {
+        localeel.append(contentls[ix]);
+    }
+}
+
+function localepane_set_populace(desc) {
+    var localeel = $('#localepane_populace');
+    localeel.empty();
+
+    if (!desc)
+        return;
 
     var contentls;
     try {
@@ -726,14 +751,17 @@ function evhan_websocket_message(ev) {
         if (obj.world !== undefined) {
             toolpane_set_world(obj.world.world, obj.world.scope, obj.world.creator);
         }
+        if (obj.locale !== undefined) {
+            localepane_set_locale(obj.locale.desc, obj.locale.name);
+        }
+        if (obj.populace !== undefined) {
+            localepane_set_populace(obj.populace);
+        }
         if (obj.focus !== undefined) {
             if (obj.focus)
                 focuspane_set(obj.focus);
             else
                 focuspane_clear();
-        }
-        if (obj.locale !== undefined) {
-            localepane_set(obj.locale.desc, obj.locale.name);
         }
     }
     if (cmd == 'clearfocus') {
