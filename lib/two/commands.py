@@ -186,7 +186,6 @@ def define_commands():
         val = 'You %s, \u201C%s\u201D' % (say, cmd.text,)
         task.write_event(conn.uid, val)
         others = yield task.find_locale_players(notself=True)
-        app.log.info('### others: %s', others)
         if others:
             oval = '%s %s, \u201C%s\u201D' % (playername, says, cmd.text,)
             task.write_event(others, oval)

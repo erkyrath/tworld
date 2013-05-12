@@ -375,12 +375,21 @@ def perform_action(app, task, conn, target):
                                   {'_id':1})
         if not location:
             raise ErrorMessageException('No such location: %s' % (lockey,))
+        
+        # We set everybody in the starting *and* ending room DIRTY_POPULACE.
+        others = yield task.find_locale_players(notself=True)
+        if others:
+            task.set_dirty(others, DIRTY_POPULACE)
+            
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':conn.uid},
                        {'$set':{'locid':location['_id'], 'focus':None,
                                 'lastmoved': task.starttime }})
         task.set_dirty(conn.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_POPULACE)
-        ### DIRTY_POPULACE on everybody in the same room!
+        
+        others = yield task.find_locale_players(notself=True)
+        if others:
+            task.set_dirty(others, DIRTY_POPULACE)
 
 
 # Late imports, to avoid circularity

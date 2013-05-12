@@ -57,22 +57,28 @@ class Task(object):
         assert self.is_writable(), 'set_data_change: Task was never set writable'
         self.changeset.add(key)
         
-    def set_dirty(self, conns, dirty):
-        # conns may be a PlayerConnection, or a list of them, or a uid
-        # (an ObjectId), or None.
+    def set_dirty(self, ls, dirty):
+        # ls may be a PlayerConnection, a uid (an ObjectId), or a list
+        # of either. Or None.
         # dirty is one or more DIRTY flags.
         assert self.is_writable(), 'set_dirty: Task was never set writable'
-        if isinstance(conns, PlayerConnection):
-            conns = ( conns, )
-        elif isinstance(conns, ObjectId):
-            conns = self.app.playconns.get_for_uid(conns)
-
-        if conns is None:
+        if ls is None:
             return
-        for conn in conns:
-            val = self.updateconns.get(conn.connid, 0) | dirty
-            self.updateconns[conn.connid] = val
 
+        if type(ls) not in (tuple, list):
+            ls = ( ls, )
+
+        for obj in ls:
+            if isinstance(obj, PlayerConnection):
+                val = self.updateconns.get(obj.connid, 0) | dirty
+                self.updateconns[obj.connid] = val
+            elif isinstance(obj, ObjectId):
+                for conn in self.app.playconns.get_for_uid(obj):
+                    val = self.updateconns.get(conn.connid, 0) | dirty
+                    self.updateconns[conn.connid] = val
+            else:
+                self.log.warning('write_event: unrecognized %s', obj)
+        
     def write_event(self, ls, text):
         # ls may be a PlayerConnection, a uid (an ObjectId), or a list
         # of either. Or None.
