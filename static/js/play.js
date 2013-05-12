@@ -264,7 +264,7 @@ function focuspane_clear()
     }
 }
 
-function focuspane_set(desc)
+function focuspane_set(desc, extrals)
 {
     var contentls;
     try {
@@ -276,6 +276,12 @@ function focuspane_set(desc)
         contentls = [ el ];
     }
 
+    if (extrals) {
+        /* Append to end of contentls. */
+        for (var ix=0; ix<extrals.length; ix++)
+            contentls.push(extrals[ix]);
+    }
+
     /* Clear out old panes and slide in the new one. (It will have the
        'FocusPaneAnimating' class until it finishes sliding.) */
 
@@ -284,6 +290,30 @@ function focuspane_set(desc)
     var newpane = build_focuspane(contentls);
     $('#leftcol').append(newpane);
     newpane.slideDown(200, function() { newpane.removeClass('FocusPaneAnimating'); } );
+}
+
+function focuspane_set_special(ls) {
+    var type = '???';
+    try {
+        type = ls[0];
+        if (type == 'selfdesc') {
+            var name = ls[1];
+            var pronoun = ls[2];
+            var desc = ls[3];
+            var extrals = [];
+            var el;
+            el = $('<p style="font-style: italic;">');
+            el.text(name + ' is ' + desc);
+            extrals.push(el);
+            /*### form elements */
+            focuspane_set(null, extrals);
+            return;
+        }
+        focuspane_set('### ' + type + ': ' + ls);
+    }
+    catch (ex) {
+        focuspane_set('[Error creating special focus ' + type + ': ' + ex + ']');
+    }
 }
 
 /* Transform a description array (a JSONable array of strings and array tags)
@@ -297,6 +327,9 @@ function focuspane_set(desc)
    this stuff interactively, and they deserve explicit bad-format warnings!)
 */
 function parse_description(desc) {
+    if (desc === null)
+        return [];
+
     if (!jQuery.isArray(desc))
         desc = [ desc ];
 
@@ -758,10 +791,12 @@ function evhan_websocket_message(ev) {
             localepane_set_populace(obj.populace);
         }
         if (obj.focus !== undefined) {
-            if (obj.focus)
-                focuspane_set(obj.focus);
-            else
+            if (!obj.focus)
                 focuspane_clear();
+            else if (obj.focusspecial)
+                focuspane_set_special(obj.focus);
+            else
+                focuspane_set(obj.focus);
         }
     }
     if (cmd == 'clearfocus') {
