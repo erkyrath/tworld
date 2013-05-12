@@ -66,7 +66,8 @@ class EvalPropContext(object):
             return str(res)
         if (self.level == LEVEL_MESSAGE):
             if is_text_object(res):
-                return ''.join([ str_or_null(val) for val in self.accum ])
+                # Skip all styles, links, etc. Just paste together strings.
+                return ''.join([ val for val in self.accum if type(val) is str ])
             return str(res)
         if (self.level == LEVEL_DISPLAY):
             if is_text_object(res):
