@@ -83,6 +83,7 @@ class World(object):
         self.proplist = []
         self.locations = {}
         self.locationlist = []
+        self.portals = {}
 
     def check_symbols_used(self):
         self.symbolsused = set()
@@ -195,6 +196,12 @@ def parse_world(filename):
                 world.instancing = val
                 if val not in ('shared', 'solo', 'standard'):
                     error('$instancing value must be shared, solo, or standard')
+            elif key == '$portal':
+                subls = [ subval.strip() for subval in val.split(',') ]
+                if len(subls) != 4:
+                    error('$Portal declaration must have four fields')
+                else:
+                    world.portals[subls[0]] = subls[1:]
             else:
                 error('Unknown key: %s' % (key,))
             continue
@@ -239,6 +246,8 @@ def parse_prop(prop):
             return {'type':'text', 'text':val}
         elif key == 'code':
             return {'type':'code', 'text':val}
+        elif key == 'portal':
+            return {'type':'portal', '_tempname':val}
         else:
             error('Unknown special property type: *%s' % (key,))
             return None
@@ -272,6 +281,36 @@ def append_to_prop(dic, key, ln):
     else:
         error('Cannot append to property %s' % (key,))
 
+def transform_prop(world, db, val):
+    if type(val) is not dict:
+        return val
+    key = val.get('type', None)
+    if key == 'portal':
+        trio = world.portals.get(val['_tempname'], None)
+        if not trio:
+            error('*Portal property not defined with $portal declaration: %s' % (val['_tempname'],))
+            return ''
+        query = { 'inwid':world.wid, 'wid':ObjectId(trio[0]), 'locid':ObjectId(trio[2]) }
+        if trio[1] in ('personal', 'global', 'same'):
+            query['scid'] = trio[1]
+        else:
+            query['scid'] = ObjectId(trio[1])
+        portal = db.portals.find_one(query)
+        if portal:
+            portid = portal['_id']
+        else:
+            location = db.locations.find_one({'_id':query['locid'], 'wid':query['wid']})
+            if not location:
+                error('Portal location does not match world: %s' % (val['_tempname'],))
+                return ''
+            portid = db.portals.insert(query)
+            print('Created portal "%s" (%s)' % (val['_tempname'], portid,))
+        newval = { 'type':'portal', 'portid':portid }
+        if 'text' in val:
+            newval['text'] = val['text']
+        return newval
+    return val
+        
 def prop_to_string(val):
     if type(val) is not dict:
         return json.dumps(val)
@@ -284,6 +323,11 @@ def prop_to_string(val):
         res = '*event %s' % (val['text'],)
         if 'otext' in val:
             res += ('\n\t- otext: ' + val['otext'])
+        return res
+    if key == 'portal':
+        res = '*portal %s' % (val['_tempname'],)
+        if 'text' in val:
+            res += ('\n\t- text: ' + val['text'])
         return res
     if key == 'text':
         val = val['text']
@@ -397,6 +441,8 @@ else:
         sys.exit(1)
     print('Created world "%s" (%s)' % (dbworld['name'], wid))
 
+world.wid = wid
+
 if opts.remove:
     if not args:
         error('Use --removeworld to remove the entire world.')
@@ -493,6 +539,7 @@ for val in args:
     if key is None:
         for key in loc.props:
             val = loc.props[key]
+            val = transform_prop(world, db, val)
             print('Writing property in %s: %s' % (loc.key, key,))
             db.worldprop.update({'wid':wid, 'locid':loc.locid, 'key':key},
                                 {'wid':wid, 'locid':loc.locid, 'key':key, 'val':val},
@@ -502,6 +549,7 @@ for val in args:
             error('Property not found in %s: %s' % (loc.key, key))
             continue
         val = loc.props[key]
+        val = transform_prop(world, db, val)
         print('Writing property in %s: %s' % (loc.key, key,))
         db.worldprop.update({'wid':wid, 'locid':loc.locid, 'key':key},
                             {'wid':wid, 'locid':loc.locid, 'key':key, 'val':val},
