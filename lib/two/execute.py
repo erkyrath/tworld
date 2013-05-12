@@ -54,7 +54,7 @@ class EvalPropContext(object):
         # Initialize per-invocation fields.
         self.accum = None
         self.linktargets = None
-        self.dependencies = None
+        self.dependencies = set()
         
         res = yield self.evalkey(key, lookup=lookup)
 
@@ -89,7 +89,7 @@ class EvalPropContext(object):
         and linktargets. Lower-level calls use the existing ones.
         """
         if lookup:
-            res = yield find_symbol(self.app, self.wid, self.iid, self.locid, key)
+            res = yield find_symbol(self.app, self.wid, self.iid, self.locid, key, dependencies=self.dependencies)
         else:
             res = { 'type':'text', 'text':key }
 
@@ -106,7 +106,6 @@ class EvalPropContext(object):
                 assert self.accum is None, 'EvalPropContext.accum should be None at depth zero'
                 self.accum = []
                 self.linktargets = {}
-                self.dependencies = set()
             else:
                 assert self.accum is not None, 'EvalPropContext.accum should not be None at depth nonzero'
 
@@ -150,25 +149,34 @@ def str_or_null(res):
     return str(res)
 
 @tornado.gen.coroutine
-def find_symbol(app, wid, iid, locid, key):
-    res = yield motor.Op(app.mongodb.instanceprop.find_one,
-                         {'iid':iid, 'locid':locid, 'key':key},
-                         {'val':1})
-    if res:
-        return res['val']
+def find_symbol(app, wid, iid, locid, key, dependencies=None):
+    if locid is not None:
+        if dependencies is not None:
+            dependencies.add(('instanceprop', iid, locid, key))
+        res = yield motor.Op(app.mongodb.instanceprop.find_one,
+                             {'iid':iid, 'locid':locid, 'key':key},
+                             {'val':1})
+        if res:
+            return res['val']
     
-    res = yield motor.Op(app.mongodb.worldprop.find_one,
-                         {'wid':wid, 'locid':locid, 'key':key},
-                         {'val':1})
-    if res:
-        return res['val']
+        if dependencies is not None:
+            dependencies.add(('worldprop', wid, locid, key))
+        res = yield motor.Op(app.mongodb.worldprop.find_one,
+                             {'wid':wid, 'locid':locid, 'key':key},
+                             {'val':1})
+        if res:
+            return res['val']
     
+    if dependencies is not None:
+        dependencies.add(('instanceprop', iid, None, key))
     res = yield motor.Op(app.mongodb.instanceprop.find_one,
                          {'iid':iid, 'locid':None, 'key':key},
                          {'val':1})
     if res:
         return res['val']
     
+    if dependencies is not None:
+        dependencies.add(('worldprop', wid, None, key))
     res = yield motor.Op(app.mongodb.worldprop.find_one,
                          {'wid':wid, 'locid':None, 'key':key},
                          {'val':1})
@@ -365,7 +373,7 @@ def perform_action(app, task, conn, target):
         task.set_dirty(conn.uid, DIRTY_FOCUS)
     elif restype == 'focus':
         # Set focus to the given symbol
-        ### if already at focus, leave it?
+        ### if already at focus, exit it? Or make no change?
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':conn.uid},
                        {'$set':{'focus':res.get('key', None)}})
