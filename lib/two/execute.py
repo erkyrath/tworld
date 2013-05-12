@@ -171,8 +171,8 @@ def find_symbol(app, wid, iid, locid, key):
 
 
 @tornado.gen.coroutine
-def generate_locale(app, conn):
-    assert conn is not None, 'generate_locale: conn is None'
+def generate_update(app, conn, dirty):
+    assert conn is not None, 'generate_update: conn is None'
     
     playstate = yield motor.Op(app.mongodb.playstate.find_one,
                                {'_id':conn.uid},
@@ -257,7 +257,7 @@ def generate_locale(app, conn):
     
 
 @tornado.gen.coroutine
-def perform_action(app, conn, target):
+def perform_action(app, task, conn, target):
     playstate = yield motor.Op(app.mongodb.playstate.find_one,
                                {'_id':conn.uid},
                                {'iid':1, 'locid':1, 'focus':1})
@@ -291,7 +291,7 @@ def perform_action(app, conn, target):
         ### Have an other-people field too.
         val = res.get('text', None)
         if val:
-            conn.write({'cmd':'event', 'text':val})
+            task.write_event(conn.uid, val)
         return
 
     if restype == 'code':
@@ -302,12 +302,14 @@ def perform_action(app, conn, target):
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':conn.uid},
                        {'$set':{'focus':target}})
+        task.set_dirty(conn.uid, DIRTY_FOCUS)
     elif restype == 'focus':
         # Set focus to the given symbol
         ### if already at focus, leave it?
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':conn.uid},
                        {'$set':{'focus':res.get('key', None)}})
+        task.set_dirty(conn.uid, DIRTY_FOCUS)
     elif restype == 'move':
         # Set locale to the given symbol
         lockey = res.get('loc', None)
@@ -319,7 +321,8 @@ def perform_action(app, conn, target):
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':conn.uid},
                        {'$set':{'locid':location['_id'], 'focus':None}})
+        task.set_dirty(conn.uid, DIRTY_FOCUS | DIRTY_LOCALE)
 
-    ### total refresh, which is not right. Be more clever.
-    yield generate_locale(app, conn) 
 
+# Late imports, to avoid circularity
+from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_FOCUS

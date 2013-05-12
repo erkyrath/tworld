@@ -56,10 +56,11 @@ class Task(object):
         assert self.is_writable(), 'set_data_change: Task was never set writable'
         self.changeset.add(key)
         
-    def set_conns_dirty(self, conns, dirty):
+    def set_dirty(self, conns, dirty):
         # conns may be a PlayerConnection, or a list of them, or a uid
         # (an ObjectId), or None.
-        assert self.is_writable(), 'set_conns_dirty: Task was never set writable'
+        # dirty is one or more DIRTY flags.
+        assert self.is_writable(), 'set_dirty: Task was never set writable'
         if isinstance(conns, PlayerConnection):
             conns = ( conns, )
         elif isinstance(conns, ObjectId):
@@ -71,6 +72,20 @@ class Task(object):
             val = self.updateconns.get(conn.connid, 0) | dirty
             self.updateconns[conn.connid] = val
 
+    def write_event(self, conns, text):
+        # conns may be a PlayerConnection, or a list of them, or a uid
+        # (an ObjectId), or None.
+        if isinstance(conns, PlayerConnection):
+            conns = ( conns, )
+        elif isinstance(conns, ObjectId):
+            conns = self.app.playconns.get_for_uid(conns)
+
+        if conns is None:
+            return
+        for conn in conns:
+            conn.write({'cmd':'event', 'text':text})
+
+            
     @tornado.gen.coroutine
     def handle(self):
         """
@@ -234,11 +249,13 @@ class Task(object):
             return
 
         self.log.info('### Must resolve updates: %s', updateconns)
+        # If two connections are on the same player, this won't be
+        # as efficient as it might be -- we'll generate text twice.
+        # But that's a rare case.
         for (connid, dirty) in updateconns.items():
             try:
                 conn = self.app.playconns.get(connid)
-                ### Do this more efficiently, with dirty bits!
-                yield two.execute.generate_locale(self.app, conn)
+                yield two.execute.generate_update(self.app, conn, dirty)
             except Exception as ex:
                 self.log.error('Error updating while resolving task: %s', self.cmdobj, exc_info=True)
         

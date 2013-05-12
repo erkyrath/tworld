@@ -86,7 +86,7 @@ def define_commands():
         # Refresh one connection (not all the player's connections!)
         ### Probably oughta be a player command, not a server command.
         conn = app.playconns.get(cmd.connid)
-        task.set_conns_dirty(conn, DIRTY_ALL)
+        task.set_dirty(conn, DIRTY_ALL)
     
     @command('playeropen', noneedmongo=True, preconnection=True)
     def cmd_playeropen(app, task, cmd, conn):
@@ -211,7 +211,7 @@ def define_commands():
             action = conn.focusactions.get(cmd.action)
         if action is None:
             raise ErrorMessageException('Action is not available.')
-        res = yield two.execute.perform_action(app, conn, action)
+        res = yield two.execute.perform_action(app, task, conn, action)
         
     @command('dropfocus', doeswrite=True)
     def cmd_dropfocus(app, task, cmd, conn):
@@ -222,6 +222,6 @@ def define_commands():
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':conn.uid},
                        {'$set':{'focus':None}})
-        task.set_conns_dirty(conn.uid, DIRTY_FOCUS)
+        task.set_dirty(conn.uid, DIRTY_FOCUS)
         
     return Command.all_commands
