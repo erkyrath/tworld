@@ -189,7 +189,6 @@ def generate_update(app, conn, dirty):
     playstate = yield motor.Op(app.mongodb.playstate.find_one,
                                {'_id':conn.uid},
                                {'iid':1, 'locid':1, 'focus':1})
-    app.log.info('### playstate: %s', playstate)
     
     iid = playstate['iid']
     if not iid:
@@ -317,7 +316,6 @@ def perform_action(app, task, conn, target):
     playstate = yield motor.Op(app.mongodb.playstate.find_one,
                                {'_id':conn.uid},
                                {'iid':1, 'locid':1, 'focus':1})
-    app.log.info('### playstate: %s', playstate)
     
     iid = playstate['iid']
     if not iid:
