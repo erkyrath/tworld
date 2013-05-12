@@ -184,13 +184,12 @@ def define_commands():
         else:
             (say, says) = ('say', 'says')
         val = 'You %s, \u201C%s\u201D' % (say, cmd.text,)
-        oval = '%s %s, \u201C%s\u201D' % (playername, says, cmd.text,)
-        for oconn in app.playconns.all():
-            ### same location! and use task.write_event!
-            if conn.uid == oconn.uid:
-                oconn.write({'cmd':'event', 'text':val})
-            else:
-                oconn.write({'cmd':'event', 'text':oval})
+        task.write_event(conn.uid, val)
+        others = yield task.find_locale_players(notself=True)
+        app.log.info('### others: %s', others)
+        if others:
+            oval = '%s %s, \u201C%s\u201D' % (playername, says, cmd.text,)
+            task.write_event(others, oval)
 
     @command('pose')
     def cmd_pose(app, task, cmd, conn):
@@ -199,9 +198,8 @@ def define_commands():
                              {'name':1})
         playername = res['name']
         val = '%s %s' % (playername, cmd.text,)
-        for oconn in app.playconns.all():
-            ### same location! and use task.write_event!
-            oconn.write({'cmd':'event', 'text':val})
+        everyone = yield task.find_locale_players()
+        task.write_event(everyone, val)
 
     @command('action', doeswrite=True)
     def cmd_action(app, task, cmd, conn):

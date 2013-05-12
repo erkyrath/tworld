@@ -258,9 +258,9 @@ def generate_update(app, conn, dirty):
         msg['locale'] = { 'name': locname, 'desc': localedesc }
 
     if dirty & DIRTY_POPULACE:
+        # Build a list of all the other people in the location.
         cursor = app.mongodb.playstate.find({'iid':iid, 'locid':locid},
                                             {'_id':1, 'lastmoved':1})
-        # Build a list of all the other people in the location.
         people = []
         while (yield cursor.fetch_next):
             ostate = cursor.next_object()

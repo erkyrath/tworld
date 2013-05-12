@@ -2,6 +2,7 @@ import datetime
 
 import tornado.gen
 from bson.objectid import ObjectId
+import motor
 
 import two.execute
 from two.playconn import PlayerConnection
@@ -72,20 +73,53 @@ class Task(object):
             val = self.updateconns.get(conn.connid, 0) | dirty
             self.updateconns[conn.connid] = val
 
-    def write_event(self, conns, text):
-        # conns may be a PlayerConnection, or a list of them, or a uid
-        # (an ObjectId), or None.
-        if isinstance(conns, PlayerConnection):
-            conns = ( conns, )
-        elif isinstance(conns, ObjectId):
-            conns = self.app.playconns.get_for_uid(conns)
-
-        if conns is None:
+    def write_event(self, ls, text):
+        # ls may be a PlayerConnection, a uid (an ObjectId), or a list
+        # of either. Or None.
+        if ls is None:
             return
-        for conn in conns:
-            conn.write({'cmd':'event', 'text':text})
 
+        if type(ls) not in (tuple, list):
+            ls = ( ls, )
+
+        for obj in ls:
+            if isinstance(obj, PlayerConnection):
+                obj.write({'cmd':'event', 'text':text})
+            elif isinstance(obj, ObjectId):
+                for conn in self.app.playconns.get_for_uid(obj):
+                    conn.write({'cmd':'event', 'text':text})
+            else:
+                self.log.warning('write_event: unrecognized %s', obj)
             
+    @tornado.gen.coroutine
+    def find_locale_players(self, notself=False):
+        conn = self.app.playconns.get(self.connid)
+        if not conn:
+            return None
+        
+        playstate = yield motor.Op(self.app.mongodb.playstate.find_one,
+                                   {'_id':conn.uid},
+                                   {'iid':1, 'locid':1})
+        if not playstate:
+            return None
+        iid = playstate['iid']
+        if not iid:
+            return None
+        locid = playstate['locid']
+        if not locid:
+            return None
+        
+        cursor = self.app.mongodb.playstate.find({'iid':iid, 'locid':locid},
+                                                 {'_id':1})
+        people = []
+        while (yield cursor.fetch_next):
+            ostate = cursor.next_object()
+            if notself and ostate['_id'] == conn.uid:
+                continue
+            people.append(ostate['_id'])
+            
+        return people
+        
     @tornado.gen.coroutine
     def handle(self):
         """
