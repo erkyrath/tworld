@@ -186,7 +186,7 @@ def define_commands():
         val = 'You %s, \u201C%s\u201D' % (say, cmd.text,)
         oval = '%s %s, \u201C%s\u201D' % (playername, says, cmd.text,)
         for oconn in app.playconns.all():
-            ### same location!
+            ### same location! and use task.write_event!
             if conn.uid == oconn.uid:
                 oconn.write({'cmd':'event', 'text':val})
             else:
@@ -200,7 +200,7 @@ def define_commands():
         playername = res['name']
         val = '%s %s' % (playername, cmd.text,)
         for oconn in app.playconns.all():
-            ### same location!
+            ### same location! and use task.write_event!
             oconn.write({'cmd':'event', 'text':val})
 
     @command('action', doeswrite=True)

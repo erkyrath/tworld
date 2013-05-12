@@ -26,11 +26,14 @@ class EvalPropContext(object):
         ### Will need CPU-limiting someday.
 
     @tornado.gen.coroutine
-    def eval(self, key):
+    def eval(self, key, lookup=True):
         """
-        Look up and return a symbol, in this context. After the call,
-        dependencies will contain the symbol (and any others checked when
-        putting together the result).
+        Look up and return a symbol, in this context. If lookup=False,
+        the argument (string) is treated as an already-looked-up {text}
+        value.
+
+        After the call, dependencies will contain the symbol (and any
+        others checked when putting together the result).
 
         The result type depends on the level:
 
@@ -52,7 +55,7 @@ class EvalPropContext(object):
         self.linktargets = None
         self.dependencies = None
         
-        res = yield self.evalkey(key)
+        res = yield self.evalkey(key, lookup=lookup)
 
         # At this point, if the value was a {text}, the accum will contain
         # the desired description.
@@ -72,7 +75,7 @@ class EvalPropContext(object):
         raise Exception('unrecognized eval level: %d' % (self.level,))
         
     @tornado.gen.coroutine
-    def evalkey(self, key, depth=0):
+    def evalkey(self, key, depth=0, lookup=True):
         """
         Look up a symbol, adding it to the accumulated content. If the
         result contains interpolated strings, this calls itself recursively.
@@ -83,7 +86,10 @@ class EvalPropContext(object):
         The top-level call to evalkey() may set up the description accumulator
         and linktargets. Lower-level calls use the existing ones.
         """
-        res = yield find_symbol(self.app, self.wid, self.iid, self.locid, key)
+        if lookup:
+            res = yield find_symbol(self.app, self.wid, self.iid, self.locid, key)
+        else:
+            res = { 'type':'text', 'text':key }
 
         if not(is_text_object(res)
                and self.level in (LEVEL_MESSAGE, LEVEL_DISPLAY)):
@@ -287,11 +293,12 @@ def perform_action(app, task, conn, target):
 
     if restype == 'event':
         # Display an event.
-        ### This should go through parse_description! (LEVEL_MESSAGE)
         ### Have an other-people field too.
         val = res.get('text', None)
         if val:
-            task.write_event(conn.uid, val)
+            ctx = EvalPropContext(app, wid, iid, locid, level=LEVEL_MESSAGE)
+            newval = yield ctx.eval(val, lookup=False)
+            task.write_event(conn.uid, newval)
         return
 
     if restype == 'code':
