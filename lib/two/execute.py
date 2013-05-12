@@ -326,7 +326,23 @@ def generate_update(app, conn, dirty):
         conn.focusdependencies.clear()
 
         focusdesc = False
-        if playstate['focus']:
+        focusobj = playstate.get('focus', None)
+        
+        if focusobj is None:
+            focusdesc = False
+        elif type(focusobj) is list:
+            restype = focusobj[0]
+            if restype == 'player':
+                player = yield motor.Op(app.mongodb.players.find_one,
+                                        {'_id':focusobj[1]},
+                                        {'name':1, 'desc':1})
+                if not player:
+                    focusdesc = 'There is no such person.'
+                else:
+                    focusdesc = '%s is %s' % (player.get('name', '???'), player.get('desc', '...'))
+            else:
+                focusdesc = '[Focus: %s]' % (focusobj,)
+        else:
             ctx = EvalPropContext(app, wid, iid, locid, level=LEVEL_DISPLAY)
             focusdesc = yield ctx.eval(playstate['focus'])
             if ctx.linktargets:
@@ -357,7 +373,18 @@ def perform_action(app, task, conn, target):
 
     locid = playstate['locid']
 
-    ### if the target is not a symbol, execute it directly
+    if type(target) is tuple:
+        restype = target[0]
+        
+        if restype == 'player':
+            obj = ['player', target[1]]
+            yield motor.Op(app.mongodb.playstate.update,
+                           {'_id':conn.uid},
+                           {'$set':{'focus':obj}})
+            task.set_dirty(conn.uid, DIRTY_FOCUS)
+            return
+            
+        raise ErrorMessageException('Action not understood: "%s"' % (target,))
     
     res = yield find_symbol(app, wid, iid, locid, target)
     if res is None:
