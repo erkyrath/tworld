@@ -49,6 +49,18 @@ class MyHandlerMixin:
             (self.twsessionstatus, self.twsession) = res
         return True
 
+    @tornado.gen.coroutine
+    def get_config_key(self, key):
+        """
+        Look up a config key in the database. If not present, return None.
+        """
+        try:
+            res = yield motor.Op(self.application.mongodb.config.find_one,
+                                 { 'key': key })
+        except Exception as ex:
+            raise MessageException('Database error: %s' % (ex,))
+        return res
+        
     def extend_template_namespace(self, map):
         """
         Add session-related entries to the template namespace. This is
@@ -186,7 +198,7 @@ class MainHandler(MyRequestHandler):
         self.set_cookie('tworld_name', tornado.escape.url_escape(fieldname),
                         expires_days=14)
 
-        res = yield tornado.gen.Task(self.application.twsessionmgr.create_session, self, uid, email, name)
+        res = yield self.application.twsessionmgr.create_session(self, uid, email, name)
         self.application.twlog.info('Player signed in: %s (session %s)', email, res)
         self.redirect('/play')
 
@@ -214,7 +226,7 @@ class RegisterHandler(MyRequestHandler):
     @tornado.gen.coroutine
     def post(self):
         yield self.find_current_session()
-        
+
         # Apply canonicalizations to the name and password.
         name = self.get_argument('name', '')
         name = unicodedata.normalize('NFKC', name)
@@ -229,9 +241,13 @@ class RegisterHandler(MyRequestHandler):
         password2 = unicodedata.normalize('NFKC', password2)
         password2 = password2.encode()  # to UTF8 bytes
         
+        locked = yield self.get_config_key('noregistration')
+        
         formerror = None
         formfocus = 'name'
-        if (not name):
+        if locked:
+            formerror = 'Player registration is not allowed at this time.'
+        elif (not name):
             formerror = 'You must enter your player name.'
             formfocus = 'name'
         elif ('@' in name):
@@ -262,7 +278,7 @@ class RegisterHandler(MyRequestHandler):
             return
 
         try:
-            res = yield tornado.gen.Task(self.application.twsessionmgr.create_player, self, email, name, password)
+            res = yield self.application.twsessionmgr.create_player(self, email, name, password)
             self.application.twlog.info('Player created: %s (session %s)', email, res)
         except MessageException as ex:
             formerror = str(ex)
@@ -296,7 +312,7 @@ class LogOutHandler(MyRequestHandler):
     def get(self):
         yield self.find_current_session()
         # End this sign-in session and kill the cookie.
-        self.application.twsessionmgr.remove_session(self)
+        yield self.application.twsessionmgr.remove_session(self)
         # Clobber any open web sockets on this session. (But the player
         # might still be signed in on a different session.)
         ls = self.application.twconntable.as_dict().values()

@@ -53,7 +53,7 @@ class SessionMgr(object):
             res = yield motor.Op(self.app.mongodb.players.find_one,
                                  { key: name })
         except Exception as ex:
-            return MessageException('Database error: %s' % ex)
+            raise MessageException('Database error: %s' % ex)
 
         if not res:
             return None
@@ -85,7 +85,7 @@ class SessionMgr(object):
             resemail = yield motor.Op(self.app.mongodb.players.find_one,
                                      { 'email': email })
         except Exception as ex:
-            return MessageException('Database error: %s' % ex)
+            raise MessageException('Database error: %s' % ex)
 
         if (resname):
             raise MessageException('That player name is already in use.')
