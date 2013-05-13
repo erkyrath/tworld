@@ -482,11 +482,19 @@ def perform_action(app, task, conn, target):
 
             ### check access level (unless this is to scope, in which case do it earlier)
             
+            res = yield motor.Op(app.mongodb.players.find_one,
+                                 {'_id':conn.uid},
+                                 {'name':1})
+            playername = res['name']
+        
             others = yield task.find_locale_players(notself=True)
             if others:
                 # Don't need to dirty populace; everyone here has a
                 # dependency.
-                task.write_event(others, '### disappears.') ###localize
+                task.write_event(others, '%s disappears.' % (playername,)) ###localize
+            task.write_event(conn.uid, 'The world fades away.') ###localize
+
+            ### really I want this to be two separate events.
             
             yield motor.Op(app.mongodb.playstate.update,
                            {'_id':conn.uid},
@@ -504,7 +512,7 @@ def perform_action(app, task, conn, target):
             others = yield task.find_locale_players(notself=True)
             if others:
                 task.set_dirty(others, DIRTY_POPULACE)
-                task.write_event(others, '### appears.') ###localize
+                task.write_event(others, '%s appears.' % (playername,)) ###localize
             return
             
         raise ErrorMessageException('Action not understood: "%s"' % (target,))
