@@ -46,7 +46,7 @@ class ConnectionTable(object):
         """
         assert isinstance(handler, tweblib.handlers.PlayWebSocketHandler)
         assert handler.twconnid, 'handler.twconnid is not positive'
-        conn = Connection(handler, uid, email, session['sid'], session['starttime'])
+        conn = Connection(handler, uid, email, session['sid'], session['refreshtime'])
         self.table[conn.connid] = conn
         return conn
 
@@ -69,15 +69,15 @@ class ConnectionTable(object):
         del self.table[handler.twconnid]
         
 class Connection(object):
-    def __init__(self, handler, uid, email, sessionid, sessionstart):
+    def __init__(self, handler, uid, email, sessionid, refreshtime):
         self.handler = handler
         self.connid = handler.twconnid
         self.uid = uid
         self.sessionid = sessionid
         self.email = email
-        self.starttime = twcommon.misc.now()
-        self.sessiontime = sessionstart     # last session refresh
-        self.lastmsgtime = self.starttime   # last user activity
+        self.starttime = twcommon.misc.now() # connection (not session) start
+        self.lastmsgtime = self.starttime    # last user activity
+        self.sessiontime = refreshtime       # last session refresh
         self.available = False
 
     def __repr__(self):

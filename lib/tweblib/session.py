@@ -154,14 +154,16 @@ class SessionMgr(object):
         # Generate a random sessionid.
         sessionid = self.random_bytes(24)
         handler.set_secure_cookie('sessionid', sessionid, expires_days=10)
-        
+
+        now = twcommon.misc.now()
         sess = {
             'sid': sessionid,
             'uid': uid,
             'email': email,
             'name': name,
             'ipaddr': handler.request.remote_ip,
-            'starttime': twcommon.misc.now(),
+            'starttime': now,
+            'refreshtime': now,
             }
 
         res = yield motor.Op(self.app.mongodb.sessions.insert, sess)
@@ -219,11 +221,10 @@ class SessionMgr(object):
         # them up.
         now = twcommon.misc.now()
         sevendays = now - datetime.timedelta(days=7)
-        sevendays = now - datetime.timedelta(seconds=30) ####
         ls = [ conn for conn in self.app.twconntable.all()
                if conn.sessiontime < sevendays ]
         if ls:
-            plustendays = now + datetime.timedelta(days=20) ####
+            plustendays = now + datetime.timedelta(days=10)
             msgobj = {
                 'cmd': 'extendcookie',
                 'key': 'sessionid',
@@ -236,7 +237,7 @@ class SessionMgr(object):
                     conn.handler.write_message(msgobj)
                     yield motor.Op(self.app.mongodb.sessions.update,
                                    { 'sid': conn.sessionid },
-                                   { '$set': {'starttime':now }})
+                                   { '$set': {'refreshtime':now }})
                     self.app.twlog.info('Player session refreshed: %s (connid %d)', conn.email, conn.connid)
                 except Exception as ex:
                     self.app.twlog.error('Error refreshing session: %s', ex)
@@ -248,13 +249,13 @@ class SessionMgr(object):
             eightdays = now - datetime.timedelta(days=8)
             countquery = bson.son.SON()
             countquery['count'] = 'sessions'
-            countquery['query'] = {'starttime': {'$lt': eightdays}}
+            countquery['query'] = {'refreshtime': {'$lt': eightdays}}
             
             res = yield motor.Op(self.app.mongodb.command, countquery)
             if res and res['n']:
                 self.app.twlog.info('Expiring %d sessions', res['n'])
                 res = yield motor.Op(self.app.mongodb.sessions.remove,
-                                     {'starttime': {'$lt': eightdays}})
+                                     {'refreshtime': {'$lt': eightdays}})
             
         except Exception as ex:
             self.app.twlog.error('Error expiring old sessions: %s', ex)

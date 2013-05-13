@@ -140,8 +140,8 @@ class TwebApplication(tornado.web.Application):
         self.twlog.info('Launching timers')
         self.twservermgr.init_timers()
 
-        # The session expiration monitor. #### longer period
-        res = tornado.ioloop.PeriodicCallback(self.twsessionmgr.monitor_sessions, 1000)
+        # The session expiration monitor. Runs once per minute.
+        res = tornado.ioloop.PeriodicCallback(self.twsessionmgr.monitor_sessions, 60000)
         res.start()
 
 
