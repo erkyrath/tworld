@@ -6,6 +6,7 @@ import hashlib
 
 import bson.son
 import tornado.gen
+import tornado.httputil
 import motor
 
 import twcommon.misc
@@ -215,10 +216,33 @@ class SessionMgr(object):
         if you're on, you're on that.)
         """
         self.app.twlog.info('### monitor_sessions')
+
+        # If any live connections are more than seven days old, bump
+        # them up.
+        now = twcommon.misc.now()
+        sevendays = now - datetime.timedelta(days=7)
+        sevendays = now - datetime.timedelta(seconds=30) ####
+        ls = [ conn for conn in self.app.twconntable.all()
+               if conn.sessiontime < sevendays ]
+        if ls:
+            plustendays = now + datetime.timedelta(days=20) ####
+            msgobj = {
+                'cmd': 'extendcookie',
+                'key': 'sessionid',
+                'date': tornado.httputil.format_timestamp(plustendays)
+                }
+            
+            for conn in ls:
+                conn.sessiontime = now
+                conn.handler.write_message(msgobj)
+                #### write to DB!
+                self.app.twlog.info('Player session refreshed: %s (session %s, connid %d)', conn.email, conn.sessionid, conn.connid)
+
+        # Expire old sessions.
         try:
             # Order matters for the count command, so we must construct
             # it as BSON.
-            eightdays = twcommon.misc.now() - datetime.timedelta(days=8)
+            eightdays = now - datetime.timedelta(days=8)
             countquery = bson.son.SON()
             countquery['count'] = 'sessions'
             countquery['query'] = {'starttime': {'$lt': eightdays}}
