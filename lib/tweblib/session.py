@@ -12,8 +12,6 @@ import motor
 import twcommon.misc
 from twcommon.excepts import MessageException
 
-### occasionally expire sessions
-
 class SessionMgr(object):
     """
     Manage the collection of sessions in mongodb.
@@ -233,10 +231,15 @@ class SessionMgr(object):
                 }
             
             for conn in ls:
-                conn.sessiontime = now
-                conn.handler.write_message(msgobj)
-                #### write to DB!
-                self.app.twlog.info('Player session refreshed: %s (session %s, connid %d)', conn.email, conn.sessionid, conn.connid)
+                try:
+                    conn.sessiontime = now
+                    conn.handler.write_message(msgobj)
+                    yield motor.Op(self.app.mongodb.sessions.update,
+                                   { 'sid': conn.sessionid },
+                                   { '$set': {'starttime':now }})
+                    self.app.twlog.info('Player session refreshed: %s (connid %d)', conn.email, conn.connid)
+                except Exception as ex:
+                    self.app.twlog.error('Error refreshing session: %s', ex)
 
         # Expire old sessions.
         try:

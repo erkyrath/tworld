@@ -30,16 +30,23 @@ class ConnectionTable(object):
         self.counter += 1
         return res
 
+    def all(self):
+        """A (non-dynamic) list of all player connections.
+        """
+        return list(self.table.values())
+
     def as_dict(self):
+        """A (non-dynamic) map of all player connections.
+        """
         return dict(self.table)
 
-    def add(self, handler, uid, email, sessionid):
+    def add(self, handler, uid, email, session):
         """Add the handler to the table, as a new Connection. It will
         initially be unavailable. Returns the Connection.
         """
         assert isinstance(handler, tweblib.handlers.PlayWebSocketHandler)
         assert handler.twconnid, 'handler.twconnid is not positive'
-        conn = Connection(handler, uid, email, sessionid)
+        conn = Connection(handler, uid, email, session['sid'], session['starttime'])
         self.table[conn.connid] = conn
         return conn
 
@@ -62,13 +69,14 @@ class ConnectionTable(object):
         del self.table[handler.twconnid]
         
 class Connection(object):
-    def __init__(self, handler, uid, email, sessionid):
+    def __init__(self, handler, uid, email, sessionid, sessionstart):
         self.handler = handler
         self.connid = handler.twconnid
         self.uid = uid
         self.sessionid = sessionid
         self.email = email
         self.starttime = twcommon.misc.now()
+        self.sessiontime = sessionstart     # last session refresh
         self.lastmsgtime = self.starttime   # last user activity
         self.available = False
 

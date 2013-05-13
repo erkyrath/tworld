@@ -423,7 +423,7 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
 
         # Add it to the connection table.
         try:
-            self.twconn = self.application.twconntable.add(self, uid, email, self.twsession['sid'])
+            self.twconn = self.application.twconntable.add(self, uid, email, self.twsession)
         except Exception as ex:
             self.write_tw_error('Unable to add connection: %s' % (ex,))
             self.close()
