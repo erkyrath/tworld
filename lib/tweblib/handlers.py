@@ -59,7 +59,9 @@ class MyHandlerMixin:
                                  { 'key': key })
         except Exception as ex:
             raise MessageException('Database error: %s' % (ex,))
-        return res
+        if not res:
+            return None
+        return res['val']
         
     def extend_template_namespace(self, map):
         """
@@ -167,6 +169,8 @@ class MainHandler(MyRequestHandler):
         password = unicodedata.normalize('NFKC', password)
         password = password.encode()  # to UTF8 bytes
         
+        locked = yield self.get_config_key('nologin')
+        
         formerror = None
         if (not name):
             formerror = 'You must enter your player name or email address.'
@@ -192,6 +196,11 @@ class MainHandler(MyRequestHandler):
         uid = res['_id']
         email = res['email']
         name = res['name']
+
+        if locked and not res.get('admin', None):
+            formerror = 'Sign-ins are not allowed at this time.'
+            self.render('main.html', formerror=formerror, init_name=name)
+            return            
 
         # Set a name cookie, for future form fill-in. This is whatever the
         # player entered in the form (name or email)
