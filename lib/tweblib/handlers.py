@@ -205,7 +205,7 @@ class MainHandler(MyRequestHandler):
         # Set a name cookie, for future form fill-in. This is whatever the
         # player entered in the form (name or email)
         self.set_cookie('tworld_name', tornado.escape.url_escape(fieldname),
-                        expires_days=14)
+                        expires_days=30)
 
         res = yield self.application.twsessionmgr.create_session(self, uid, email, name)
         self.application.twlog.info('Player signed in: %s (session %s)', email, res)
@@ -297,7 +297,7 @@ class RegisterHandler(MyRequestHandler):
         
         # Set a name cookie, for future form fill-in. We use the player name.
         self.set_cookie('tworld_name', tornado.escape.url_escape(name),
-                        expires_days=14)
+                        expires_days=30)
         
         self.redirect('/play')
         

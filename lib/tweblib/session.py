@@ -4,6 +4,7 @@ import binascii
 import datetime
 import hashlib
 
+import bson.son
 import tornado.gen
 import motor
 
@@ -152,7 +153,7 @@ class SessionMgr(object):
         
         # Generate a random sessionid.
         sessionid = self.random_bytes(24)
-        handler.set_secure_cookie('sessionid', sessionid)
+        handler.set_secure_cookie('sessionid', sessionid, expires_days=10)
         
         sess = {
             'sid': sessionid,
@@ -199,3 +200,34 @@ class SessionMgr(object):
             yield motor.Op(self.app.mongodb.sessions.remove,
                            { 'sid': sessionid })
     
+    @tornado.gen.coroutine
+    def monitor_sessions(self):
+        """
+        The session strategy: When you sign in, you get a secure cookie
+        ("sessionid") with an ten-day expiration. Then, as long as you're
+        connected to a websocket, we'll send you a notice to extend that
+        expiration after seven days. If you're not connected, we'll clean
+        up the session on our end after eight days.
+
+        (Most web sites would also do an extend on normal page browsing.
+        But we've got nothing to offer except the websocket service, so
+        if you're on, you're on that.)
+        """
+        self.app.twlog.info('### monitor_sessions')
+        try:
+            # Order matters for the count command, so we must construct
+            # it as BSON.
+            eightdays = datetime.datetime.now() - datetime.timedelta(days=8)
+            countquery = bson.son.SON()
+            countquery['count'] = 'sessions'
+            countquery['query'] = {'starttime': {'$lt': eightdays}}
+            
+            res = yield motor.Op(self.app.mongodb.command, countquery)
+            if res and res['n']:
+                self.app.twlog.info('Expiring %d sessions', res['n'])
+                res = yield motor.Op(self.app.mongodb.sessions.remove,
+                                     {'starttime': {'$lt': eightdays}})
+            
+        except Exception as ex:
+            self.app.twlog.error('Error expiring old sessions: %s', ex)
+
