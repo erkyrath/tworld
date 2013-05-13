@@ -838,8 +838,8 @@ function evhan_websocket_message(ev) {
         var match = re.exec(document.cookie);
         if (match) {
             var val = match[1];
-            console.log('### cookie value: ' + match);
-            document.cookie = key+':'+val+';expires='+date;
+            var newval = key+'='+val+';expires='+date;
+            document.cookie = newval;
         }
     }
 }
