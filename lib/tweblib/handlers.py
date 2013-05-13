@@ -44,7 +44,7 @@ class MyHandlerMixin:
         prepare() method, but that can't be async in Tornado 3.0. Maybe in
         3.1.)
         """
-        res = yield tornado.gen.Task(self.application.twsessionmgr.find_session, self)
+        res = yield self.application.twsessionmgr.find_session(self)
         if (res):
             (self.twsessionstatus, self.twsession) = res
         return True
@@ -126,7 +126,7 @@ class MainHandler(MyRequestHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self):
-        yield tornado.gen.Task(self.find_current_session)
+        yield self.find_current_session()
         if not self.twsession:
             try:
                 name = self.get_cookie('tworld_name', None)
@@ -140,7 +140,7 @@ class MainHandler(MyRequestHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def post(self):
-        yield tornado.gen.Task(self.find_current_session)
+        yield self.find_current_session()
 
         # If the "register" form was submitted, jump to the other page.
         if (self.get_argument('register', None)):
@@ -165,7 +165,7 @@ class MainHandler(MyRequestHandler):
             return
 
         try:
-            res = yield tornado.gen.Task(self.application.twsessionmgr.find_player, self, name, password)
+            res = yield self.application.twsessionmgr.find_player(self, name, password)
         except MessageException as ex:
             formerror = str(ex)
             self.render('main.html', formerror=formerror, init_name=name)
@@ -204,7 +204,7 @@ class RegisterHandler(MyRequestHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self):
-        yield tornado.gen.Task(self.find_current_session)
+        yield self.find_current_session()
         if self.twsession:
             self.redirect('/')
             return
@@ -213,7 +213,7 @@ class RegisterHandler(MyRequestHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def post(self):
-        yield tornado.gen.Task(self.find_current_session)
+        yield self.find_current_session()
         
         # Apply canonicalizations to the name and password.
         name = self.get_argument('name', '')
@@ -294,7 +294,7 @@ class LogOutHandler(MyRequestHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self):
-        yield tornado.gen.Task(self.find_current_session)
+        yield self.find_current_session()
         # End this sign-in session and kill the cookie.
         self.application.twsessionmgr.remove_session(self)
         # Clobber any open web sockets on this session. (But the player
@@ -308,7 +308,7 @@ class LogOutHandler(MyRequestHandler):
                 pass
         # Now reload the session status. Also override the out-of-date
         # get_template_namespace entries.
-        yield tornado.gen.Task(self.find_current_session)
+        yield self.find_current_session()
         self.render('logout.html',
                     twsessionstatus=self.twsessionstatus,
                     twsession=self.twsession)
@@ -319,7 +319,7 @@ class PlayHandler(MyRequestHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self):
-        yield tornado.gen.Task(self.find_current_session)
+        yield self.find_current_session()
         if not self.twsession:
             self.redirect('/')
             return
@@ -340,7 +340,7 @@ class TopPageHandler(MyRequestHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self):
-        yield tornado.gen.Task(self.find_current_session)
+        yield self.find_current_session()
         self.render('top_%s.html' % (self.page,))
 
 class AdminMainHandler(MyRequestHandler):
@@ -348,7 +348,7 @@ class AdminMainHandler(MyRequestHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self):
-        yield tornado.gen.Task(self.find_current_session)
+        yield self.find_current_session()
         ### check player credentials too!
         if self.twsessionstatus != 'auth':
             raise tornado.web.HTTPError(403, 'You do not have admin access.')
@@ -360,7 +360,7 @@ class AdminMainHandler(MyRequestHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def post(self):
-        yield tornado.gen.Task(self.find_current_session)
+        yield self.find_current_session()
         ### check player credentials too!
         if self.twsessionstatus != 'auth':
             raise tornado.web.HTTPError(403, 'You do not have admin access.')

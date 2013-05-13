@@ -305,10 +305,3 @@ class Task(object):
             except Exception as ex:
                 self.log.error('Error updating while resolving task: %s', self.cmdobj, exc_info=True)
         
-
-def delay(dur, callback=None):
-    """Delay N seconds. This must be invoked as
-    yield tornado.gen.Task(app.delay, dur)
-    """
-    delta = datetime.timedelta(seconds=dur)
-    return tornado.ioloop.IOLoop.current().add_timeout(delta, callback)
