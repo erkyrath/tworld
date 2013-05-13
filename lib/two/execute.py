@@ -295,6 +295,7 @@ def generate_update(app, conn, dirty):
             ostate['_ackey'] = ackey
             conn.populaceactions[ackey] = ('player', ostate['_id'])
             conn.populacedependencies.add( ('playstate', ostate['_id'], 'locid') )
+        cursor.close()
         for ostate in people:
             oplayer = yield motor.Op(app.mongodb.players.find_one,
                                      {'_id':ostate['_id']},

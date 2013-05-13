@@ -355,6 +355,7 @@ class PlayHandler(MyRequestHandler):
             while (yield cursor.fetch_next):
                 pref = cursor.next_object()
                 uiprefs[pref['key']] = pref['val']
+            cursor.close()
         self.render('play.html', uiprefs=json.dumps(uiprefs))
         
 class TopPageHandler(MyRequestHandler):

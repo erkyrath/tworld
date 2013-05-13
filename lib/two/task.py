@@ -128,6 +128,7 @@ class Task(object):
             if notself and ostate['_id'] == conn.uid:
                 continue
             people.append(ostate['_id'])
+        cursor.close()
             
         return people
         
