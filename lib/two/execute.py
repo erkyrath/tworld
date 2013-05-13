@@ -2,6 +2,7 @@ import random
 import datetime
 
 import tornado.gen
+from bson.objectid import ObjectId
 import motor
 
 from twcommon.excepts import MessageException, ErrorMessageException
@@ -429,7 +430,77 @@ def perform_action(app, task, conn, target):
             return
 
         if restype == 'portal':
-            raise ErrorMessageException('### Portal action.')
+            portid = target[1]
+            portal = yield motor.Op(app.mongodb.portals.find_one,
+                                      {'_id':portid})
+            if not portal:
+                raise ErrorMessageException('Portal not found.')
+            if portal['inwid'] != wid:
+                raise ErrorMessageException('You are not in this portal\'s world.')
+
+            world = yield motor.Op(app.mongodb.worlds.find_one,
+                                   {'_id':portal['wid']})
+            if not world:
+                raise ErrorMessageException('Destination world not found.')
+            newwid = world['_id']
+
+            location = yield motor.Op(app.mongodb.locations.find_one,
+                                      {'_id':portal['locid'], 'wid':newwid})
+            if not location:
+                raise ErrorMessageException('Destination location not found.')
+            newlocid = location['_id']
+            
+            if portal['scid'] == 'personal' or world['instancing'] == 'solo':
+                player = yield motor.Op(app.mongodb.players.find_one,
+                                        {'_id':conn.uid},
+                                        {'scid':1})
+                if not player or not player['scid']:
+                    raise ErrorMessageException('You have no personal scope!')
+                newscid = player['scid']
+            elif portal['scid'] == 'global' or world['instancing'] == 'shared':
+                config = yield motor.Op(app.mongodb.config.find_one,
+                                        {'key':'globalscopeid'})
+                if not config:
+                    raise ErrorMessageException('There is no global scope!')
+                newscid = config['val']
+            elif portal['scid'] == 'same':
+                newscid = scid
+            else:
+                newscid = portal['scid']
+            assert isinstance(newscid, ObjectId), 'newscid is not ObjectId'
+
+            instance = yield motor.Op(app.mongodb.instances.find_one,
+                                      {'wid':newwid, 'scid':newscid})
+
+            if instance:
+                newiid = instance['_id']
+            else:
+                newiid = yield motor.Op(app.mongodb.instances.insert,
+                                        {'wid':newwid, 'scid':newscid})
+                app.log.info('Created instance %s (world %s, scope %s)', newiid, newwid, newscid)
+
+            ### check access level (unless this is to scope, in which case do it earlier)
+            
+            ### write_event "### disappears" to everyone in the start room?
+            
+            yield motor.Op(app.mongodb.playstate.update,
+                           {'_id':conn.uid},
+                           {'$set':{'iid':newiid,
+                                    'locid':newlocid,
+                                    'focus':None,
+                                    'lastmoved': task.starttime }})
+            task.set_dirty(conn.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_WORLD | DIRTY_POPULACE)
+            task.set_data_change( ('playstate', conn.uid, 'iid') )
+            task.set_data_change( ('playstate', conn.uid, 'locid') )
+        
+            # We set everybody in the destination room DIRTY_POPULACE.
+            # (Players in the starting room have a dependency, which is already
+            # covered.)
+            others = yield task.find_locale_players(notself=True)
+            if others:
+                task.set_dirty(others, DIRTY_POPULACE)
+                task.write_event('### appears.') ###localize
+            return
             
         raise ErrorMessageException('Action not understood: "%s"' % (target,))
     
