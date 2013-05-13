@@ -15,6 +15,7 @@ until it returns (and then we have to ack them again).
 
 import datetime
 
+import twcommon.misc
 import tweblib.handlers
 
 class ConnectionTable(object):
@@ -67,7 +68,7 @@ class Connection(object):
         self.uid = uid
         self.sessionid = sessionid
         self.email = email
-        self.starttime = datetime.datetime.now()
+        self.starttime = twcommon.misc.now()
         self.lastmsgtime = self.starttime   # last user activity
         self.available = False
 
@@ -78,14 +79,14 @@ class Connection(object):
         """Return how long the connection has been open. But trim off the
         microseconds, because that's silly.
         """
-        delta = datetime.datetime.now() - self.starttime
+        delta = twcommon.misc.now() - self.starttime
         return datetime.timedelta(seconds=int(delta.total_seconds()))
 
     def idletime(self):
         """Return how long it's been since the last activity from the
         player.
         """
-        delta = datetime.datetime.now() - self.lastmsgtime
+        delta = twcommon.misc.now() - self.lastmsgtime
         return datetime.timedelta(seconds=int(delta.total_seconds()))
 
     def close(self, errmsg=None):

@@ -6,6 +6,7 @@ import motor
 
 import two.execute
 from two.playconn import PlayerConnection
+import twcommon.misc
 from twcommon.excepts import MessageException, ErrorMessageException
 
 DIRTY_WORLD = 0x01  # Instance, really
@@ -28,7 +29,7 @@ class Task(object):
         # When this command was received by tworld:
         self.queuetime = queuetime
         # When we started working on the command:
-        self.starttime = datetime.datetime.now()
+        self.starttime = twcommon.misc.now()
 
         # This will be a set of change keys.
         self.changeset = None

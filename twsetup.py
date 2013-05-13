@@ -32,7 +32,7 @@ tornado.options.parse_command_line()
 opts = tornado.options.options
 
 
-client = pymongo.MongoClient()
+client = pymongo.MongoClient(tz_aware=True)
 db = client[opts.mongo_database]
 
 initial_config = {
@@ -106,7 +106,7 @@ else:
         'email': opts.admin_email,
         'pwsalt': binascii.hexlify(os.urandom(8)),
         'password': b'x',   # cannot use this password until changed
-        'createtime': datetime.datetime.now(),
+        'createtime': datetime.datetime.now(datetime.timezone.utc),
         }
 
     adminplayer.update(initial_config['playerfields'])

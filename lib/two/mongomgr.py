@@ -54,7 +54,7 @@ class MongoMgr(object):
             
         if (not self.mongoavailable):
             try:
-                self.mongo = motor.MotorClient()
+                self.mongo = motor.MotorClient(tz_aware=True)
                 res = yield motor.Op(self.mongo.open)
                 ### maybe authenticate to a database?
                 self.mongoavailable = True

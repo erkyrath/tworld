@@ -12,6 +12,7 @@ import two.playconn
 import two.mongomgr
 import two.commands
 import two.task
+import twcommon.misc
 from twcommon import wcproto
 
 class Tworld(object):
@@ -46,7 +47,7 @@ class Tworld(object):
             obj = wcproto.namespace_wrapper(obj)
         # If this command was caused by a message from tweb, twwcid is
         # its ID number. We will rarely need this.
-        self.queue.append( (obj, connid, twwcid, datetime.datetime.now()) )
+        self.queue.append( (obj, connid, twwcid, twcommon.misc.now()) )
         
         if not self.commandbusy:
             self.ioloop.add_callback(self.pop_queue)
@@ -82,7 +83,7 @@ class Tworld(object):
                 self.log.error('Error resolving task: %s', cmdobj, exc_info=True)
 
         starttime = task.starttime
-        endtime = datetime.datetime.now()
+        endtime = twcommon.misc.now()
         self.log.info('Finished command in %.3f ms (queued for %.3f ms)',
                       (endtime-starttime).total_seconds() * 1000,
                       (starttime-queuetime).total_seconds() * 1000)

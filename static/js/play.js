@@ -830,6 +830,18 @@ function evhan_websocket_message(ev) {
         eventpane_add('Error: ' + obj.text, 'EventError');
     if (cmd == 'message')
         eventpane_add(obj.text, 'EventMessage');
+    if (cmd == 'extendcookie') {
+        /* Extend an existing cookie to a new date. */
+        var key = obj.key;
+        var date = obj.date;
+        var re = new RegExp(key+'=([^;]*)');
+        var match = re.exec(document.cookie);
+        if (match) {
+            var val = match[1];
+            console.log('### cookie value: ' + match);
+            document.cookie = key+':'+val+';expires='+date;
+        }
+    }
 }
 
 function websocket_send_json(obj) {

@@ -12,6 +12,7 @@ import tornado.websocket
 import motor
 
 import tweblib.session
+import twcommon.misc
 from twcommon.excepts import MessageException
 
 class MyHandlerMixin:
@@ -447,7 +448,7 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
             self.write_tw_error('Your connection is not registered.')
             return
 
-        self.twconn.lastmsgtime = datetime.datetime.now()
+        self.twconn.lastmsgtime = twcommon.misc.now()
 
         if not self.application.twservermgr.tworldavailable:
             self.application.twlog.warning('Tworld is not available.')

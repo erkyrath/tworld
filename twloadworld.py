@@ -406,7 +406,7 @@ if opts.display:
 if opts.display or opts.check:
     sys.exit(0)
 
-client = pymongo.MongoClient()
+client = pymongo.MongoClient(tz_aware=True)
 db = client[opts.mongo_database]
 
 dbcreator = db.players.find_one({'name':world.creator})

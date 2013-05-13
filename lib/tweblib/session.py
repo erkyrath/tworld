@@ -8,6 +8,7 @@ import bson.son
 import tornado.gen
 import motor
 
+import twcommon.misc
 from twcommon.excepts import MessageException
 
 ### occasionally expire sessions
@@ -104,7 +105,7 @@ class SessionMgr(object):
             'email': email,
             'pwsalt': pwsalt,
             'password': cryptpw,
-            'createtime': datetime.datetime.now(),
+            'createtime': twcommon.misc.now(),
             }
 
         playerfields = yield motor.Op(self.app.mongodb.config.find_one, {'key':'playerfields'})
@@ -161,7 +162,7 @@ class SessionMgr(object):
             'email': email,
             'name': name,
             'ipaddr': handler.request.remote_ip,
-            'starttime': datetime.datetime.now(),
+            'starttime': twcommon.misc.now(),
             }
 
         res = yield motor.Op(self.app.mongodb.sessions.insert, sess)
@@ -217,7 +218,7 @@ class SessionMgr(object):
         try:
             # Order matters for the count command, so we must construct
             # it as BSON.
-            eightdays = datetime.datetime.now() - datetime.timedelta(days=8)
+            eightdays = twcommon.misc.now() - datetime.timedelta(days=8)
             countquery = bson.son.SON()
             countquery['count'] = 'sessions'
             countquery['query'] = {'starttime': {'$lt': eightdays}}
