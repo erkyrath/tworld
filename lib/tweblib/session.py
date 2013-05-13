@@ -215,8 +215,6 @@ class SessionMgr(object):
         But we've got nothing to offer except the websocket service, so
         if you're on, you're on that.)
         """
-        self.app.twlog.info('### monitor_sessions')
-
         # If any live connections are more than seven days old, bump
         # them up.
         now = twcommon.misc.now()
