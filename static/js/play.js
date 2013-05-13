@@ -302,11 +302,14 @@ function focuspane_set_special(ls) {
             var desc = ls[3];
             var extrals = [];
             var el;
-            el = $('<p style="font-style: italic;">');
+            el = $('<p class="StyleEmph">');
             el.text(name + ' is ' + desc);
             extrals.push(el);
+            el = $('<p class="StyleEmph">');
+            el.text('He is considering his appearance.'); /*###*/
+            extrals.push(el);
             /*### form elements */
-            focuspane_set(null, extrals);
+            focuspane_set(ls[4], extrals);
             return;
         }
         if (type == 'portal') {

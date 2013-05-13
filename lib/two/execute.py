@@ -348,6 +348,12 @@ def generate_update(app, conn, dirty):
                 else:
                     focusdesc = '%s is %s' % (player.get('name', '???'), player.get('desc', '...'))
             elif restype == 'selfdesc':
+                ctx = EvalPropContext(app, wid, iid, locid, level=LEVEL_DISPLAY)
+                extratext = yield ctx.eval(focusobj[1], lookup=False)
+                if ctx.linktargets:
+                    conn.focusactions.update(ctx.linktargets)
+                if ctx.dependencies:
+                    conn.focusdependencies.update(ctx.dependencies)
                 player = yield motor.Op(app.mongodb.players.find_one,
                                         {'_id':conn.uid},
                                         {'name':1, 'pronoun':1, 'desc':1})
@@ -357,7 +363,8 @@ def generate_update(app, conn, dirty):
                     focusdesc = ['selfdesc',
                                  player.get('name', '???'),
                                  player.get('pronoun', 'it'),
-                                 player.get('desc', '...')]
+                                 player.get('desc', '...'),
+                                 extratext]
                     specialflag = True
             elif restype == 'portal':
                 portid = focusobj[1]
@@ -587,6 +594,13 @@ def perform_action(app, task, conn, target):
         porttext = res.get('text', None)
         if porttext:
             obj.append(porttext)
+        yield motor.Op(app.mongodb.playstate.update,
+                       {'_id':conn.uid},
+                       {'$set':{'focus':obj}})
+        task.set_dirty(conn.uid, DIRTY_FOCUS)
+    elif restype == 'selfdesc':
+        # Set focus to the wardrobe
+        obj = ['selfdesc', res['text']]
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':conn.uid},
                        {'$set':{'focus':obj}})

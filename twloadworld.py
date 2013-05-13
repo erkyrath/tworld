@@ -248,6 +248,8 @@ def parse_prop(prop):
             return {'type':'text', 'text':val}
         elif key == 'code':
             return {'type':'code', 'text':val}
+        elif key == 'selfdesc':
+            return {'type':'selfdesc', 'text':val}
         elif key == 'portal':
             return {'type':'portal', '_tempname':val}
         else:
@@ -325,6 +327,9 @@ def prop_to_string(val):
         res = '*event %s' % (val['text'],)
         if 'otext' in val:
             res += ('\n\t- otext: ' + val['otext'])
+        return res
+    if key == 'selfdesc':
+        res = '*selfdesc %s' % (val['text'],)
         return res
     if key == 'portal':
         res = '*portal %s' % (val['_tempname'],)
