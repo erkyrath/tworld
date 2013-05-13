@@ -481,7 +481,11 @@ def perform_action(app, task, conn, target):
 
             ### check access level (unless this is to scope, in which case do it earlier)
             
-            ### write_event "### disappears" to everyone in the start room?
+            others = yield task.find_locale_players(notself=True)
+            if others:
+                # Don't need to dirty populace; everyone here has a
+                # dependency.
+                task.write_event(others, '### disappears.') ###localize
             
             yield motor.Op(app.mongodb.playstate.update,
                            {'_id':conn.uid},
@@ -499,7 +503,7 @@ def perform_action(app, task, conn, target):
             others = yield task.find_locale_players(notself=True)
             if others:
                 task.set_dirty(others, DIRTY_POPULACE)
-                task.write_event('### appears.') ###localize
+                task.write_event(others, '### appears.') ###localize
             return
             
         raise ErrorMessageException('Action not understood: "%s"' % (target,))

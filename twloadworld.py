@@ -147,6 +147,8 @@ def parse_world(filename):
             
         if not ln or ln.startswith('#'):
             continue
+        if ln.startswith('***'):
+            break
 
         if ln.startswith('*'):
             # New location.
