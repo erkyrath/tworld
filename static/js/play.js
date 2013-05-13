@@ -309,6 +309,27 @@ function focuspane_set_special(ls) {
             focuspane_set(null, extrals);
             return;
         }
+        if (type == 'portal') {
+            var target = ls[1];
+            var desttext = ls[2];
+            var extratext = null;
+            if (ls.length >= 4)
+                extratext = ls[3];
+            /* Note that extratext, if present, may be a full-fledged
+               description. */
+            var extrals = [];
+            el = $('<p>');
+            el.text(desttext);
+            extrals.push(el);
+            var ael = $('<a>', {href:'#'+target});
+            ael.text('Enter the portal.'); /* ###localize */
+            ael.on('click', {target:target}, evhan_click_action);
+            el = $('<p>');
+            el.append(ael);
+            extrals.push(el);
+            focuspane_set(extratext, extrals);
+            return;
+        }
         focuspane_set('### ' + type + ': ' + ls);
     }
     catch (ex) {

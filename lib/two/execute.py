@@ -72,7 +72,7 @@ class EvalPropContext(object):
         if (self.level == LEVEL_RAW):
             return res
         if (self.level == LEVEL_FLAT):
-            return str(res)
+            return str_or_null(res)
         if (self.level == LEVEL_MESSAGE):
             if is_text_object(res):
                 # Skip all styles, links, etc. Just paste together strings.
@@ -157,7 +157,7 @@ def str_or_null(res):
 
 @tornado.gen.coroutine
 def find_symbol(app, wid, iid, locid, key, dependencies=None):
-    if locid is not None:
+    if (locid is not None) and (iid is not None):
         if dependencies is not None:
             dependencies.add(('instanceprop', iid, locid, key))
         res = yield motor.Op(app.mongodb.instanceprop.find_one,
@@ -166,6 +166,7 @@ def find_symbol(app, wid, iid, locid, key, dependencies=None):
         if res:
             return res['val']
     
+    if locid is not None:
         if dependencies is not None:
             dependencies.add(('worldprop', wid, locid, key))
         res = yield motor.Op(app.mongodb.worldprop.find_one,
@@ -173,22 +174,24 @@ def find_symbol(app, wid, iid, locid, key, dependencies=None):
                              {'val':1})
         if res:
             return res['val']
-    
-    if dependencies is not None:
-        dependencies.add(('instanceprop', iid, None, key))
-    res = yield motor.Op(app.mongodb.instanceprop.find_one,
-                         {'iid':iid, 'locid':None, 'key':key},
-                         {'val':1})
-    if res:
-        return res['val']
-    
-    if dependencies is not None:
-        dependencies.add(('worldprop', wid, None, key))
-    res = yield motor.Op(app.mongodb.worldprop.find_one,
-                         {'wid':wid, 'locid':None, 'key':key},
-                         {'val':1})
-    if res:
-        return res['val']
+
+    if iid is not None:
+        if dependencies is not None:
+            dependencies.add(('instanceprop', iid, None, key))
+        res = yield motor.Op(app.mongodb.instanceprop.find_one,
+                             {'iid':iid, 'locid':None, 'key':key},
+                             {'val':1})
+        if res:
+            return res['val']
+
+    if True:
+        if dependencies is not None:
+            dependencies.add(('worldprop', wid, None, key))
+        res = yield motor.Op(app.mongodb.worldprop.find_one,
+                             {'wid':wid, 'locid':None, 'key':key},
+                             {'val':1})
+        if res:
+            return res['val']
 
     return None
 
@@ -354,6 +357,31 @@ def generate_update(app, conn, dirty):
                                  player.get('pronoun', 'it'),
                                  player.get('desc', '...')]
                     specialflag = True
+            elif restype == 'portal':
+                portid = focusobj[1]
+                extratext = None
+                if len(focusobj) >= 3:
+                    ctx = EvalPropContext(app, wid, iid, locid, level=LEVEL_DISPLAY)
+                    extratext = yield ctx.eval(focusobj[2], lookup=False)
+                    if ctx.linktargets:
+                        conn.focusactions.update(ctx.linktargets)
+                    if ctx.dependencies:
+                        conn.focusdependencies.update(ctx.dependencies)
+                portal = yield motor.Op(app.mongodb.portals.find_one,
+                                        {'_id':portid})
+                if not portal or portal['inwid'] != wid:
+                    focusdesc = '[This portal is not available.]'
+                else:
+                    ackey = 'port' + EvalPropContext.build_action_key()
+                    conn.focusactions[ackey] = ('portal', portid)
+                    ctx = EvalPropContext(app, portal['wid'], None, portal['locid'], level=LEVEL_FLAT)
+                    desttext = yield ctx.eval('portaldesc')
+                    if not desttext:
+                        desttext = 'The destination is hazy.'
+                    focusdesc = ['portal', ackey, desttext];
+                    if extratext:
+                        focusdesc.append(extratext)
+                    specialflag = True
             else:
                 focusdesc = '[Focus: %s]' % (focusobj,)
         else:
@@ -399,6 +427,9 @@ def perform_action(app, task, conn, target):
                            {'$set':{'focus':obj}})
             task.set_dirty(conn.uid, DIRTY_FOCUS)
             return
+
+        if restype == 'portal':
+            raise ErrorMessageException('### Portal action.')
             
         raise ErrorMessageException('Action not understood: "%s"' % (target,))
     
@@ -463,7 +494,21 @@ def perform_action(app, task, conn, target):
         others = yield task.find_locale_players(notself=True)
         if others:
             task.set_dirty(others, DIRTY_POPULACE)
-
-
+    elif restype == 'portal':
+        # Set focus to a portal object
+        portid = res.get('portid', None)
+        if not portid:
+            raise ErrorMessageException('Portal property has no portid')
+        obj = ['portal', portid]
+        porttext = res.get('text', None)
+        if porttext:
+            obj.append(porttext)
+        yield motor.Op(app.mongodb.playstate.update,
+                       {'_id':conn.uid},
+                       {'$set':{'focus':obj}})
+        task.set_dirty(conn.uid, DIRTY_FOCUS)
+    else:
+        raise ErrorMessageException('Action invoked unsupported property type: %s' % (restype,))
+    
 # Late imports, to avoid circularity
 from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_POPULACE, DIRTY_FOCUS
