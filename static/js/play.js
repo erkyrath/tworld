@@ -292,24 +292,19 @@ function focuspane_set(desc, extrals)
     newpane.slideDown(200, function() { newpane.removeClass('FocusPaneAnimating'); } );
 }
 
+var focuspane_special_val = [];
+
 function focuspane_set_special(ls) {
     var type = '???';
     try {
         type = ls[0];
         if (type == 'selfdesc') {
-            var name = ls[1];
-            var pronoun = ls[2];
-            var desc = ls[3];
-            var extrals = [];
-            var el;
-            el = $('<p class="StyleEmph">');
-            el.text(name + ' is ' + desc);
-            extrals.push(el);
-            el = $('<p class="StyleEmph">');
-            el.text('He is considering his appearance.'); /*###*/
-            extrals.push(el);
-            /*### form elements */
+            /* ['selfdesc', name, pronoun, desc] */
+            focuspane_special_val = ls;
+            var extrals = selfdesc_build_controls();
             focuspane_set(ls[4], extrals);
+            $('.FormSelfDescPronoun').prop('value', ls[2]);
+            selfdesc_update_labels();
             return;
         }
         if (type == 'portal') {
@@ -338,6 +333,79 @@ function focuspane_set_special(ls) {
     catch (ex) {
         focuspane_set('[Error creating special focus ' + type + ': ' + ex + ']');
     }
+}
+
+function selfdesc_build_controls() {
+    /* ['selfdesc', name, pronoun, desc] */
+    var extrals = [];
+    var el, divel, optel;
+
+    divel = $('<div>', { 'class':'FocusSection' });
+    extrals.push(divel);
+    el = $('<span>').text('You see...');
+    divel.append(el);
+    el = $('<br>');
+    divel.append(el);
+    el = $('<textarea>', { 'class':'FormSelfDescDesc FocusInput', rows:2,
+                           autocapitalize:'off', autofocus:'autofocus',
+                           name:'desc' });
+    el.text(focuspane_special_val[3]);
+    divel.append(el);
+
+    divel = $('<div>', { 'class':'FocusSection' });
+    extrals.push(divel);
+    el = $('<span>').text('Your pronouns: ');
+    divel.append(el);
+    el = $('<select>', { 'class':'FormSelfDescPronoun FocusSelect', name:'select' });
+    divel.append(el);
+    optel = $('<option>', { value:'he' }).text('He, his');
+    el.append(optel);
+    optel = $('<option>', { value:'she' }).text('She, her');
+    el.append(optel);
+    optel = $('<option>', { value:'it' }).text('It, its');
+    el.append(optel);
+    optel = $('<option>', { value:'they' }).text('They, their');
+    el.append(optel);
+    optel = $('<option>', { value:'name' }).text(focuspane_special_val[1] + ', ' + focuspane_special_val[1] + "'s");
+    el.append(optel);
+
+    el = $('<div>', { 'class':'FocusDivider' });
+    extrals.push(el);
+
+    el = $('<p>', { 'class':'FormSelfDescLabel1 StyleEmph' });
+    el.text('is...');
+    extrals.push(el);
+
+    el = $('<p>', { 'class':'FormSelfDescLabel2 StyleEmph' });
+    el.text('pronoun...');
+    extrals.push(el);
+
+    return extrals;
+}
+
+function selfdesc_update_labels() {
+    var val = focuspane_special_val[1] + ' is ' + focuspane_special_val[3];
+    $('.FormSelfDescLabel1').text(val);
+
+    switch (focuspane_special_val[2]) {
+    case 'he':
+        val = 'He is considering his appearance.';
+        break;
+    case 'she':
+        val = 'She is considering her appearance.';
+        break;
+    case 'they':
+        val = 'They are considering their appearance.';
+        break;
+    case 'name':
+        val = focuspane_special_val[1] + ' is considering ' + focuspane_special_val[1] + '\'s appearance.';
+        break;
+    case 'it':
+    default:
+        val = 'It is considering its appearance.';
+        break;
+    }
+    $('.FormSelfDescLabel2').text(val);
 }
 
 /* Transform a description array (a JSONable array of strings and array tags)

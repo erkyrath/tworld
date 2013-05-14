@@ -232,6 +232,9 @@
   padding: 0.25em 0.75em;
 }
 
+/* Styles concerning the tool column.
+ */
+
 .ToolOutline {
   margin-top: 20px;
   margin-bottom: 20px;
@@ -348,6 +351,10 @@ h3.ToolTitle {
   font-style: italic;
 }
 
+/* Styles that concern the widgets in the tool column -- the menu, the
+   sliders, and so on.
+*/
+
 #popup_menu {
   background: #D2D2B6;
   border: 1px solid #AA9;
@@ -420,5 +427,39 @@ h3.ToolTitle {
 #rightcol .ui-widget-content,
 #rightcol .ui-widget-header {
   background-image: none;
+}
+
+/* Styles that apply to special content in the focus pane. (For example,
+   self-description editing.)
+*/
+
+.FocusSection {
+  margin: 15px 20px;
+  color: #666;
+}
+
+.FocusInput {
+  background: #FFFFF4;
+  width: 100%;
+  margin: 0px;
+  border: 1px solid #CCC;
+  padding: 4px 0px;
+  font-family: SortsMillGoudy, Palatino, Georgia, serif;
+  font-size: 1em;
+  border-radius: 3px;
+  text-indent: 10px;
+}
+
+.FocusSelect {
+  font-size: 1.2em;
+}
+
+.FocusDivider {
+  clear: both;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  background: #BBB;
+  border-bottom: 1px solid white;
+  height: 1px;
 }
 

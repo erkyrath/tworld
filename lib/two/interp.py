@@ -210,7 +210,10 @@ def pronoun_map(player, map):
         player = { 'name': 'nobody', 'pronoun': 'it' }
     if player['pronoun'] == 'name':
         return player['name'] + map['name']
-    return map[player['pronoun']]
+    res = map.get(player['pronoun'], None)
+    if not res:
+        res = map.get('it')
+    return res
 
 import unittest
 
