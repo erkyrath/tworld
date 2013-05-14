@@ -1,5 +1,5 @@
 """
-This table manages the websocket connections from clients.
+The ConnectionTable manages the websocket connections from clients.
 
 The table contains Connection objects. A connection is mostly a wrapper
 for an active PlayWebSocketHandler, and has a nonzero connection ID as a
@@ -26,6 +26,8 @@ class ConnectionTable(object):
         self.counter = 1
 
     def generate_connid(self):
+        """Pull out another connection ID to use.
+        """
         res = self.counter
         self.counter += 1
         return res
@@ -57,6 +59,8 @@ class ConnectionTable(object):
         return self.table[connid]
 
     def remove(self, handler):
+        """Remove this connection from the table.
+        """
         if not handler.twconnid:
             return
         conn = self.table.get(handler.twconnid, None)
@@ -69,6 +73,12 @@ class ConnectionTable(object):
         del self.table[handler.twconnid]
         
 class Connection(object):
+    """Represents (and contains) a websocket connection to a player.
+
+    Note that we may have two connections to the same player! Which may
+    be on the same session, or different sessions.
+    """
+    
     def __init__(self, handler, uid, email, sessionid, refreshtime):
         self.handler = handler
         self.connid = handler.twconnid

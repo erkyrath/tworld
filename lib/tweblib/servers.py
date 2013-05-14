@@ -37,6 +37,8 @@ class ServerMgr(object):
         self.twbuffer = None
 
     def init_timers(self):
+        """Start the ioloop timers for this module.
+        """
         ioloop = tornado.ioloop.IOLoop.instance()
         
         # The mongo status monitor. We set up one call immediately, and then
@@ -63,6 +65,19 @@ class ServerMgr(object):
 
     @tornado.gen.coroutine
     def monitor_mongo_status(self):
+        """Check the status of the MongoDB connection. If the server has
+        died, close the socket. If the socket is closed (or has never been
+        opened), try to open it.
+
+        This is called once when the app launches, to open the initial
+        connection, and every few seconds thereafter.
+
+        The mongotimerbusy flag protects us from really slow connection
+        attempts. Not sure why that would happen, but if it does, we'll
+        avoid piling up multiple attempts. On the down side, if the function
+        throws an uncaught exception, the flag will be stuck forever.
+        (So don't do that.)
+        """
         if (self.mongotimerbusy):
             self.log.warning('monitor_mongo_status: already in flight; did a previous call jam?')
             return
@@ -99,8 +114,18 @@ class ServerMgr(object):
 
 
     def monitor_tworld_status(self):
-        # This routine is *not* a coroutine, because it doesn't do anything
-        # yieldy.
+        """Check the status of the Tworld connection. If the socket is
+        closed (or has never been opened), try to open it.
+
+        This is called once when the app launches, to open the initial
+        connection, and every few seconds thereafter.
+
+        The tworldtimerbusy flag protects us from really slow connection
+        attempts.
+        
+        This routine is *not* a coroutine, because it doesn't do anything
+        yieldy. Instead, it has an old-fashioned (ugly) callback structure.
+        """
         
         if (self.tworldtimerbusy):
             self.log.warning('monitor_tworld_status: already in flight; did a previous call jam?')
@@ -151,6 +176,8 @@ class ServerMgr(object):
         # pong arrives, or if the socket closes.
 
     def read_tworld_data(self, dat):
+        """Callback from tworld reading handler.
+        """
         self.twbuffer.extend(dat)
         while True:
             # This slices a chunk off the buffer and returns it, if a
@@ -226,6 +253,8 @@ class ServerMgr(object):
         
 
     def close_tworld(self, dat):
+        """Callback from tworld reading handler.
+        """
         self.log.error('Connection to tworld closed.')
         # All connections we're holding are back to unavailable status.
         for (connid, conn) in self.app.twconntable.as_dict().items():

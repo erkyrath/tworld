@@ -1,3 +1,6 @@
+"""
+All the URI request handlers used by Tweb.
+"""
 
 import datetime
 import traceback
@@ -340,7 +343,7 @@ class LogOutHandler(MyRequestHandler):
                     twsession=self.twsession)
 
 class PlayHandler(MyRequestHandler):
-    """Handler for the game itself.
+    """Handler for the game page itself.
     """
     @tornado.web.asynchronous
     @tornado.gen.coroutine
@@ -397,16 +400,25 @@ class AdminMainHandler(MyRequestHandler):
         self.redirect('/admin')
 
 class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
+    """Handler for the websocket URI.
+
+    This winds up stored inside a Connection object, for as long as the
+    connection stays open.
+    """
     def open(self):
-        # Proceed using a callback, because the open() method cannot be
-        # made into a coroutine.
+        """Callback: web socket has been opened.
+        
+        Proceed using a callback, because the open() method cannot be
+        made into a coroutine.
+        """
         self.twconnid = None
         self.twconn = None
         self.find_current_session(callback=self.open_cont)
 
     def open_cont(self, result):
-        # From here on out we have to catch our own exceptions and close
-        # the socket.
+        """Callback to the callback: we've pulled session info from
+        the database.
+        """
         if self.twsessionstatus != 'auth':
             self.write_tw_error('You are not authenticated.')
             self.close()
@@ -442,7 +454,11 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
             return
 
     def on_message(self, msg):
-        # Note that message is a string here; it hasn't been de-jsoned.
+        """Callback: web socket has received a message.
+        
+        Note that message is a string here. The UTF-8 bytes have been decoded,
+        but it hasn't been de-jsoned.
+        """
         self.application.twlog.info('### message: %s' % (msg,))
         if not self.twconn or not self.twconn.available:
             self.application.twlog.warning('Websocket connection is not available')
@@ -477,6 +493,8 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
             self.write_tw_error('Unable to pass command to service: %s' % (ex,))
 
     def on_close(self):
+        """Callback: web socket has closed.
+        """
         self.application.twlog.info('Player disconnected from websocket %s', self.twconnid)
         # Tell tworld that the connection is closed. (Maybe it never
         # became available, but we'll send the message anyway.)

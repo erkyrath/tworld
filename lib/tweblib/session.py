@@ -1,3 +1,12 @@
+"""
+The SessionMgr manages the collection of login sessions from client.
+When you sign into the web site, you get a sessionid cookie, and we
+create a session entry in the database. The session lasts until one of
+those disappears.
+
+(Note that sessions are not web socket connections. See the connections.py
+module for those.)
+"""
 
 import os
 import binascii
