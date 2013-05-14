@@ -10,3 +10,4 @@ Typically you will install Python 3 and MongoDB with your package manager;
 on MacOS, I use Homebrew. Python comes with its own package manager, pip3;
 use this to install Tornado, PyMongo, and Motor.
 
+License: Open-source under the MIT license. See the "LICENSE" file.
