@@ -2,6 +2,7 @@
 
 """
 twloadworld: Copyright (c) 2013, Andrew Plotkin
+(Available under the MIT License; see LICENSE file.)
 
 This script reads a world definition file and pushes it into the database.
 This is an administrator tool; it does no permission checking and can

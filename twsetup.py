@@ -2,6 +2,7 @@
 
 """
 twsetup: Copyright (c) 2013, Andrew Plotkin
+(Available under the MIT License; see LICENSE file.)
 
 This script sets up the Mongo database with the bare minimum of data
 needed to run Tworld. You will typically run this exactly once when

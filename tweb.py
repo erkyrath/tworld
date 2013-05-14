@@ -2,6 +2,7 @@
 
 """
 tweb: Copyright (c) 2013, Andrew Plotkin
+(Available under the MIT License; see LICENSE file.)
 
 This is the top-level script which acts as Tworld's web server.
 
