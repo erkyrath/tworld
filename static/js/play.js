@@ -438,6 +438,67 @@ function selfdesc_update_labels() {
     $('.FormSelfDescLabel2').text(val);
 }
 
+/* All the commands that can be received from the server. */
+
+function cmd_event(obj) {
+    eventpane_add(obj.text);
+}
+
+function cmd_update(obj) {
+    if (obj.world !== undefined) {
+        toolpane_set_world(obj.world.world, obj.world.scope, obj.world.creator);
+    }
+    if (obj.locale !== undefined) {
+        localepane_set_locale(obj.locale.desc, obj.locale.name);
+    }
+    if (obj.populace !== undefined) {
+        localepane_set_populace(obj.populace);
+    }
+    if (obj.focus !== undefined) {
+        if (!obj.focus)
+            focuspane_clear();
+        else if (obj.focusspecial)
+            focuspane_set_special(obj.focus);
+        else
+            focuspane_set(obj.focus);
+    }
+}
+
+function cmd_clearfocus(obj) {
+    /* Same as update { focus:false }, really */
+    focuspane_clear();
+}
+
+function cmd_message(obj) {
+    eventpane_add(obj.text, 'EventMessage');
+}
+
+function cmd_error(obj) {
+    eventpane_add('Error: ' + obj.text, 'EventError');
+}
+
+function cmd_extendcookie(obj) {
+    /* Extend an existing cookie to a new date. */
+    var key = obj.key;
+    var date = obj.date;
+    var re = new RegExp(key+'=([^;]*)');
+    var match = re.exec(document.cookie);
+    if (match) {
+        var val = match[1];
+        var newval = key+'='+val+';expires='+date;
+        document.cookie = newval;
+    }
+}
+
+var command_table = {
+    event: cmd_event,
+    update: cmd_update,
+    clearfocus: cmd_clearfocus,
+    message: cmd_message,
+    error: cmd_error,
+    extendcookie: cmd_extendcookie
+};
+
 /* Transform a description array (a JSONable array of strings and array tags)
    into a list of DOM elements. You can also pass in a raw string, which
    will be treated as a single unstyled paragraph.
@@ -684,7 +745,6 @@ function note_uipref_changed(key)
 
 function send_uipref_changed()
 {
-    console.log('### send_uipref_changed');
     if (!connected) {
         /* Leave changed_uiprefs full of keys. Maybe we can send it later. */
         return;
@@ -900,50 +960,12 @@ function evhan_websocket_message(ev) {
         return;
     }
 
-    /*### build a command table!*/
-    if (cmd == 'event')
-        eventpane_add(obj.text);
-    if (cmd == 'update') {
-        if (obj.world !== undefined) {
-            toolpane_set_world(obj.world.world, obj.world.scope, obj.world.creator);
-        }
-        if (obj.locale !== undefined) {
-            localepane_set_locale(obj.locale.desc, obj.locale.name);
-        }
-        if (obj.populace !== undefined) {
-            localepane_set_populace(obj.populace);
-        }
-        if (obj.focus !== undefined) {
-            if (!obj.focus)
-                focuspane_clear();
-            else if (obj.focusspecial)
-                focuspane_set_special(obj.focus);
-            else
-                focuspane_set(obj.focus);
-        }
+    func = command_table[cmd];
+    if (!func) {
+        console.log('command not understood: ' + cmd);
     }
-    if (cmd == 'clearfocus') {
-        focuspane_clear();
-    }
-    if (cmd == 'setfocus') {
-        focuspane_set(obj.desc);
-    }
-    if (cmd == 'error')
-        eventpane_add('Error: ' + obj.text, 'EventError');
-    if (cmd == 'message')
-        eventpane_add(obj.text, 'EventMessage');
-    if (cmd == 'extendcookie') {
-        /* Extend an existing cookie to a new date. */
-        var key = obj.key;
-        var date = obj.date;
-        var re = new RegExp(key+'=([^;]*)');
-        var match = re.exec(document.cookie);
-        if (match) {
-            var val = match[1];
-            var newval = key+'='+val+';expires='+date;
-            document.cookie = newval;
-        }
-    }
+
+    func(obj);
 }
 
 function websocket_send_json(obj) {
