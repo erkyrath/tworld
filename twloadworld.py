@@ -198,12 +198,6 @@ def parse_world(filename):
                 world.instancing = val
                 if val not in ('shared', 'solo', 'standard'):
                     error('$instancing value must be shared, solo, or standard')
-            elif key == '$portal':
-                subls = [ subval.strip() for subval in val.split(',') ]
-                if len(subls) != 4:
-                    error('$Portal declaration must have four fields')
-                else:
-                    world.portals[subls[0]] = subls[1:]
             else:
                 error('Unknown key: %s' % (key,))
             continue
@@ -251,7 +245,11 @@ def parse_prop(prop):
         elif key == 'selfdesc':
             return {'type':'selfdesc', 'text':val}
         elif key == 'portal':
-            return {'type':'portal', '_tempname':val}
+            subls = [ subval.strip() for subval in val.split(',') ]
+            if len(subls) != 3:
+                error('Portal property must have three fields')
+                return None
+            return {'type':'portal', '_temptrio':subls}
         else:
             error('Unknown special property type: *%s' % (key,))
             return None
@@ -282,6 +280,8 @@ def append_to_prop(dic, key, ln):
     elif type(val) is dict and 'text' in val:
         # Covers {text}, {event}, {code}
         val['text'] += ('\n\n' + ln)
+    elif type(val) is dict and val.get('type', None) == 'portal':
+        val['text'] = ln
     else:
         error('Cannot append to property %s' % (key,))
 
@@ -290,10 +290,7 @@ def transform_prop(world, db, val):
         return val
     key = val.get('type', None)
     if key == 'portal':
-        trio = world.portals.get(val['_tempname'], None)
-        if not trio:
-            error('*Portal property not defined with $portal declaration: %s' % (val['_tempname'],))
-            return '[Portal property not found]'
+        trio = val['_temptrio']
         toworld = db.worlds.find_one({'name':trio[0]})
         if not toworld:
             error('World not found for portal: %s' % (trio[0],))
@@ -336,7 +333,7 @@ def prop_to_string(val):
         res = '*selfdesc %s' % (val['text'],)
         return res
     if key == 'portal':
-        res = '*portal %s' % (val['_tempname'],)
+        res = '*portal %s' % (val['_temptrio'],)
         if 'text' in val:
             res += ('\n\t- text: ' + val['text'])
         return res
