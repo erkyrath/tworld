@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
 
+"""
+tworld: Copyright (c) 2013, Andrew Plotkin
+
+This is the top-level script which acts as Tworld's core server.
+
+Players do not connect directly to this process. The tweb server (the web
+server process) connects to this; players connect to tweb. All game
+commands are relayed to us through tweb.
+"""
+
 import sys
 import types
 import logging
@@ -8,7 +18,6 @@ import tornado.options
 import tornado.ioloop
 import tornado.autoreload
 
-sys.path.insert(0, '/Volumes/Zarfslab Tir/seltani/lib')
 
 # Set up all the options. (Generally found in the config file.)
 

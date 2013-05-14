@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 """
+tweb: Copyright (c) 2013, Andrew Plotkin
+
 This is the top-level script which acts as Tworld's web server.
 
 Tweb is built on Tornado (a Python web app framework). It handles normal

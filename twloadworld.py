@@ -1,5 +1,17 @@
 #!/usr/bin/env python3
 
+"""
+twloadworld: Copyright (c) 2013, Andrew Plotkin
+
+This script reads a world definition file and pushes it into the database.
+This is an administrator tool; it does no permission checking and can
+modify or overwrite any world.
+
+I built this as a temporary measure, awaiting a full-fledged world-creation
+interface. However, I suspect it will remain useful for various cases
+(wiping and rebuilding a Tworld database, etc).
+"""
+
 import sys
 import os
 import json
