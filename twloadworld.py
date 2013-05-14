@@ -322,7 +322,7 @@ def transform_prop(world, db, val):
             portid = portal['_id']
         else:
             portid = db.portals.insert(query)
-            print('Created portal "%s" (%s)' % (val['_tempname'], portid,))
+            print('Created portal %s (%s)' % (trio, portid,))
         newval = { 'type':'portal', 'portid':portid }
         if 'text' in val:
             newval['text'] = val['text']
