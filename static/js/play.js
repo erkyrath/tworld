@@ -622,7 +622,8 @@ function evhan_doc_keypress(ev) {
             frameel.stop().animate({ 'scrollTop': newscrolltop }, 200);
     }
     
-    if (ev.target.tagName.toUpperCase() == 'INPUT') {
+    var tagname = ev.target.tagName.toUpperCase();   
+    if (tagname == 'INPUT' || tagname == 'TEXTAREA') {
         /* If the focus is already on an input field, don't mess with it. */
         return;
     }

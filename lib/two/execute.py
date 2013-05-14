@@ -599,7 +599,11 @@ def perform_action(app, task, conn, target):
                        {'$set':{'focus':obj}})
         task.set_dirty(conn.uid, DIRTY_FOCUS)
     elif restype == 'selfdesc':
-        # Set focus to the wardrobe
+        # Set focus to the appearance editor
+        world = yield motor.Op(app.mongodb.worlds.find_one,
+                               {'_id':wid})
+        if not world or world['instancing'] != 'solo':
+            raise ErrorMessageException('Description editing is only permitted in a solo world.')
         obj = ['selfdesc', res['text']]
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':conn.uid},
