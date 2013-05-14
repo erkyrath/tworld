@@ -347,6 +347,8 @@ def generate_update(app, conn, dirty):
                     focusdesc = 'There is no such person.'
                 else:
                     focusdesc = '%s is %s' % (player.get('name', '???'), player.get('desc', '...'))
+                    conn.focusdependencies.add( ('players', focusobj[1], 'desc') )
+                    conn.focusdependencies.add( ('players', focusobj[1], 'name') )
             elif restype == 'selfdesc':
                 ctx = EvalPropContext(app, wid, iid, locid, level=LEVEL_DISPLAY)
                 extratext = yield ctx.eval(focusobj[1], lookup=False)

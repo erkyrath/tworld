@@ -173,6 +173,21 @@ def define_commands():
         ### debug
         raise Exception('You asked for an exception.')
 
+    @command('selfdesc', doeswrite=True)
+    def cmd_selfdesc(app, task, cmd, conn):
+        if getattr(cmd, 'pronoun', None):
+            if cmd.pronoun not in ("he", "she", "it", "they", "name"):
+                raise ErrorMessageException('Invalid pronoun: %s' % (cmd.pronoun,))
+            yield motor.Op(app.mongodb.players.update,
+                           {'_id':conn.uid},
+                           {'$set': {'pronoun':cmd.pronoun}})
+            task.set_data_change( ('players', conn.uid, 'pronoun') )
+        if getattr(cmd, 'desc', None):
+            yield motor.Op(app.mongodb.players.update,
+                           {'_id':conn.uid},
+                           {'$set': {'desc':cmd.desc}})
+            task.set_data_change( ('players', conn.uid, 'desc') )
+        
     @command('say')
     def cmd_say(app, task, cmd, conn):
         res = yield motor.Op(app.mongodb.players.find_one,
