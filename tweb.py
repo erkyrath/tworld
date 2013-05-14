@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
 
+"""
+This is the top-level script which acts as Tworld's web server.
+
+Tweb is built on Tornado (a Python web app framework). It handles normal
+page requests for web clients, tracks login sessions, and accepts web
+socket connections. All game commands come in over the websockets; tweb
+passes those along to the tworld server, and relays back the responses.
+"""
+
 import sys
 import logging
 
@@ -113,7 +122,13 @@ for val in opts.top_pages:
 handlers.append( (r'.*', tweblib.handlers.MyErrorHandler, {'status_code': 404}) )
 
 class TwebApplication(tornado.web.Application):
+    """TwebApplication is a customization of the generic Tornado web app
+    class.
+    """
+    
     def init_tworld(self):
+        """Perform app-specific initialization.
+        """
         # The parsed options (all of them, not just the tornado options)
         self.twopts = opts
         
@@ -137,6 +152,10 @@ class TwebApplication(tornado.web.Application):
         tornado.ioloop.IOLoop.instance().add_callback(self.init_timers)
 
     def init_timers(self):
+        """Perform more app-specific initialization when the IOLoop starts
+        running. (This launches timers and so on. Really I could do this
+        stuff in init_tworld(), but I like keeping this part separate.)
+        """
         self.twlog.info('Launching timers')
         self.twservermgr.init_timers()
 

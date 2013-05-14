@@ -878,7 +878,6 @@ function evhan_click_action(ev) {
     ev.preventDefault();
 
     var target = ev.data.target;
-    console.log('### action: ' + target);
     websocket_send_json({ cmd:'action', action:target });
 }
 
