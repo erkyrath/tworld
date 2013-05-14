@@ -293,8 +293,16 @@ def transform_prop(world, db, val):
         trio = world.portals.get(val['_tempname'], None)
         if not trio:
             error('*Portal property not defined with $portal declaration: %s' % (val['_tempname'],))
-            return ''
-        query = { 'inwid':world.wid, 'wid':ObjectId(trio[0]), 'locid':ObjectId(trio[2]) }
+            return '[Portal property not found]'
+        toworld = db.worlds.find_one({'name':trio[0]})
+        if not toworld:
+            error('World not found for portal: %s' % (trio[0],))
+            return '[Portal world not found]'
+        toloc = db.locations.find_one({'wid':toworld['_id'], 'key':trio[2]})
+        if not toloc:
+            error('Location not found for portal: %s, %s' % (trio[0], trio[2]))
+            return '[Portal location not found]'
+        query = { 'inwid':world.wid, 'wid':toworld['_id'], 'locid':toloc['_id'] }
         if trio[1] in ('personal', 'global', 'same'):
             query['scid'] = trio[1]
         else:
@@ -303,10 +311,6 @@ def transform_prop(world, db, val):
         if portal:
             portid = portal['_id']
         else:
-            location = db.locations.find_one({'_id':query['locid'], 'wid':query['wid']})
-            if not location:
-                error('Portal location does not match world: %s' % (val['_tempname'],))
-                return ''
             portid = db.portals.insert(query)
             print('Created portal "%s" (%s)' % (val['_tempname'], portid,))
         newval = { 'type':'portal', 'portid':portid }
