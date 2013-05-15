@@ -255,6 +255,16 @@ class ServerMgr(object):
             except Exception as ex:
                 self.log.error('Unable to process playernotok: %s', ex)
             return
+
+        if cmd == 'messageall':
+            # send a message to every connection
+            msgobj = { 'cmd':'message', 'text':obj.text }
+            for conn in self.app.twconntable.all():
+                try:
+                    conn.handler.write_message(msgobj)
+                except Exception as ex:
+                    self.log.error('Unable to send messageall message: %s', ex)
+            return
         
         raise Exception('Tworld message not implemented: %s' % (cmd,))
     

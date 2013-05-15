@@ -21,6 +21,9 @@ class WebConnectionTable(object):
     def get(self, twwcid):
         return self.map.get(twwcid, None)
 
+    def all(self):
+        return list(self.map.values())
+
     def listen(self):
         self.ioloop = tornado.ioloop.IOLoop.current()
         

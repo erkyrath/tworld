@@ -173,6 +173,13 @@ def define_commands():
         ### debug
         raise Exception('You asked for an exception.')
 
+    @command('meta_holler')
+    def cmd_meta_holler(app, task, cmd, conn):
+        ### admin only!
+        val = 'Admin broadcast: ' + (' '.join(cmd._args))
+        for stream in app.webconns.all():
+            stream.write(wcproto.message(0, {'cmd':'messageall', 'text':val}))
+
     @command('selfdesc', doeswrite=True)
     def cmd_selfdesc(app, task, cmd, conn):
         if getattr(cmd, 'pronoun', None):
