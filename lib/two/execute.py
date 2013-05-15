@@ -213,6 +213,7 @@ def generate_update(app, conn, dirty):
     if not iid:
         msg['world'] = {'world':'(In transition)', 'scope':'\u00A0', 'creator':'...'}
         msg['focus'] = False ### probably needs to be something for linking out of the void
+        msg['populace'] = False
         msg['locale'] = { 'desc': '...' }
         conn.write(msg)
         return
