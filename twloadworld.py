@@ -86,6 +86,8 @@ if not args:
     sys.exit(-1)
 
 class World(object):
+    portlist_define_order = 0    # yes, a hack
+    
     def __init__(self):
         self.creator = 'Admin'
         self.wid = None
@@ -240,9 +242,16 @@ def parse_world(filename):
 def parse_prop(prop):
     if prop.startswith('*'):
         key, dummy, val = prop[1:].partition(' ')
+        
+        if key == 'portlist':
+            order = World.portlist_define_order
+            World.portlist_define_order += 1
+            return {'type':'portlist', '_templist':[], '_temporder':order}
+        
         if not val:
             error('%s must be followed by a value' % (key,))
             return None
+        
         if key == 'move':
             val = sluggify(val.strip())
             return {'type':'move', 'loc':val}
@@ -289,7 +298,14 @@ def append_to_prop(dic, key, ln):
             return
         subkey = subkey.strip()
         subval = subval.strip()
-        val[subkey] = subval
+        if val.get('type', None) == 'portlist' and subkey == 'portal':
+            subls = [ s2val.strip() for s2val in subval.split(',') ]
+            if len(subls) != 3:
+                error('Portal property must have three fields')
+                return None
+            val['_templist'].append(subls)
+        else:
+            val[subkey] = subval
     elif type(val) is dict and 'text' in val:
         # Covers {text}, {event}, {code}
         val['text'] += ('\n\n' + ln)
@@ -302,6 +318,7 @@ def transform_prop(world, db, val):
     if type(val) is not dict:
         return val
     key = val.get('type', None)
+    
     if key == 'portal':
         trio = val['_temptrio']
         toworld = db.worlds.find_one({'name':trio[0]})
@@ -327,6 +344,40 @@ def transform_prop(world, db, val):
         if 'text' in val:
             newval['text'] = val['text']
         return newval
+
+    if key == 'portlist':
+        if val['_temporder'] < len(world.allportlists):
+            plistid = world.allportlists[val['_temporder']]['_id']
+        else:
+            plistid = db.portlists.insert({'type':'world', 'wid':world.wid})
+            print('Created portlist (%s)' % (plistid,))
+        # Clean out the portlist and rebuild it
+        db.portals.remove({'plistid':plistid})
+        listpos = 0.0
+        for trio in val['_templist']:
+            toworld = db.worlds.find_one({'name':trio[0]})
+            if not toworld:
+                error('World not found for portal: %s' % (trio[0],))
+                return '[Portal world not found]'
+            toloc = db.locations.find_one({'wid':toworld['_id'], 'key':trio[2]})
+            if not toloc:
+                error('Location not found for portal: %s, %s' % (trio[0], trio[2]))
+                return '[Portal location not found]'
+            query = { 'plistid':plistid, 'wid':toworld['_id'], 'locid':toloc['_id'] }
+            if trio[1] in ('personal', 'global', 'same'):
+                query['scid'] = trio[1]
+            else:
+                query['scid'] = ObjectId(trio[1])
+            query['listpos'] = listpos
+            listpos += 1.0
+            portid = db.portals.insert(query)
+            print('Created portal %s (%s)' % (trio, portid,))
+        newval = { 'type':'portlist', 'plistid':plistid }
+        if 'text' in val:
+            newval['text'] = val['text']
+        return newval
+            
+    
     return val
         
 def prop_to_string(val):
@@ -463,6 +514,11 @@ else:
     print('Created world "%s" (%s)' % (dbworld['name'], wid))
 
 world.wid = wid
+
+# Check for existing portlists
+world.allportlists = list(db.portlists.find({'type':'world', 'wid':world.wid}))
+world.allportlists.sort(key = lambda x:x['_id'])
+print('### allportlists = %s' % (world.allportlists,))
 
 if opts.remove:
     if not args:
