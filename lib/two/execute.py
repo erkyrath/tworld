@@ -492,7 +492,7 @@ def perform_action(app, task, conn, target):
             else:
                 minaccess = ACC_VISITOR
             if False: ### check minaccess against scope access!
-                task.write_event(cmd.uid, 'You do not have access to this instance.') ###localize
+                task.write_event(conn.uid, 'You do not have access to this instance.') ###localize
                 return
         
             res = yield motor.Op(app.mongodb.players.find_one,
