@@ -42,6 +42,13 @@ class Tworld(object):
         self.webconns.listen()
         self.mongomgr.init_timers()
 
+        # This periodic command kicks disconnected players to the void.
+        # (Every three minutes, plus an uneven fraction of a second.)
+        def func():
+            self.queue_command({'cmd':'checkdisconnected'})
+        res = tornado.ioloop.PeriodicCallback(func, 180100)
+        res.start()
+
     def schedule_command(self, obj, delay):
         """Schedule a command to be queued, delay seconds in the future.
         This only handles commands internal to tworld (connid 0, twwcid 0).

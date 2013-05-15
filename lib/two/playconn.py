@@ -22,13 +22,21 @@ class PlayerConnectionTable(object):
         return self.map.get(connid, None)
 
     def get_for_uid(self, uid):
-        """Return all player connections matching the given user id, or
+        """Returns all player connections matching the given user id, or
         None.
         """
         uset = self.uidmap.get(uid, None)
         if not uset:
             return None
         return list(uset)
+
+    def count_for_uid(self, uid):
+        """Returns number of player connections matching the given user id.
+        """
+        uset = self.uidmap.get(uid, None)
+        if not uset:
+            return 0
+        return len(uset)
 
     def all(self):
         """A (non-dynamic) list of all player connections.

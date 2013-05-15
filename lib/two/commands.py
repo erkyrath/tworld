@@ -78,7 +78,48 @@ def define_commands():
                 except:
                     pass
         app.log.warning('Tweb has disconnected; now %d connections remain', len(app.playconns.as_dict()))
-    
+
+    @command('checkdisconnected', isserver=True, doeswrite=True)
+    def cmd_checkdisconnected(app, task, cmd, stream):
+        # Construct a list of players who are in the world, but
+        # disconnected.
+        ls = []
+        inworld = 0
+        cursor = app.mongodb.playstate.find({'iid':{'$ne':None}},
+                                            {'_id':1})
+        while (yield cursor.fetch_next):
+            playstate = cursor.next_object()
+            conncount = app.playconns.count_for_uid(playstate['_id'])
+            inworld += 1
+            if not conncount:
+                ls.append(playstate['_id'])
+        cursor.close()
+
+        app.log.info('checkdisconnected: %d players in world, %d are disconnected', inworld, len(ls))
+        ### Keep a two-strikes list, so that players are knocked out after some minimum interval
+        for uid in ls:
+            app.queue_command({'cmd':'tovoid', 'uid':uid, 'portin':False})
+
+    @command('tovoid', isserver=True, doeswrite=True)
+    def cmd_tovoid(app, task, cmd, stream):
+        task.write_event(cmd.uid, 'The world fades away.') ###localize
+        others = yield task.find_locale_players(uid=cmd.uid, notself=True)
+        if others:
+            res = yield motor.Op(app.mongodb.players.find_one,
+                                 {'_id':cmd.uid},
+                                 {'name':1})
+            playername = res['name']
+            task.write_event(others, '%s disappears.' % (playername,)) ###localize
+        yield motor.Op(app.mongodb.playstate.update,
+                       {'_id':cmd.uid},
+                       {'$set':{'focus':None, 'iid':None, 'locid':None,
+                                'portto':None, 'lastmoved':twcommon.misc.now()}})
+        task.set_dirty(cmd.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_WORLD | DIRTY_POPULACE)
+        task.set_data_change( ('playstate', cmd.uid, 'iid') )
+        task.set_data_change( ('playstate', cmd.uid, 'locid') )
+        if cmd.portin:
+            app.schedule_command({'cmd':'portin', 'uid':cmd.uid}, 1.5)
+        
     @command('logplayerconntable', isserver=True, noneedmongo=True)
     def cmd_logplayerconntable(app, task, cmd, stream):
         app.playconns.dumplog()
@@ -245,24 +286,9 @@ def define_commands():
         ### debug
         raise Exception('You asked for an exception.')
 
-    @command('meta_panic', doeswrite=True)
+    @command('meta_panic')
     def cmd_meta_panic(app, task, cmd, conn):
-        task.write_event(conn.uid, 'The world fades away.') ###localize
-        others = yield task.find_locale_players(notself=True)
-        if others:
-            res = yield motor.Op(app.mongodb.players.find_one,
-                                 {'_id':conn.uid},
-                                 {'name':1})
-            playername = res['name']
-            task.write_event(others, '%s disappears.' % (playername,)) ###localize
-        yield motor.Op(app.mongodb.playstate.update,
-                       {'_id':conn.uid},
-                       {'$set':{'focus':None, 'iid':None, 'locid':None,
-                                'portto':None, 'lastmoved':twcommon.misc.now()}})
-        task.set_dirty(conn.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_WORLD | DIRTY_POPULACE)
-        task.set_data_change( ('playstate', conn.uid, 'iid') )
-        task.set_data_change( ('playstate', conn.uid, 'locid') )
-        app.schedule_command({'cmd':'portin', 'uid':conn.uid}, 1.5)
+        app.queue_command({'cmd':'tovoid', 'uid':conn.uid, 'portin':True})
 
     @command('meta_holler')
     def cmd_meta_holler(app, task, cmd, conn):
