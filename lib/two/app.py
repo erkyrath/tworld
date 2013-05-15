@@ -42,6 +42,17 @@ class Tworld(object):
         self.webconns.listen()
         self.mongomgr.init_timers()
 
+    def schedule_command(self, obj, delay):
+        """Schedule a command to be queued, delay seconds in the future.
+        This only handles commands internal to tworld (connid 0, twwcid 0).
+        
+        This does *not* put the scheduled command in the database. It
+        is therefore unreliable; if tworld shuts down before the command
+        runs, it will be lost.
+        """
+        self.ioloop.add_timeout(datetime.timedelta(seconds=delay),
+                                lambda:self.queue_command(obj))
+
     def queue_command(self, obj, connid=0, twwcid=0):
         if type(obj) is dict:
             obj = wcproto.namespace_wrapper(obj)

@@ -2,11 +2,11 @@
 import tornado.gen
 import motor
 
+import twcommon.misc
 from twcommon import wcproto
 from twcommon.excepts import MessageException, ErrorMessageException
 
 import two.execute
-from two.task import DIRTY_ALL, DIRTY_LOCALE, DIRTY_FOCUS
 
 class Command:
     # As commands are defined with the @command decorator, they are stuffed
@@ -66,6 +66,8 @@ def define_commands():
             stream.write(wcproto.message(0, {'cmd':'playerok', 'connid':conn.connid}))
             app.queue_command({'cmd':'refreshconn', 'connid':conn.connid})
             app.log.info('Player %s has reconnected (uid %s)', conn.email, conn.uid)
+            # But don't queue a portin command, because people are no more
+            # likely to be in the void than usual.
 
     @command('disconnect', isserver=True, noneedmongo=True)
     def cmd_disconnect(app, task, cmd, stream):
@@ -105,6 +107,8 @@ def define_commands():
         cmd._stream.write(wcproto.message(0, {'cmd':'playerok', 'connid':connid}))
         app.queue_command({'cmd':'refreshconn', 'connid':connid})
         app.log.info('Player %s has connected (uid %s)', conn.email, conn.uid)
+        # If the player is in the void, put them somewhere.
+        app.queue_command({'cmd':'portin', 'uid':conn.uid})
 
     @command('playerclose')
     def cmd_playerclose(app, task, cmd, conn):
@@ -114,6 +118,76 @@ def define_commands():
         except Exception as ex:
             app.log.error('Failed to remove on playerclose %d: %s', conn.connid, ex)
     
+    @command('portin', isserver=True, doeswrite=True)
+    def cmd_portin(app, task, cmd, stream):
+        # When a player is in the void, this command should come along
+        # shortly thereafter and send them to a destination.
+        player = yield motor.Op(app.mongodb.players.find_one,
+                                {'_id':cmd.uid},
+                                {'name':1, 'scid':1})
+        playstate = yield motor.Op(app.mongodb.playstate.find_one,
+                                   {'_id':cmd.uid})
+        if not player or not playstate:
+            raise ErrorMessageException('Portin: no such player: %s' % (cmd.uid,))
+        playername = player['name']
+        if playstate.get('iid', None) and playstate.get('locid', None):
+            app.log.info('Player %s is already in the world', playername)
+            return
+        # Figure out what destination was set. If none, default to the
+        # start world. ### Player's chosen panic location!
+        newloc = playstate.get('portto', None)
+        if newloc:
+            newwid = newloc['wid']
+            newscid = newloc['scid']
+            newlocid = newloc['locid']
+        else:
+            res = yield motor.Op(app.mongodb.config.find_one,
+                                 {'key':'startworldloc'})
+            lockey = res['val']
+            res = yield motor.Op(app.mongodb.config.find_one,
+                                 {'key':'startworldid'})
+            newwid = res['val']
+            newscid = player['scid']
+            res = yield motor.Op(app.mongodb.locations.find_one,
+                                 {'wid':newwid, 'key':lockey})
+            newlocid = res['_id']
+        app.log.info('### player portin to %s, %s, %s', newwid, newscid, newlocid)
+        
+        instance = yield motor.Op(app.mongodb.instances.find_one,
+                                  {'wid':newwid, 'scid':newscid})
+        if instance:
+            minaccess = instance.get('minaccess', ACC_VISITOR)
+        else:
+            minaccess = ACC_VISITOR
+        if False: ### check minaccess against scope access!
+            task.write_event(cmd.uid, 'You do not have access to this instance.')
+            return
+        
+        if instance:
+            newiid = instance['_id']
+        else:
+            newiid = yield motor.Op(app.mongodb.instances.insert,
+                                    {'wid':newwid, 'scid':newscid})
+            app.log.info('Created instance %s (world %s, scope %s)', newiid, newwid, newscid)
+
+        yield motor.Op(app.mongodb.playstate.update,
+                       {'_id':cmd.uid},
+                       {'$set':{'iid':newiid,
+                                'locid':newlocid,
+                                'focus':None,
+                                'lastmoved': task.starttime,
+                                'portto':None }})
+        task.set_dirty(cmd.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_WORLD | DIRTY_POPULACE)
+        task.set_data_change( ('playstate', cmd.uid, 'iid') )
+        task.set_data_change( ('playstate', cmd.uid, 'locid') )
+        
+        # We set everybody in the destination room DIRTY_POPULACE.
+        others = yield task.find_locale_players(uid=cmd.uid, notself=True)
+        if others:
+            task.set_dirty(others, DIRTY_POPULACE)
+            task.write_event(others, '%s appears.' % (playername,)) ###localize
+        task.write_event(cmd.uid, 'You are somewhere new.')
+        
     @command('uiprefs')
     def cmd_uiprefs(app, task, cmd, conn):
         # Could we handle this in tweb? I guess, if we cared.
@@ -135,9 +209,7 @@ def define_commands():
         newcmd = Command.all_commands.get('meta_'+key)
         if not newcmd:
             raise MessageException('Command \u201C/%s\u201D not understood. Try \u201C/help\u201D.' % (key,))
-        cmd._args = ls[1:]
-        res = yield newcmd.func(app, task, cmd, conn)
-        return res
+        app.queue_command({'cmd':newcmd.name, 'args':ls[1:]}, connid=conn.connid)
 
     @command('meta_help')
     def cmd_meta_help(app, task, cmd, conn):
@@ -173,10 +245,23 @@ def define_commands():
         ### debug
         raise Exception('You asked for an exception.')
 
+    @command('meta_panic', doeswrite=True)
+    def cmd_meta_panic(app, task, cmd, conn):
+        ### message to other players?
+        task.write_event(conn.uid, 'The world fades away.') ###localize
+        yield motor.Op(app.mongodb.playstate.update,
+                       {'_id':conn.uid},
+                       {'$set':{'focus':None, 'iid':None, 'locid':None,
+                                'portto':None, 'lastmoved':twcommon.misc.now()}})
+        task.set_dirty(conn.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_WORLD | DIRTY_POPULACE)
+        task.set_data_change( ('playstate', conn.uid, 'iid') )
+        task.set_data_change( ('playstate', conn.uid, 'locid') )
+        app.schedule_command({'cmd':'portin', 'uid':conn.uid}, 1.5)
+
     @command('meta_holler')
     def cmd_meta_holler(app, task, cmd, conn):
         ### admin only!
-        val = 'Admin broadcast: ' + (' '.join(cmd._args))
+        val = 'Admin broadcast: ' + (' '.join(cmd.args))
         for stream in app.webconns.all():
             stream.write(wcproto.message(0, {'cmd':'messageall', 'text':val}))
 
@@ -248,3 +333,6 @@ def define_commands():
         task.set_dirty(conn.uid, DIRTY_FOCUS)
         
     return Command.all_commands
+
+from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_POPULACE, DIRTY_FOCUS
+from twcommon.access import ACC_VISITOR

@@ -103,13 +103,15 @@ class Task(object):
                 self.log.warning('write_event: unrecognized %s', obj)
             
     @tornado.gen.coroutine
-    def find_locale_players(self, notself=False):
-        conn = self.app.playconns.get(self.connid)
-        if not conn:
-            return None
+    def find_locale_players(self, uid=None, notself=False):
+        if uid is None:
+            conn = self.app.playconns.get(self.connid)
+            if not conn:
+                return None
+            uid = conn.uid
         
         playstate = yield motor.Op(self.app.mongodb.playstate.find_one,
-                                   {'_id':conn.uid},
+                                   {'_id':uid},
                                    {'iid':1, 'locid':1})
         if not playstate:
             return None
@@ -125,7 +127,7 @@ class Task(object):
         people = []
         while (yield cursor.fetch_next):
             ostate = cursor.next_object()
-            if notself and ostate['_id'] == conn.uid:
+            if notself and ostate['_id'] == uid:
                 continue
             people.append(ostate['_id'])
         cursor.close()
