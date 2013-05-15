@@ -191,66 +191,73 @@ class ServerMgr(object):
                     # only return point from this method.)
                     return
             except Exception as ex:
-                self.log.info('Malformed message: %s', ex)
+                self.log.warning('Malformed message: %s', ex)
                 continue
-            
-            (connid, raw, obj) = tup
 
-            ### The code below needs to be split out into a function.
-            ### "continue" everywhere sucks.
+            try:
+                (connid, raw, obj) = tup
+                self.handle_tworld_message(connid, raw, obj)
+            except Exception as ex:
+                self.log.warning('Error handling tworld message', exc_info=True)
+            continue
 
+    def handle_tworld_message(self, connid, raw, obj):
+        """Handle a single message from tworld, or throw an exception.
+        (This does not do anything yieldy.)
+        """
+        if not self.tworldavailable:
             # Special case: if we're connecting, only accept 'connectok'
-            if not self.tworldavailable:
-                if (connid != 0):
-                    self.log.warning('Cannot pass message back to client before tworld is available!')
-                elif getattr(obj, 'cmd', None) != 'connectok':
-                    self.log.warning('Cannot handle command before tworld is available!')
-                else:
-                    self.log.info('Tworld socket available')
-                    self.tworldavailable = True
-                    self.tworldtimerbusy = False
-                continue
-            
             if (connid != 0):
-                # Pass the raw message along to the client. (As UTF-8.)
-                try:
-                    conn = self.app.twconntable.find(connid)
-                    if not conn.available and obj.cmd != 'error':
-                        raise Exception('Connection not available')
-                    conn.handler.write_message(raw.decode())
-                except Exception as ex:
-                    self.log.error('Unable to pass message back to connection %d (%s): %s', connid, raw[0:50], ex)
+                self.log.warning('Cannot pass message back to client before tworld is available!')
+            elif getattr(obj, 'cmd', None) != 'connectok':
+                self.log.warning('Cannot handle command before tworld is available!')
             else:
-                # It's for us.
-                try:
-                    cmd = obj.cmd
-                    if cmd == 'playerok':
-                        # accept the connection
-                        try:
-                            conn = self.app.twconntable.find(obj.connid)
-                            if conn.available:
-                                raise Exception('Connection is already available')
-                            self.log.info('Player connection registered: %s (connid %d)', conn.email, conn.connid)
-                            conn.available = True
-                        except Exception as ex:
-                            self.log.error('Unable to process playerok: %s', ex)
-                        continue
-                    if cmd == 'playernotok':
-                        # kill the connection
-                        try:
-                            conn = self.app.twconntable.find(obj.connid)
-                            if conn.available:
-                                raise Exception('Connection is already available')
-                            self.log.info('Player connection rejected by Tworld: %s (connid %d)', conn.email, conn.connid)
-                            errmsg = getattr(obj, 'text', 'Connection rejected by Tworld')
-                            conn.close(errmsg)
-                        except Exception as ex:
-                            self.log.error('Unable to process playernotok: %s', ex)
-                        continue
-                    raise Exception('Not implemented')
-                except Exception as ex:
-                    self.log.error('Problem handling server command (%s): %s', raw[0:50], ex)
+                self.log.info('Tworld socket available')
+                self.tworldavailable = True
+                self.tworldtimerbusy = False
+            return
         
+        if (connid != 0):
+            # Pass the raw message along to the client. (As UTF-8.)
+            try:
+                conn = self.app.twconntable.find(connid)
+                if not conn.available and obj.cmd != 'error':
+                    raise Exception('Connection not available')
+                conn.handler.write_message(raw.decode())
+            except Exception as ex:
+                self.log.error('Unable to pass message back to connection %d (%s): %s', connid, raw[0:50], ex)
+            return
+
+        # It's for us.
+        cmd = obj.cmd
+        
+        if cmd == 'playerok':
+            # accept the connection
+            try:
+                conn = self.app.twconntable.find(obj.connid)
+                if conn.available:
+                    raise Exception('Connection is already available')
+                self.log.info('Player connection registered: %s (connid %d)', conn.email, conn.connid)
+                conn.available = True
+            except Exception as ex:
+                self.log.error('Unable to process playerok: %s', ex)
+            return
+        
+        if cmd == 'playernotok':
+            # kill the connection
+            try:
+                conn = self.app.twconntable.find(obj.connid)
+                if conn.available:
+                    raise Exception('Connection is already available')
+                self.log.info('Player connection rejected by Tworld: %s (connid %d)', conn.email, conn.connid)
+                errmsg = getattr(obj, 'text', 'Connection rejected by Tworld')
+                conn.close(errmsg)
+            except Exception as ex:
+                self.log.error('Unable to process playernotok: %s', ex)
+            return
+        
+        raise Exception('Tworld message not implemented: %s' % (cmd,))
+    
 
     def close_tworld(self, dat):
         """Callback from tworld reading handler.
