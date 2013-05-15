@@ -14,6 +14,8 @@ class PlayerConnectionTable(object):
         # collide) or key this on (twwcid, connid). Currently we only
         # support a single tweb, so I am ignoring the problem.
 
+        self.uidmap = {} # maps uids (ObjectIds) to sets of PlayerConnections.
+
     def get(self, connid):
         """Look up a player connection by its ID. Returns None if not found.
         """
@@ -22,13 +24,11 @@ class PlayerConnectionTable(object):
     def get_for_uid(self, uid):
         """Return all player connections matching the given user id, or
         None.
-        ### This will have to be made efficient, because I bet we're going
-        to call it a whole lot.
         """
-        res = [ conn for conn in self.map.values() if conn.uid == uid ]
-        if res:
-            return res
-        return None
+        uset = self.uidmap.get(uid, None)
+        if not uset:
+            return None
+        return list(uset)
 
     def all(self):
         """A (non-dynamic) list of all player connections.
@@ -47,6 +47,11 @@ class PlayerConnectionTable(object):
         assert connid not in self.map, 'Connection ID already in use!'
         conn = PlayerConnection(self, connid, ObjectId(uidstr), email, stream)
         self.map[connid] = conn
+        uset = self.uidmap.get(conn.uid, None)
+        if uset:
+            uset.add(conn)
+        else:
+            self.uidmap[conn.uid] = set( (conn,) )
         return conn
 
     def remove(self, connid):
@@ -55,6 +60,11 @@ class PlayerConnectionTable(object):
         """
         conn = self.map[connid]
         del self.map[connid]
+        uset = self.uidmap.get(conn.uid, None)
+        if uset:
+            uset.remove(conn)
+            if not uset:
+                del self.uidmap[conn.uid]
         conn.connid = None
         conn.stream = None
         conn.twwcid = None
@@ -63,6 +73,12 @@ class PlayerConnectionTable(object):
         self.log.debug('PlayerConnectionTable has %d entries', len(self.map))
         for (connid, conn) in sorted(self.map.items()):
             self.log.debug(' %d: email %s, uid %s (twwcid %d)', connid, conn.email, conn.uid, conn.twwcid)
+        uls = [ len(uset) for uset in self.uidmap.values() ]
+        uidsum = sum(uls)
+        if 0 in uls:
+            self.log.debug('ERROR: empty set in uidmap!')
+        if uidsum != len(self.map):
+            self.log.debug('ERROR: uidmap has %d entries!', uidsum)
 
 class PlayerConnection(object):
     def __init__(self, table, connid, uid, email, stream):
