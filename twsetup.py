@@ -80,6 +80,9 @@ db.worldprop.create_index([('wid', pymongo.ASCENDING), ('locid', pymongo.ASCENDI
 # Compound index
 db.instanceprop.create_index([('iid', pymongo.ASCENDING), ('locid', pymongo.ASCENDING), ('key', pymongo.ASCENDING)], unique=True)
 
+# Sparse indexes
+db.portals.create_index('inwid', sparse=True)
+db.portals.create_index('plistid', sparse=True)
 
 # Create some config entries if they don't exist, but leave them alone
 # if they do exist.

@@ -146,6 +146,17 @@ class SessionMgr(object):
         yield motor.Op(self.app.mongodb.players.update,
                        {'_id':uid},
                        {'$set': {'scid': scid}})
+
+        # Create a personal portlist (booklet) for the player.
+        portlist = {
+            'type': 'pers',
+            'uid': uid,
+            }
+
+        plistid = yield motor.Op(self.app.mongodb.portlists.insert, portlist)
+        yield motor.Op(self.app.mongodb.players.update,
+                       {'_id':uid},
+                       {'$set': {'plistid': plistid}})
         
         # Create a sign-in session too, and we're done.
         sessionid = yield tornado.gen.Task(self.create_session, handler, uid, email, name)
