@@ -249,6 +249,13 @@ def define_commands():
     def cmd_meta_panic(app, task, cmd, conn):
         ### message to other players?
         task.write_event(conn.uid, 'The world fades away.') ###localize
+        others = yield task.find_locale_players(notself=True)
+        if others:
+            res = yield motor.Op(app.mongodb.players.find_one,
+                                 {'_id':conn.uid},
+                                 {'name':1})
+            playername = res['name']
+            task.write_event(others, '%s disappears.' % (playername,)) ###localize
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':conn.uid},
                        {'$set':{'focus':None, 'iid':None, 'locid':None,
