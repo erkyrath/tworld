@@ -160,7 +160,7 @@ def define_commands():
         else:
             minaccess = ACC_VISITOR
         if False: ### check minaccess against scope access!
-            task.write_event(cmd.uid, 'You do not have access to this instance.')
+            task.write_event(cmd.uid, 'You do not have access to this instance.') ###localize
             return
         
         if instance:
@@ -247,7 +247,6 @@ def define_commands():
 
     @command('meta_panic', doeswrite=True)
     def cmd_meta_panic(app, task, cmd, conn):
-        ### message to other players?
         task.write_event(conn.uid, 'The world fades away.') ###localize
         others = yield task.find_locale_players(notself=True)
         if others:

@@ -459,7 +459,11 @@ def perform_action(app, task, conn, target):
             if not location:
                 raise ErrorMessageException('Destination location not found.')
             newlocid = location['_id']
-            
+
+            # Figure out what scope we are porting to. The portal scid
+            # value may be a special value such as 'personal', 'global',
+            # 'same'. We also obey the (higher priority) world-instancing
+            # definition.
             if portal['scid'] == 'personal' or world['instancing'] == 'solo':
                 player = yield motor.Op(app.mongodb.players.find_one,
                                         {'_id':conn.uid},
@@ -479,18 +483,17 @@ def perform_action(app, task, conn, target):
                 newscid = portal['scid']
             assert isinstance(newscid, ObjectId), 'newscid is not ObjectId'
 
+            # Load up the instance, but only to check minaccess.
             instance = yield motor.Op(app.mongodb.instances.find_one,
                                       {'wid':newwid, 'scid':newscid})
-
             if instance:
-                newiid = instance['_id']
+                minaccess = instance.get('minaccess', ACC_VISITOR)
             else:
-                newiid = yield motor.Op(app.mongodb.instances.insert,
-                                        {'wid':newwid, 'scid':newscid})
-                app.log.info('Created instance %s (world %s, scope %s)', newiid, newwid, newscid)
-
-            ### check access level (unless this is to scope, in which case do it earlier)
-            
+                minaccess = ACC_VISITOR
+            if False: ### check minaccess against scope access!
+                task.write_event(cmd.uid, 'You do not have access to this instance.') ###localize
+                return
+        
             res = yield motor.Op(app.mongodb.players.find_one,
                                  {'_id':conn.uid},
                                  {'name':1})
@@ -503,25 +506,19 @@ def perform_action(app, task, conn, target):
                 task.write_event(others, '%s disappears.' % (playername,)) ###localize
             task.write_event(conn.uid, 'The world fades away.') ###localize
 
-            ### really I want this to be two separate events.
-            
+            # Jump to the void, and schedule a portin event.
+            portto = {'wid':newwid, 'scid':newscid, 'locid':newlocid}
             yield motor.Op(app.mongodb.playstate.update,
                            {'_id':conn.uid},
-                           {'$set':{'iid':newiid,
-                                    'locid':newlocid,
+                           {'$set':{'iid':None,
+                                    'locid':None,
                                     'focus':None,
-                                    'lastmoved': task.starttime }})
+                                    'lastmoved': task.starttime,
+                                    'portto':portto }})
             task.set_dirty(conn.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_WORLD | DIRTY_POPULACE)
             task.set_data_change( ('playstate', conn.uid, 'iid') )
             task.set_data_change( ('playstate', conn.uid, 'locid') )
-        
-            # We set everybody in the destination room DIRTY_POPULACE.
-            # (Players in the starting room have a dependency, which is already
-            # covered.)
-            others = yield task.find_locale_players(notself=True)
-            if others:
-                task.set_dirty(others, DIRTY_POPULACE)
-                task.write_event(others, '%s appears.' % (playername,)) ###localize
+            app.schedule_command({'cmd':'portin', 'uid':conn.uid}, 1.5)
             return
             
         raise ErrorMessageException('Action not understood: "%s"' % (target,))
@@ -616,3 +613,4 @@ def perform_action(app, task, conn, target):
     
 # Late imports, to avoid circularity
 from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_POPULACE, DIRTY_FOCUS
+from twcommon.access import ACC_VISITOR
