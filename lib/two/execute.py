@@ -198,6 +198,35 @@ def find_symbol(app, wid, iid, locid, key, dependencies=None):
 
 
 @tornado.gen.coroutine
+def portal_in_scope(app, portal, uid, wid):
+    """Make sure that a portal (object) is reachable by the player (uid)
+    who is in world wid. Raises a ErrorMessageException if not.
+
+    ("Reachable" means in the given world, or in the player's personal
+    collection. This does not check access levels.)
+    ### Will also have to account for being offered a link by another
+    player.
+    """
+    if 'inwid' in portal:
+        # Directly in-place in the world.
+        if portal['inwid'] != wid:
+            raise ErrorMessageException('You are not in this portal\'s world.')
+    elif 'plistid' in portal:
+        # In a portlist.
+        portlist = yield motor.Op(app.mongodb.portlists.find_one,
+                                  {'_id':portal['plistid']})
+        if not portlist:
+            raise ErrorMessageException('Portal does not have a portlist.')
+        if portlist['type'] == 'pers':
+            if portlist['uid'] != uid:
+                raise ErrorMessageException('Portal is not in your personal portlist.')
+        else:
+            if portlist['wid'] != wid:
+                raise ErrorMessageException('You are not in this portlist\'s world.')
+    else:
+        raise ErrorMessageException('Portal does not have a placement.')
+    
+@tornado.gen.coroutine
 def portal_description(app, portal, uid, uidiid=None):
     """Return a (JSONable) object describing a portal in human-readable
     strings. Returns None if a problem arises.
@@ -453,8 +482,13 @@ def generate_update(app, conn, dirty):
                         conn.focusdependencies.update(ctx.dependencies)
                 portal = yield motor.Op(app.mongodb.portals.find_one,
                                         {'_id':portid})
-                if not portal or portal['inwid'] != wid:
-                    focusdesc = '[This portal is not available.]'
+                try:
+                    yield portal_in_scope(app, portal, conn.uid, wid)
+                    scopeerror = None
+                except ErrorMessageException as ex:
+                    scopeerror = '[%s]' % (ex,)
+                if scopeerror:
+                    focusdesc = scopeerror
                 else:
                     ackey = 'port' + EvalPropContext.build_action_key()
                     conn.focusactions[ackey] = ('portal', portid)
@@ -493,7 +527,7 @@ def generate_update(app, conn, dirty):
                         desc = yield portal_description(app, portal, conn.uid, uidiid=iid)
                         if desc:
                             ackey = 'plist' + EvalPropContext.build_action_key()
-                            conn.focusactions[ackey] = ('portal', portal['_id']) ### no, focus-in!
+                            conn.focusactions[ackey] = ('plistel', plistid, portal['_id'])
                             desc['target'] = ackey
                             subls.append(desc)
                     focusdesc = ['portlist', subls];
@@ -546,6 +580,14 @@ def perform_action(app, task, conn, target):
             task.set_dirty(conn.uid, DIRTY_FOCUS)
             return
 
+        if restype == 'plistel':
+            obj = ['portal', target[2]]
+            yield motor.Op(app.mongodb.playstate.update,
+                           {'_id':conn.uid},
+                           {'$set':{'focus':obj}})
+            task.set_dirty(conn.uid, DIRTY_FOCUS)
+            return
+        
         if restype == 'portal':
             portid = target[1]
             portal = yield motor.Op(app.mongodb.portals.find_one,
@@ -553,25 +595,8 @@ def perform_action(app, task, conn, target):
             if not portal:
                 raise ErrorMessageException('Portal not found.')
 
-            # Check that the portal is accessible. Many cases.
-            if 'inwid' in portal:
-                # Directly in-place in the world.
-                if portal['inwid'] != wid:
-                    raise ErrorMessageException('You are not in this portal\'s world.')
-            elif 'plistid' in portal:
-                # In a portlist.
-                portlist = yield motor.Op(app.mongodb.portlists.find_one,
-                                          {'_id':portal['plistid']})
-                if not portlist:
-                    raise ErrorMessageException('Portal does not have a portlist.')
-                if portlist['type'] == 'pers':
-                    if portlist['uid'] != conn.uid:
-                        raise ErrorMessageException('Portal is not in your personal portlist.')
-                else:
-                    if portlist['wid'] != wid:
-                        raise ErrorMessageException('You are not in this portlist\'s world.')
-            else:
-                raise ErrorMessageException('Portal does not have a placement.')
+            # Check that the portal is accessible.
+            yield portal_in_scope(app, portal, conn.uid, wid)
 
             world = yield motor.Op(app.mongodb.worlds.find_one,
                                    {'_id':portal['wid']})
