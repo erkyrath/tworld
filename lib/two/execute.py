@@ -8,6 +8,7 @@ import motor
 from twcommon.excepts import MessageException, ErrorMessageException
 from two import interp
 
+LEVEL_DISPSPECIAL = 4
 LEVEL_DISPLAY = 3
 LEVEL_MESSAGE = 2
 LEVEL_FLAT = 1
@@ -24,16 +25,24 @@ class EvalPropContext(object):
         EvalPropContext.link_code_counter = EvalPropContext.link_code_counter + 1
         return str(EvalPropContext.link_code_counter) + hex(random.getrandbits(32))[2:]
     
-    def __init__(self, app, wid, iid, locid=None, level=LEVEL_MESSAGE):
+    def __init__(self, app, wid, iid, locid=None, uid=None, level=LEVEL_MESSAGE):
         self.app = app
         self.wid = wid
         self.iid = iid
         self.locid = locid
+        self.uid = uid
         self.level = level
         self.accum = None
         self.linktargets = None
         self.dependencies = None
         ### Will need CPU-limiting someday.
+
+    def updateacdepends(self, ctx):
+        assert self.accum is not None, 'EvalPropContext.accum should not be None here'
+        if ctx.linktargets:
+            self.linktargets.update(ctx.linktargets)
+        if ctx.dependencies:
+            self.dependencies.update(ctx.dependencies)
 
     @tornado.gen.coroutine
     def eval(self, key, lookup=True):
@@ -52,6 +61,8 @@ class EvalPropContext(object):
         MESSAGE: A string. ({text} objects produce strings from the flattened,
         de-styled, de-linked description.)
         DISPLAY: A string or, for {text} objects, a description.
+        DISPSPECIAL: A string; for {text}, a description; for other {}
+            objects, special client objects. (Used only for focus.)
 
         (A description is an array of strings and tag-arrays, JSONable and
         passable to the client.)
@@ -64,6 +75,7 @@ class EvalPropContext(object):
         self.accum = None
         self.linktargets = None
         self.dependencies = set()
+        self.wasspecial = False
         
         res = yield self.evalkey(key, lookup=lookup)
 
@@ -83,6 +95,12 @@ class EvalPropContext(object):
             if is_text_object(res):
                 return self.accum
             return str_or_null(res)
+        if (self.level == LEVEL_DISPSPECIAL):
+            if self.wasspecial:
+                return res
+            if is_text_object(res):
+                return self.accum
+            return str_or_null(res)
         raise Exception('unrecognized eval level: %d' % (self.level,))
         
     @tornado.gen.coroutine
@@ -92,7 +110,7 @@ class EvalPropContext(object):
         result contains interpolated strings, this calls itself recursively.
 
         Returns an object or description array. (The latter only at
-        MESSAGE or DISPLAY level.)
+        MESSAGE/DISPLAY/DISPSPECIAL level.)
 
         The top-level call to evalkey() may set up the description accumulator
         and linktargets. Lower-level calls use the existing ones.
@@ -100,10 +118,50 @@ class EvalPropContext(object):
         if lookup:
             res = yield find_symbol(self.app, self.wid, self.iid, self.locid, key, dependencies=self.dependencies)
         else:
-            res = { 'type':'text', 'text':key }
+            if type(key) is dict:
+                res = key
+            else:
+                res = { 'type':'text', 'text':key }
 
-        if not(is_text_object(res)
-               and self.level in (LEVEL_MESSAGE, LEVEL_DISPLAY)):
+        objtype = None
+        if type(res) is dict:
+            objtype = res.get('type', None)
+
+        if depth == 0 and objtype:
+            assert self.accum is None, 'EvalPropContext.accum should be None at depth zero'
+            self.accum = []
+            self.linktargets = {}
+        
+        if depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'portal':
+            assert self.accum is not None, 'EvalPropContext.accum should not be None here'
+            try:
+                portid = res.get('portid', None)
+                extratext = None
+                val = res.get('text', None)
+                if val:
+                    # Look up the extra text in a separate context.
+                    ctx = EvalPropContext(self.app, self.wid, self.iid, self.locid, self.uid, level=LEVEL_DISPLAY)
+                    extratext = yield ctx.eval(val, lookup=False)
+                    self.updateacdepends(ctx)
+                portal = yield motor.Op(self.app.mongodb.portals.find_one,
+                                        {'_id':portid})
+                yield portal_in_scope(self.app, portal, self.uid, self.wid)
+                ackey = 'port' + EvalPropContext.build_action_key()
+                self.linktargets[ackey] = ('portal', portid)
+                # Look up the destination portaldesc in a separate context.
+                ctx = EvalPropContext(self.app, portal['wid'], None, portal['locid'], level=LEVEL_FLAT)
+                desttext = yield ctx.eval('portaldesc')
+                self.updateacdepends(ctx)
+                if not desttext:
+                    desttext = 'The destination is hazy.' ###localize
+                specres = ['portal', ackey, desttext, extratext]
+                self.wasspecial = True
+                return specres
+            except Exception as ex:
+                return '[Exception: %s]' % (ex,)
+
+        if not(objtype == 'text'
+               and self.level in (LEVEL_MESSAGE, LEVEL_DISPLAY, LEVEL_DISPSPECIAL)):
             # For most cases, the type returned by the database is the
             # type we want.
             return res
@@ -111,12 +169,7 @@ class EvalPropContext(object):
         # But at MESSAGE/DISPLAY level, a {text} object is parsed out.
 
         try:
-            if (depth == 0):
-                assert self.accum is None, 'EvalPropContext.accum should be None at depth zero'
-                self.accum = []
-                self.linktargets = {}
-            else:
-                assert self.accum is not None, 'EvalPropContext.accum should not be None at depth nonzero'
+            assert self.accum is not None, 'EvalPropContext.accum should not be None here'
 
             nodls = interp.parse(res.get('text', ''))
             for nod in nodls:
@@ -207,6 +260,8 @@ def portal_in_scope(app, portal, uid, wid):
     ### Will also have to account for being offered a link by another
     player.
     """
+    if not portal:
+        raise ErrorMessageException('Portal not found.')
     if 'inwid' in portal:
         # Directly in-place in the world.
         if portal['inwid'] != wid:
@@ -358,7 +413,7 @@ def generate_update(app, conn, dirty):
         conn.localeactions.clear()
         conn.localedependencies.clear()
         
-        ctx = EvalPropContext(app, wid, iid, locid, level=LEVEL_DISPLAY)
+        ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_DISPLAY)
         localedesc = yield ctx.eval('desc')
         
         if ctx.linktargets:
@@ -433,7 +488,7 @@ def generate_update(app, conn, dirty):
         conn.focusdependencies.clear()
 
         focusdesc = False
-        specialflag = False
+        focusspecial = False
         
         focusobj = playstate.get('focus', None)
         
@@ -452,7 +507,7 @@ def generate_update(app, conn, dirty):
                     conn.focusdependencies.add( ('players', focusobj[1], 'desc') )
                     conn.focusdependencies.add( ('players', focusobj[1], 'name') )
             elif restype == 'selfdesc':
-                ctx = EvalPropContext(app, wid, iid, locid, level=LEVEL_DISPLAY)
+                ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_DISPLAY)
                 extratext = yield ctx.eval(focusobj[1], lookup=False)
                 if ctx.linktargets:
                     conn.focusactions.update(ctx.linktargets)
@@ -469,42 +524,12 @@ def generate_update(app, conn, dirty):
                                  player.get('pronoun', 'it'),
                                  player.get('desc', '...'),
                                  extratext]
-                    specialflag = True
-            elif restype == 'portal':
-                portid = focusobj[1]
-                extratext = None
-                if len(focusobj) >= 3:
-                    ctx = EvalPropContext(app, wid, iid, locid, level=LEVEL_DISPLAY)
-                    extratext = yield ctx.eval(focusobj[2], lookup=False)
-                    if ctx.linktargets:
-                        conn.focusactions.update(ctx.linktargets)
-                    if ctx.dependencies:
-                        conn.focusdependencies.update(ctx.dependencies)
-                portal = yield motor.Op(app.mongodb.portals.find_one,
-                                        {'_id':portid})
-                try:
-                    yield portal_in_scope(app, portal, conn.uid, wid)
-                    scopeerror = None
-                except ErrorMessageException as ex:
-                    scopeerror = '[%s]' % (ex,)
-                if scopeerror:
-                    focusdesc = scopeerror
-                else:
-                    ackey = 'port' + EvalPropContext.build_action_key()
-                    conn.focusactions[ackey] = ('portal', portid)
-                    ctx = EvalPropContext(app, portal['wid'], None, portal['locid'], level=LEVEL_FLAT)
-                    desttext = yield ctx.eval('portaldesc')
-                    if not desttext:
-                        desttext = 'The destination is hazy.'
-                    focusdesc = ['portal', ackey, desttext];
-                    if extratext:
-                        focusdesc.append(extratext)
-                    specialflag = True
+                    focusspecial = True
             elif restype == 'portlist':
                 plistid = focusobj[1]
                 extratext = None
                 if len(focusobj) >= 3:
-                    ctx = EvalPropContext(app, wid, iid, locid, level=LEVEL_DISPLAY)
+                    ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_DISPLAY)
                     extratext = yield ctx.eval(focusobj[2], lookup=False)
                     if ctx.linktargets:
                         conn.focusactions.update(ctx.linktargets)
@@ -533,19 +558,21 @@ def generate_update(app, conn, dirty):
                     focusdesc = ['portlist', subls];
                     if extratext:
                         focusdesc.append(extratext)
-                    specialflag = True
+                    focusspecial = True
             else:
                 focusdesc = '[Focus: %s]' % (focusobj,)
         else:
-            ctx = EvalPropContext(app, wid, iid, locid, level=LEVEL_DISPLAY)
+            ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_DISPSPECIAL)
             focusdesc = yield ctx.eval(playstate['focus'])
+            focusspecial = ctx.wasspecial
+            
             if ctx.linktargets:
                 conn.focusactions.update(ctx.linktargets)
             if ctx.dependencies:
                 conn.focusdependencies.update(ctx.dependencies)
 
         msg['focus'] = focusdesc
-        if specialflag:
+        if focusspecial:
             msg['focusspecial'] = True
     
     conn.write(msg)
@@ -685,13 +712,13 @@ def perform_action(app, task, conn, target):
         # Display an event.
         val = res.get('text', None)
         if val:
-            ctx = EvalPropContext(app, wid, iid, locid, level=LEVEL_MESSAGE)
+            ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_MESSAGE)
             newval = yield ctx.eval(val, lookup=False)
             task.write_event(conn.uid, newval)
         val = res.get('otext', None)
         if val:
             others = yield task.find_locale_players(notself=True)
-            ctx = EvalPropContext(app, wid, iid, locid, level=LEVEL_MESSAGE)
+            ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_MESSAGE)
             newval = yield ctx.eval(val, lookup=False)
             task.write_event(others, newval)
         return
@@ -699,7 +726,7 @@ def perform_action(app, task, conn, target):
     if restype == 'code':
         raise ErrorMessageException('Code events are not yet supported.') ###
     
-    if restype == 'text':
+    if restype in ('text', 'portal'):
         # Set focus to this symbol-name
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':conn.uid},
@@ -734,19 +761,6 @@ def perform_action(app, task, conn, target):
         others = yield task.find_locale_players(notself=True)
         if others:
             task.set_dirty(others, DIRTY_POPULACE)
-    elif restype == 'portal':
-        # Set focus to a portal object
-        portid = res.get('portid', None)
-        if not portid:
-            raise ErrorMessageException('Portal property has no portid')
-        obj = ['portal', portid]
-        porttext = res.get('text', None)
-        if porttext:
-            obj.append(porttext)
-        yield motor.Op(app.mongodb.playstate.update,
-                       {'_id':conn.uid},
-                       {'$set':{'focus':obj}})
-        task.set_dirty(conn.uid, DIRTY_FOCUS)
     elif restype == 'portlist':
         # Set focus to a portlist object
         plistid = res.get('plistid', None)
