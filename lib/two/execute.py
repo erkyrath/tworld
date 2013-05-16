@@ -132,6 +132,31 @@ class EvalPropContext(object):
             self.accum = []
             self.linktargets = {}
         
+        if depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'selfdesc':
+            assert self.accum is not None, 'EvalPropContext.accum should not be None here'
+            try:
+                extratext = None
+                val = res.get('text', None)
+                if val:
+                    # Look up the extra text in a separate context.
+                    ctx = EvalPropContext(self.app, self.wid, self.iid, self.locid, self.uid, level=LEVEL_DISPLAY)
+                    extratext = yield ctx.eval(val, lookup=False)
+                    self.updateacdepends(ctx)
+                player = yield motor.Op(self.app.mongodb.players.find_one,
+                                        {'_id':self.uid},
+                                        {'name':1, 'pronoun':1, 'desc':1})
+                if not player:
+                    return 'There is no such person.'
+                specres = ['selfdesc',
+                           player.get('name', '???'),
+                           player.get('pronoun', 'it'),
+                           player.get('desc', '...'),
+                           extratext]
+                self.wasspecial = True
+                return specres
+            except Exception as ex:
+                return '[Exception: %s]' % (ex,)
+                
         if depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'portal':
             assert self.accum is not None, 'EvalPropContext.accum should not be None here'
             try:
@@ -412,25 +437,6 @@ def render_focus(app, wid, iid, locid, conn, focusobj):
             conn.focusdependencies.add( ('players', focusobj[1], 'desc') )
             conn.focusdependencies.add( ('players', focusobj[1], 'name') )
             return (focusdesc, False)
-        
-        if restype == 'selfdesc':
-            ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_DISPLAY)
-            extratext = yield ctx.eval(focusobj[1], lookup=False)
-            if ctx.linktargets:
-                conn.focusactions.update(ctx.linktargets)
-            if ctx.dependencies:
-                conn.focusdependencies.update(ctx.dependencies)
-            player = yield motor.Op(app.mongodb.players.find_one,
-                                    {'_id':conn.uid},
-                                    {'name':1, 'pronoun':1, 'desc':1})
-            if not player:
-                return ('There is no such person.', False)
-            focusdesc = ['selfdesc',
-                         player.get('name', '???'),
-                         player.get('pronoun', 'it'),
-                         player.get('desc', '...'),
-                         extratext]
-            return (focusdesc, True)
         
         if restype == 'portal':
             lookup = False
@@ -740,7 +746,7 @@ def perform_action(app, task, conn, target):
     if restype == 'code':
         raise ErrorMessageException('Code events are not yet supported.') ###
     
-    if restype in ('text', 'portal', 'portlist'):
+    if restype in ('text', 'portal', 'portlist', 'selfdesc'):
         # Set focus to this symbol-name
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':conn.uid},
@@ -775,17 +781,6 @@ def perform_action(app, task, conn, target):
         others = yield task.find_locale_players(notself=True)
         if others:
             task.set_dirty(others, DIRTY_POPULACE)
-    elif restype == 'selfdesc':
-        # Set focus to the appearance editor
-        world = yield motor.Op(app.mongodb.worlds.find_one,
-                               {'_id':wid})
-        if not world or world['instancing'] != 'solo':
-            raise ErrorMessageException('Description editing is only permitted in a solo world.')
-        obj = ['selfdesc', res['text']]
-        yield motor.Op(app.mongodb.playstate.update,
-                       {'_id':conn.uid},
-                       {'$set':{'focus':obj}})
-        task.set_dirty(conn.uid, DIRTY_FOCUS)
     else:
         raise ErrorMessageException('Action invoked unsupported property type: %s' % (restype,))
     
