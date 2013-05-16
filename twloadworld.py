@@ -518,7 +518,6 @@ world.wid = wid
 # Check for existing portlists
 world.allportlists = list(db.portlists.find({'type':'world', 'wid':world.wid}))
 world.allportlists.sort(key = lambda x:x['_id'])
-print('### allportlists = %s' % (world.allportlists,))
 
 if opts.remove:
     if not args:
