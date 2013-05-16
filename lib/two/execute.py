@@ -390,6 +390,65 @@ def portal_description(app, portal, uid, uidiid=None):
         return None
 
 @tornado.gen.coroutine
+def render_focus(app, wid, iid, locid, conn, focusobj):
+    """The part of generate_update() that deals with focus.
+    Returns (focus, focusspecial).
+    """
+    if focusobj is None:
+        return (False, False)
+
+    lookup = True
+    
+    if type(focusobj) is list:
+        restype = focusobj[0]
+        
+        if restype == 'player':
+            player = yield motor.Op(app.mongodb.players.find_one,
+                                    {'_id':focusobj[1]},
+                                    {'name':1, 'desc':1})
+            if not player:
+                return ('There is no such person.', False)
+            focusdesc = '%s is %s' % (player.get('name', '???'), player.get('desc', '...'))
+            conn.focusdependencies.add( ('players', focusobj[1], 'desc') )
+            conn.focusdependencies.add( ('players', focusobj[1], 'name') )
+            return (focusdesc, False)
+        
+        if restype == 'selfdesc':
+            ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_DISPLAY)
+            extratext = yield ctx.eval(focusobj[1], lookup=False)
+            if ctx.linktargets:
+                conn.focusactions.update(ctx.linktargets)
+            if ctx.dependencies:
+                conn.focusdependencies.update(ctx.dependencies)
+            player = yield motor.Op(app.mongodb.players.find_one,
+                                    {'_id':conn.uid},
+                                    {'name':1, 'pronoun':1, 'desc':1})
+            if not player:
+                return ('There is no such person.', False)
+            focusdesc = ['selfdesc',
+                         player.get('name', '???'),
+                         player.get('pronoun', 'it'),
+                         player.get('desc', '...'),
+                         extratext]
+            return (focusdesc, True)
+        
+        if restype == 'portal':
+            lookup = False
+            focusobj = {'type':'portal', 'portid':focusobj[1]}
+            pass   # Fall through to EvalPropContext code below
+        else:
+            focusdesc = '[Focus: %s]' % (focusobj,)
+            return (focusdesc, False)
+
+    ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_DISPSPECIAL)
+    focusdesc = yield ctx.eval(focusobj, lookup=lookup)
+    if ctx.linktargets:
+        conn.focusactions.update(ctx.linktargets)
+    if ctx.dependencies:
+        conn.focusdependencies.update(ctx.dependencies)
+    return (focusdesc, ctx.wasspecial)
+
+@tornado.gen.coroutine
 def generate_update(app, conn, dirty):
     assert conn is not None, 'generate_update: conn is None'
     if not dirty:
@@ -523,55 +582,8 @@ def generate_update(app, conn, dirty):
         conn.focusactions.clear()
         conn.focusdependencies.clear()
 
-        focusdesc = False
-        focusspecial = False
-        
         focusobj = playstate.get('focus', None)
-        
-        if focusobj is None:
-            focusdesc = False
-        elif type(focusobj) is list:
-            restype = focusobj[0]
-            if restype == 'player':
-                player = yield motor.Op(app.mongodb.players.find_one,
-                                        {'_id':focusobj[1]},
-                                        {'name':1, 'desc':1})
-                if not player:
-                    focusdesc = 'There is no such person.'
-                else:
-                    focusdesc = '%s is %s' % (player.get('name', '???'), player.get('desc', '...'))
-                    conn.focusdependencies.add( ('players', focusobj[1], 'desc') )
-                    conn.focusdependencies.add( ('players', focusobj[1], 'name') )
-            elif restype == 'selfdesc':
-                ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_DISPLAY)
-                extratext = yield ctx.eval(focusobj[1], lookup=False)
-                if ctx.linktargets:
-                    conn.focusactions.update(ctx.linktargets)
-                if ctx.dependencies:
-                    conn.focusdependencies.update(ctx.dependencies)
-                player = yield motor.Op(app.mongodb.players.find_one,
-                                        {'_id':conn.uid},
-                                        {'name':1, 'pronoun':1, 'desc':1})
-                if not player:
-                    focusdesc = 'There is no such person.'
-                else:
-                    focusdesc = ['selfdesc',
-                                 player.get('name', '???'),
-                                 player.get('pronoun', 'it'),
-                                 player.get('desc', '...'),
-                                 extratext]
-                    focusspecial = True
-            else:
-                focusdesc = '[Focus: %s]' % (focusobj,)
-        else:
-            ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_DISPSPECIAL)
-            focusdesc = yield ctx.eval(playstate['focus'])
-            focusspecial = ctx.wasspecial
-            
-            if ctx.linktargets:
-                conn.focusactions.update(ctx.linktargets)
-            if ctx.dependencies:
-                conn.focusdependencies.update(ctx.dependencies)
+        (focusdesc, focusspecial) = yield render_focus(app, wid, iid, locid, conn, focusobj)
 
         msg['focus'] = focusdesc
         if focusspecial:
