@@ -295,6 +295,8 @@ function focuspane_set(desc, extrals)
 var focuspane_special_val = [];
 
 function focuspane_set_special(ls) {
+    /* ### This seriously neglects dependencies. */
+
     var type = '???';
     try {
         type = ls[0];
@@ -338,15 +340,26 @@ function focuspane_set_special(ls) {
             /* Note that extratext, if present, may be a full-fledged
                description. */
             var extrals = [];
-            var el = $('<ul>');
-            extrals.push(el);
-            for (var ix=0; ix<portlist.length; ix++) {
-                portal = portlist[ix];
-                var lel = $('<li>');
-                lel.text(portal.world + ' ' + NBSP + ' ');
-                var spel = $('<span>', {'class':'StyleEmph'}).text(portal.scope);
-                lel.append(spel);
-                el.append(lel);
+            if (!portlist.length) {
+                var el = $('<p>').text('The collection is empty.'); /* ###localize */
+                extrals.push(el);
+            }
+            else {
+                var el = $('<ul>');
+                extrals.push(el);
+                for (var ix=0; ix<portlist.length; ix++) {
+                    portal = portlist[ix];
+                    var lel = $('<li>');
+                    var ael = $('<a>', {href:'#'+portal.target});
+                    ael.text(portal.world);
+                    ael.on('click', {target:portal.target}, evhan_click_action);
+                    lel.append(ael);
+                    lel.append(' ' + NBSP + ' ');
+                    var spel = $('<span>', {'class':'StyleEmph'});
+                    spel.text('(created by ' + portal.creator + ')');
+                    lel.append(spel);
+                    el.append(lel);
+                }
             }
             focuspane_set(extratext, extrals);
             return;

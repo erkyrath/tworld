@@ -492,6 +492,9 @@ def generate_update(app, conn, dirty):
                     for portal in ls:
                         desc = yield portal_description(app, portal, conn.uid, uidiid=iid)
                         if desc:
+                            ackey = 'plist' + EvalPropContext.build_action_key()
+                            conn.focusactions[ackey] = ('portal', portal['_id']) ### no, focus-in!
+                            desc['target'] = ackey
                             subls.append(desc)
                     focusdesc = ['portlist', subls];
                     if extratext:
@@ -549,8 +552,26 @@ def perform_action(app, task, conn, target):
                                       {'_id':portid})
             if not portal:
                 raise ErrorMessageException('Portal not found.')
-            if portal['inwid'] != wid:
-                raise ErrorMessageException('You are not in this portal\'s world.')
+
+            # Check that the portal is accessible. Many cases.
+            if 'inwid' in portal:
+                # Directly in-place in the world.
+                if portal['inwid'] != wid:
+                    raise ErrorMessageException('You are not in this portal\'s world.')
+            elif 'plistid' in portal:
+                # In a portlist.
+                portlist = yield motor.Op(app.mongodb.portlists.find_one,
+                                          {'_id':portal['plistid']})
+                if not portlist:
+                    raise ErrorMessageException('Portal does not have a portlist.')
+                if portlist['type'] == 'pers':
+                    if portlist['uid'] != conn.uid:
+                        raise ErrorMessageException('Portal is not in your personal portlist.')
+                else:
+                    if portlist['wid'] != wid:
+                        raise ErrorMessageException('You are not in this portlist\'s world.')
+            else:
+                raise ErrorMessageException('Portal does not have a placement.')
 
             world = yield motor.Op(app.mongodb.worlds.find_one,
                                    {'_id':portal['wid']})
