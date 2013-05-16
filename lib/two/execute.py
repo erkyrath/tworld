@@ -160,6 +160,42 @@ class EvalPropContext(object):
             except Exception as ex:
                 return '[Exception: %s]' % (ex,)
 
+        if depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'portlist':
+            assert self.accum is not None, 'EvalPropContext.accum should not be None here'
+            try:
+                plistid = res.get('plistid', None)
+                extratext = None
+                val = res.get('text', None)
+                if val:
+                    # Look up the extra text in a separate context.
+                    ctx = EvalPropContext(self.app, self.wid, self.iid, self.locid, self.uid, level=LEVEL_DISPLAY)
+                    extratext = yield ctx.eval(val, lookup=False)
+                    self.updateacdepends(ctx)
+                portlist = yield motor.Op(self.app.mongodb.portlists.find_one,
+                                          {'_id':plistid})
+                if not portlist or portlist['wid'] != self.wid:
+                    raise ErrorMessageException('This portal list is not available.')
+                cursor = self.app.mongodb.portals.find({'plistid':plistid})
+                ls = []
+                while (yield cursor.fetch_next):
+                    portal = cursor.next_object()
+                    ls.append(portal)
+                cursor.close()
+                ls.sort(key=lambda portal:portal.get('listpos', 0))
+                subls = []
+                for portal in ls:
+                    desc = yield portal_description(self.app, portal, self.uid, uidiid=self.iid)
+                    if desc:
+                        ackey = 'plist' + EvalPropContext.build_action_key()
+                        self.linktargets[ackey] = ('focus', 'portal', portal['_id'], None)
+                        desc['target'] = ackey
+                        subls.append(desc)
+                specres = ['portlist', subls, extratext]
+                self.wasspecial = True
+                return specres
+            except Exception as ex:
+                return '[Exception: %s]' % (ex,)
+
         if not(objtype == 'text'
                and self.level in (LEVEL_MESSAGE, LEVEL_DISPLAY, LEVEL_DISPSPECIAL)):
             # For most cases, the type returned by the database is the
@@ -525,40 +561,6 @@ def generate_update(app, conn, dirty):
                                  player.get('desc', '...'),
                                  extratext]
                     focusspecial = True
-            elif restype == 'portlist':
-                plistid = focusobj[1]
-                extratext = None
-                if len(focusobj) >= 3:
-                    ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_DISPLAY)
-                    extratext = yield ctx.eval(focusobj[2], lookup=False)
-                    if ctx.linktargets:
-                        conn.focusactions.update(ctx.linktargets)
-                    if ctx.dependencies:
-                        conn.focusdependencies.update(ctx.dependencies)
-                portlist = yield motor.Op(app.mongodb.portlists.find_one,
-                                          {'_id':plistid})
-                if not portlist or portlist['wid'] != wid:
-                    focusdesc = '[This portal list is not available.]'
-                else:
-                    cursor = app.mongodb.portals.find({'plistid':plistid})
-                    ls = []
-                    while (yield cursor.fetch_next):
-                        portal = cursor.next_object()
-                        ls.append(portal)
-                    cursor.close()
-                    ls.sort(key=lambda portal:portal.get('listpos', 0))
-                    subls = []
-                    for portal in ls:
-                        desc = yield portal_description(app, portal, conn.uid, uidiid=iid)
-                        if desc:
-                            ackey = 'plist' + EvalPropContext.build_action_key()
-                            conn.focusactions[ackey] = ('plistel', plistid, portal['_id'])
-                            desc['target'] = ackey
-                            subls.append(desc)
-                    focusdesc = ['portlist', subls];
-                    if extratext:
-                        focusdesc.append(extratext)
-                    focusspecial = True
             else:
                 focusdesc = '[Focus: %s]' % (focusobj,)
         else:
@@ -607,8 +609,8 @@ def perform_action(app, task, conn, target):
             task.set_dirty(conn.uid, DIRTY_FOCUS)
             return
 
-        if restype == 'plistel':
-            obj = ['portal', target[2]]
+        if restype == 'focus':
+            obj = list(target[1:])
             yield motor.Op(app.mongodb.playstate.update,
                            {'_id':conn.uid},
                            {'$set':{'focus':obj}})
@@ -726,7 +728,7 @@ def perform_action(app, task, conn, target):
     if restype == 'code':
         raise ErrorMessageException('Code events are not yet supported.') ###
     
-    if restype in ('text', 'portal'):
+    if restype in ('text', 'portal', 'portlist'):
         # Set focus to this symbol-name
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':conn.uid},
@@ -761,19 +763,6 @@ def perform_action(app, task, conn, target):
         others = yield task.find_locale_players(notself=True)
         if others:
             task.set_dirty(others, DIRTY_POPULACE)
-    elif restype == 'portlist':
-        # Set focus to a portlist object
-        plistid = res.get('plistid', None)
-        if not plistid:
-            raise ErrorMessageException('Portlist property has no plistid')
-        obj = ['portlist', plistid]
-        porttext = res.get('text', None)
-        if porttext:
-            obj.append(porttext)
-        yield motor.Op(app.mongodb.playstate.update,
-                       {'_id':conn.uid},
-                       {'$set':{'focus':obj}})
-        task.set_dirty(conn.uid, DIRTY_FOCUS)
     elif restype == 'selfdesc':
         # Set focus to the appearance editor
         world = yield motor.Op(app.mongodb.worlds.find_one,
