@@ -318,7 +318,7 @@ function focuspane_set_special(ls) {
             /* Note that extratext, if present, may be a full-fledged
                description. */
             var extrals = [];
-            el = $('<p>');
+            var el = $('<p>');
             el.text(desttext);
             extrals.push(el);
             var ael = $('<a>', {href:'#'+target});
@@ -327,6 +327,27 @@ function focuspane_set_special(ls) {
             el = $('<p>');
             el.append(ael);
             extrals.push(el);
+            focuspane_set(extratext, extrals);
+            return;
+        }
+        if (type == 'portlist') {
+            var portlist = ls[1];
+            var extratext = null;
+            if (ls.length >= 3)
+                extratext = ls[2];
+            /* Note that extratext, if present, may be a full-fledged
+               description. */
+            var extrals = [];
+            var el = $('<ul>');
+            extrals.push(el);
+            for (var ix=0; ix<portlist.length; ix++) {
+                portal = portlist[ix];
+                var lel = $('<li>');
+                lel.text(portal.world + ' ' + NBSP + ' ');
+                var spel = $('<span>', {'class':'StyleEmph'}).text(portal.scope);
+                lel.append(spel);
+                el.append(lel);
+            }
             focuspane_set(extratext, extrals);
             return;
         }

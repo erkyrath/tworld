@@ -198,6 +198,78 @@ def find_symbol(app, wid, iid, locid, key, dependencies=None):
 
 
 @tornado.gen.coroutine
+def portal_description(app, portal, uid, uidiid=None):
+    """Return a (JSONable) object describing a portal in human-readable
+    strings. Returns None if a problem arises.
+
+    The argument may be a portal object or an ObjectId referring to one.
+    """
+    try:
+        if isinstance(portal, ObjectId):
+            portal = yield motor.Op(app.mongodb.portals.find_one,
+                                    {'_id':portal})
+        if not portal:
+            return None
+        
+        world = yield motor.Op(app.mongodb.worlds.find_one,
+                               {'_id':portal['wid']})
+        if not world:
+            return None
+        worldname = world.get('name', '???')
+        
+        creator = yield motor.Op(app.mongodb.players.find_one,
+                                 {'_id':world['creator']}, {'name':1})
+        if creator:
+            creatorname = creator.get('name', '???')
+        else:
+            creatorname = '???'
+            
+        if portal['scid'] == 'personal' or world['instancing'] == 'solo':
+            player = yield motor.Op(app.mongodb.players.find_one,
+                                    {'_id':uid},
+                                    {'scid':1})
+            scope = yield motor.Op(app.mongodb.scopes.find_one,
+                                   {'_id':player['scid']})
+        elif portal['scid'] == 'global' or world['instancing'] == 'shared':
+            config = yield motor.Op(app.mongodb.config.find_one,
+                                    {'key':'globalscopeid'})
+            scope = yield motor.Op(app.mongodb.scopes.find_one,
+                                   {'_id':config['val']})
+        elif portal['scid'] == 'same':
+            if not uidiid:
+                playstate = yield motor.Op(app.mongodb.playstate.find_one,
+                                           {'_id':uid},
+                                           {'iid':1})
+                uidiid = playstate['iid']
+            instance = yield motor.Op(app.mongodb.instances.find_one,
+                                       {'_id':uidiid},
+                                       {'scid':1})
+            scope = yield motor.Op(app.mongodb.scopes.find_one,
+                                   {'_id':instance['scid']})
+        else:
+            scope = yield motor.Op(app.mongodb.scopes.find_one,
+                                   {'_id':portal['scid']})
+
+        if scope['type'] == 'glob':
+            scopename = '(Global instance)'
+        elif scope['type'] == 'pers':
+        ### Probably leave off the name if it's you
+            scopeowner = yield motor.Op(app.mongodb.players.find_one,
+                                        {'_id':scope['uid']},
+                                        {'name':1})
+            scopename = '(Personal instance: %s)' % (scopeowner['name'],)
+        elif scope['type'] == 'grp':
+            scopename = '(Group: %s)' % (scope['group'],)
+        else:
+            scopename = '???'
+
+        return {'world':worldname, 'scope':scopename, 'creator':creatorname}
+    
+    except Exception as ex:
+        app.log.warning('portal_description failed: %s', ex)
+        return None
+
+@tornado.gen.coroutine
 def generate_update(app, conn, dirty):
     assert conn is not None, 'generate_update: conn is None'
     if not dirty:
@@ -391,6 +463,37 @@ def generate_update(app, conn, dirty):
                     if not desttext:
                         desttext = 'The destination is hazy.'
                     focusdesc = ['portal', ackey, desttext];
+                    if extratext:
+                        focusdesc.append(extratext)
+                    specialflag = True
+            elif restype == 'portlist':
+                plistid = focusobj[1]
+                extratext = None
+                if len(focusobj) >= 3:
+                    ctx = EvalPropContext(app, wid, iid, locid, level=LEVEL_DISPLAY)
+                    extratext = yield ctx.eval(focusobj[2], lookup=False)
+                    if ctx.linktargets:
+                        conn.focusactions.update(ctx.linktargets)
+                    if ctx.dependencies:
+                        conn.focusdependencies.update(ctx.dependencies)
+                portlist = yield motor.Op(app.mongodb.portlists.find_one,
+                                          {'_id':plistid})
+                if not portlist or portlist['wid'] != wid:
+                    focusdesc = '[This portal list is not available.]'
+                else:
+                    cursor = app.mongodb.portals.find({'plistid':plistid})
+                    ls = []
+                    while (yield cursor.fetch_next):
+                        portal = cursor.next_object()
+                        ls.append(portal)
+                    cursor.close()
+                    ls.sort(key=lambda portal:portal.get('listpos', 0))
+                    subls = []
+                    for portal in ls:
+                        desc = yield portal_description(app, portal, conn.uid, uidiid=iid)
+                        if desc:
+                            subls.append(desc)
+                    focusdesc = ['portlist', subls];
                     if extratext:
                         focusdesc.append(extratext)
                     specialflag = True
@@ -591,6 +694,19 @@ def perform_action(app, task, conn, target):
         if not portid:
             raise ErrorMessageException('Portal property has no portid')
         obj = ['portal', portid]
+        porttext = res.get('text', None)
+        if porttext:
+            obj.append(porttext)
+        yield motor.Op(app.mongodb.playstate.update,
+                       {'_id':conn.uid},
+                       {'$set':{'focus':obj}})
+        task.set_dirty(conn.uid, DIRTY_FOCUS)
+    elif restype == 'portlist':
+        # Set focus to a portlist object
+        plistid = res.get('plistid', None)
+        if not plistid:
+            raise ErrorMessageException('Portlist property has no plistid')
+        obj = ['portlist', plistid]
         porttext = res.get('text', None)
         if porttext:
             obj.append(porttext)
