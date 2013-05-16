@@ -116,8 +116,10 @@ class EvalPropContext(object):
         and linktargets. Lower-level calls use the existing ones.
         """
         if lookup:
+            origkey = key
             res = yield find_symbol(self.app, self.wid, self.iid, self.locid, key, dependencies=self.dependencies)
         else:
+            origkey = None
             if type(key) is dict:
                 res = key
             else:
@@ -161,6 +163,11 @@ class EvalPropContext(object):
             assert self.accum is not None, 'EvalPropContext.accum should not be None here'
             try:
                 portid = res.get('portid', None)
+                backkey = None
+                backto = res.get('backto', None)
+                if backto:
+                    backkey = 'back' + EvalPropContext.build_action_key()
+                    self.linktargets[backkey] = backto
                 extratext = None
                 val = res.get('text', None)
                 if val:
@@ -179,7 +186,7 @@ class EvalPropContext(object):
                 self.updateacdepends(ctx)
                 if not desttext:
                     desttext = 'The destination is hazy.' ###localize
-                specres = ['portal', ackey, desttext, extratext]
+                specres = ['portal', ackey, desttext, backkey, extratext]
                 self.wasspecial = True
                 return specres
             except Exception as ex:
@@ -212,7 +219,7 @@ class EvalPropContext(object):
                     desc = yield portal_description(self.app, portal, self.uid, uidiid=self.iid)
                     if desc:
                         ackey = 'plist' + EvalPropContext.build_action_key()
-                        self.linktargets[ackey] = ('focus', 'portal', portal['_id'], None)
+                        self.linktargets[ackey] = ('focus', 'portal', portal['_id'], origkey, None)
                         desc['target'] = ackey
                         subls.append(desc)
                 specres = ['portlist', subls, extratext]
@@ -440,7 +447,10 @@ def render_focus(app, wid, iid, locid, conn, focusobj):
         
         if restype == 'portal':
             lookup = False
-            focusobj = {'type':'portal', 'portid':focusobj[1]}
+            arr = focusobj
+            focusobj = {'type':'portal', 'portid':arr[1]}
+            if len(arr) >= 3:
+                focusobj['backto'] = arr[2]
             pass   # Fall through to EvalPropContext code below
         else:
             focusdesc = '[Focus: %s]' % (focusobj,)

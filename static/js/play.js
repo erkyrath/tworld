@@ -314,12 +314,19 @@ function focuspane_set_special(ls) {
         if (type == 'portal') {
             var target = ls[1];
             var desttext = ls[2];
-            var extratext = null;
-            if (ls.length >= 4)
-                extratext = ls[3];
+            var backtarget = ls[3];
+            var extratext = ls[4];
             /* Note that extratext, if present, may be a full-fledged
                description. */
             var extrals = [];
+            if (backtarget) {
+                var ael = $('<a>', {href:'#'+backtarget});
+                ael.text('(Back to the collection.)'); /* ###localize */
+                ael.on('click', {target:backtarget}, evhan_click_action);
+                var el = $('<p>');
+                el.append(ael);
+                extrals.push(el);
+            }
             var el = $('<p>');
             el.text(desttext);
             extrals.push(el);
@@ -544,7 +551,7 @@ var command_table = {
    this stuff interactively, and they deserve explicit bad-format warnings!)
 */
 function parse_description(desc) {
-    if (desc === null)
+    if (desc === null || desc === undefined)
         return [];
 
     if (!jQuery.isArray(desc))
@@ -983,7 +990,7 @@ function evhan_websocket_close() {
 }
 
 function evhan_websocket_message(ev) {
-    console.log('### message: ' + ev.data);
+    console.log(('### message: ' + ev.data).slice(0,100));
     try {
         var obj = JSON.parse(ev.data);
         var cmd = obj.cmd;
