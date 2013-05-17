@@ -157,6 +157,34 @@ class SessionMgr(object):
         yield motor.Op(self.app.mongodb.players.update,
                        {'_id':uid},
                        {'$set': {'plistid': plistid}})
+
+        # Create the first entry for the portlist.
+        try:
+            res = yield motor.Op(self.app.mongodb.config.find_one, {'key':'firstportal'})
+            firstportal = None
+            if res:
+                firstportal = res['val']
+            if not firstportal:
+                res = yield motor.Op(self.app.mongodb.config.find_one, {'key':'startworldid'})
+                portwid = res['val']
+                res = yield motor.Op(self.app.mongodb.config.find_one, {'key':'startworldloc'})
+                portlockey = res['val']
+                res = yield motor.Op(self.app.mongodb.locations.find_one, {'wid':portwid, 'key':portlockey})
+                portlocid = res['_id']
+                portscid = scid  # from above
+            else:
+                pass ###
+            if not (portwid and portscid and portlocid):
+                raise Exception('Unable to define portal')
+
+            portal = {
+                'plistid':plistid, 'listpos':1.0,
+                'wid':portwid, 'scid':portscid, 'locid':portlocid,
+                }
+            yield motor.Op(self.app.mongodb.portals.insert, portal)
+            
+        except Exception as ex:
+            self.app.twlog.error('Error creating player\'s first portal: %s', ex)
         
         # Create a sign-in session too, and we're done.
         sessionid = yield tornado.gen.Task(self.create_session, handler, uid, email, name)

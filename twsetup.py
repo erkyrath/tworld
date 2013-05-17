@@ -50,6 +50,7 @@ initial_config = {
         'pronoun': 'it',
         },
     'startworldloc': 'start',
+    'firstportal': None,
     }
 
 # All the indexes we need. (Except _id, which comes free.)
