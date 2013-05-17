@@ -350,7 +350,7 @@ def portal_in_scope(app, portal, uid, wid):
         raise ErrorMessageException('Portal does not have a placement.')
     
 @tornado.gen.coroutine
-def portal_description(app, portal, uid, uidiid=None):
+def portal_description(app, portal, uid, uidiid=None, location=False):
     """Return a (JSONable) object describing a portal in human-readable
     strings. Returns None if a problem arises.
 
@@ -415,7 +415,18 @@ def portal_description(app, portal, uid, uidiid=None):
         else:
             scopename = '???'
 
-        return {'world':worldname, 'scope':scopename, 'creator':creatorname}
+        res = {'world':worldname, 'scope':scopename, 'creator':creatorname}
+
+        if location:
+            loc = yield motor.Op(app.mongodb.locations.find_one,
+                                 {'_id':portal['locid']})
+            if loc:
+                locname = loc.get('name', '???')
+            else:
+                locname = '???'
+            res['location'] = locname
+
+        return res
     
     except Exception as ex:
         app.log.warning('portal_description failed: %s', ex)
