@@ -348,7 +348,7 @@ h3.ToolTitle {
 }
 
 .ToolList li {
-  margin-left: 15px;
+  padding-left: 15px;
   text-indent: -15px;
 }
 
@@ -362,7 +362,7 @@ h3.ToolTitle {
 }
 
 .ToolListSelected {
-  background: yellow; /*###*/
+  background: #FFA;
 }
 
 .ToolGloss {

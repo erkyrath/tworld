@@ -361,7 +361,10 @@ function toolpane_plist_update() {
         el.append($('<div>', {'class':'ToolListSub'}).text(portal.location));
 
         /* Click on entry to select. */
-        el.on('click', {portid:portal.portid}, function(ev) { ev.preventDefault(); toolpane_plist_select(ev.data.portid); } );
+        el.on('click', {portid:portal.portid}, function(ev) {
+                ev.preventDefault();
+                toolpane_plist_select(ev.data.portid, true);
+            } );
 
         portal.el = el;
         seg.map[portal.portid] = portal;
@@ -380,20 +383,24 @@ function toolpane_plist_update() {
     }
 }
 
-function toolpane_plist_select(portid) {
+function toolpane_plist_select(portid, useasfocus) {
     var seg = toolsegments['plist'];
     
-    if (portid == seg.selection)
-        portid = null;
-
     var portal = seg.map[seg.selection];
     if (portal) {
         portal.el.removeClass('ToolListSelected');
     }
     seg.selection = portid;
     portal = seg.map[seg.selection];
-    if (portal) {
-        portal.el.addClass('ToolListSelected');
+    if (!portal) {
+        seg.selection = null;
+        return;
+    }
+
+    portal.el.addClass('ToolListSelected');
+
+    if (useasfocus) {
+        websocket_send_json({ cmd:'plistselect', portid:portid });
     }
 }
 
