@@ -208,6 +208,8 @@ class Task(object):
                 # Newly-established connection. Only 'playeropen' will be
                 # accepted. (Another twwcid case; we'll have to sneak the
                 # stream in through the object.)
+                # (It's also possible that the connection closed since we
+                # queued this, in which case we still reject.)
                 if not cmd.preconnection:
                     raise ErrorMessageException('Tworld has not yet registered this connection.')
                 assert cmd.name=='playeropen', 'Command not playeropen should have already been rejected'

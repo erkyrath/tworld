@@ -102,6 +102,10 @@ def define_commands():
 
     @command('tovoid', isserver=True, doeswrite=True)
     def cmd_tovoid(app, task, cmd, stream):
+        # If portto is None, we'll wind up porting to the player's panic
+        # location.
+        portto = getattr(cmd, 'portto', None)
+        
         task.write_event(cmd.uid, 'The world fades away.') ###localize
         others = yield task.find_locale_players(uid=cmd.uid, notself=True)
         if others:
@@ -113,7 +117,8 @@ def define_commands():
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':cmd.uid},
                        {'$set':{'focus':None, 'iid':None, 'locid':None,
-                                'portto':None, 'lastmoved':twcommon.misc.now()}})
+                                'portto':portto,
+                                'lastmoved':twcommon.misc.now()}})
         task.set_dirty(cmd.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_WORLD | DIRTY_POPULACE)
         task.set_data_change( ('playstate', cmd.uid, 'iid') )
         task.set_data_change( ('playstate', cmd.uid, 'locid') )
@@ -326,6 +331,10 @@ def define_commands():
     def cmd_meta_panic(app, task, cmd, conn):
         app.queue_command({'cmd':'tovoid', 'uid':conn.uid, 'portin':True})
 
+    @command('meta_panicstart')
+    def cmd_meta_panicstart(app, task, cmd, conn):
+        app.queue_command({'cmd':'portstart'}, connid=task.connid, twwcid=task.twwcid)
+
     @command('meta_holler')
     def cmd_meta_holler(app, task, cmd, conn):
         ### admin only!
@@ -333,6 +342,28 @@ def define_commands():
         for stream in app.webconns.all():
             stream.write(wcproto.message(0, {'cmd':'messageall', 'text':val}))
 
+    @command('portstart', doeswrite=True)
+    def cmd_portstart(app, task, cmd, conn):
+        # Fling the player back to the start world. (Not necessarily the
+        # same as a panic or initial login!)
+        player = yield motor.Op(app.mongodb.players.find_one,
+                                {'_id':conn.uid},
+                                {'scid':1})
+        res = yield motor.Op(app.mongodb.config.find_one,
+                             {'key':'startworldloc'})
+        lockey = res['val']
+        res = yield motor.Op(app.mongodb.config.find_one,
+                             {'key':'startworldid'})
+        newwid = res['val']
+        newscid = player['scid']
+        res = yield motor.Op(app.mongodb.locations.find_one,
+                             {'wid':newwid, 'key':lockey})
+        newlocid = res['_id']
+        
+        app.queue_command({'cmd':'tovoid', 'uid':conn.uid, 'portin':True,
+                           'portto':{'wid':newwid, 'scid':newscid, 'locid':newlocid}})
+        
+        
     @command('selfdesc', doeswrite=True)
     def cmd_selfdesc(app, task, cmd, conn):
         if getattr(cmd, 'pronoun', None):
