@@ -331,12 +331,15 @@ function toolpane_plist_update() {
     var seg = toolsegments['plist'];
     var el;
 
+    seg.listel.empty();
+
     if (!seg.list.length) {
-        seg.listel.empty();
         el = $('<li>', {'class':'ToolListDimmed'}).text('(empty)');
         seg.listel.append(el);
         return;
     }
+
+    /*###*/
 }
 
 function localepane_set_locale(desc, title) {
@@ -690,6 +693,18 @@ function cmd_update(obj) {
     }
 }
 
+function cmd_updateplist(obj) {
+    var seg = toolsegments['plist'];
+    seg.list.length = 0;
+
+    if (obj.plist) {
+        for (var ix=0; ix<obj.plist.length; ix++)
+            seg.list.push(obj.plist[ix]);
+    }
+
+    toolpane_plist_update();
+}
+
 function cmd_clearfocus(obj) {
     /* Same as update { focus:false }, really */
     focuspane_clear();
@@ -719,6 +734,7 @@ function cmd_extendcookie(obj) {
 var command_table = {
     event: cmd_event,
     update: cmd_update,
+    updateplist: cmd_updateplist,
     clearfocus: cmd_clearfocus,
     message: cmd_message,
     error: cmd_error,
@@ -1188,6 +1204,7 @@ function evhan_websocket_message(ev) {
     func = command_table[cmd];
     if (!func) {
         console.log('command not understood: ' + cmd);
+        return;
     }
 
     func(obj);

@@ -64,7 +64,7 @@ def define_commands():
                 continue
             conn = app.playconns.add(connobj.connid, connobj.uid, connobj.email, stream)
             stream.write(wcproto.message(0, {'cmd':'playerok', 'connid':conn.connid}))
-            app.queue_command({'cmd':'refreshconn', 'connid':conn.connid})
+            app.queue_command({'cmd':'connrefreshall', 'connid':conn.connid})
             app.log.info('Player %s has reconnected (uid %s)', conn.email, conn.uid)
             # But don't queue a portin command, because people are no more
             # likely to be in the void than usual.
@@ -124,13 +124,49 @@ def define_commands():
     def cmd_logplayerconntable(app, task, cmd, stream):
         app.playconns.dumplog()
         
-    @command('refreshconn', isserver=True, doeswrite=True)
-    def cmd_refreshconn(app, task, cmd, stream):
+    @command('connrefreshall', isserver=True, doeswrite=True)
+    def cmd_connrefreshall(app, task, cmd, stream):
         # Refresh one connection (not all the player's connections!)
-        ### Probably oughta be a player command, not a server command.
         conn = app.playconns.get(cmd.connid)
+        if not conn:
+            return
         task.set_dirty(conn, DIRTY_ALL)
+        app.queue_command({'cmd':'connupdateplist', 'connid':cmd.connid})
+        ### probably queue a connupdatefriends, too
     
+    @command('connupdateplist', isserver=True)
+    def cmd_connupdateplist(app, task, cmd, stream):
+        # Re-send the player's portlist to one connection.
+        conn = app.playconns.get(cmd.connid)
+        if not conn:
+            return
+        player = yield motor.Op(app.mongodb.players.find_one,
+                                {'_id':conn.uid},
+                                {'plistid':1})
+        if not player:
+            return
+        playstate = yield motor.Op(app.mongodb.playstate.find_one,
+                                   {'_id':conn.uid},
+                                   {'iid':1})
+        if not playstate:
+            return
+        plistid = player['plistid']
+        iid = playstate['iid']
+        cursor = app.mongodb.portals.find({'plistid':plistid})
+        ls = []
+        while (yield cursor.fetch_next):
+            portal = cursor.next_object()
+            ls.append(portal)
+        cursor.close()
+        ls.sort(key=lambda portal:portal.get('listpos', 0))
+        subls = []
+        for portal in ls:
+            desc = yield two.execute.portal_description(app, portal, conn.uid, uidiid=iid)
+            if desc:
+                subls.append(desc)
+        app.log.info('### sending plist update: %s', subls)
+        conn.write({'cmd':'updateplist', 'plist':subls})
+        
     @command('playeropen', noneedmongo=True, preconnection=True)
     def cmd_playeropen(app, task, cmd, conn):
         assert conn is None, 'playeropen command with connection not None'
@@ -146,7 +182,7 @@ def define_commands():
             
         conn = app.playconns.add(connid, cmd.uid, cmd.email, cmd._stream)
         cmd._stream.write(wcproto.message(0, {'cmd':'playerok', 'connid':connid}))
-        app.queue_command({'cmd':'refreshconn', 'connid':connid})
+        app.queue_command({'cmd':'connrefreshall', 'connid':connid})
         app.log.info('Player %s has connected (uid %s)', conn.email, conn.uid)
         # If the player is in the void, put them somewhere.
         app.queue_command({'cmd':'portin', 'uid':conn.uid})
@@ -259,7 +295,7 @@ def define_commands():
     @command('meta_refresh')
     def cmd_meta_refresh(app, task, cmd, conn):
         conn.write({'cmd':'message', 'text':'Refreshing display...'})
-        app.queue_command({'cmd':'refreshconn', 'connid':conn.connid})
+        app.queue_command({'cmd':'connrefreshall', 'connid':conn.connid})
         
     @command('meta_actionmaps')
     def cmd_meta_actionmaps(app, task, cmd, conn):
