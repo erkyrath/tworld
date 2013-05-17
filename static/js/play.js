@@ -360,6 +360,9 @@ function toolpane_plist_update() {
         el.append($('<span>', {'class':'ToolGloss'}).text(portal.scope));
         el.append($('<div>', {'class':'ToolListSub'}).text(portal.location));
 
+        /* Click on entry to select. */
+        el.on('click', {portid:portal.portid}, function(ev) { ev.preventDefault(); toolpane_plist_select(ev.data.portid); } );
+
         portal.el = el;
         seg.map[portal.portid] = portal;
         el.data('portid', portal.portid);
