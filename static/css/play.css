@@ -257,12 +257,14 @@
 }
 
 .ToolSegment {
+  clear: both;
   border-top: 1px solid #FFF;
   border-bottom: 1px solid #BBB;
   padding: 0.25em 0px;
 }
 
 .ToolFooter {
+  clear: both;
   border-top: 1px solid #FFF;
   height: 10px;
 }
@@ -278,14 +280,15 @@
 .ToolControl {
   background: #EED;
   width: 1.2em;
-  height: 1em;
+  height: 1.1em;
   color: #884;
   font-family: fixed;
   font-size: 1.2em;
-  margin-top: 0.25em;
+  margin-top: 0.15em;
   text-align: center;
   cursor: pointer;
   border-radius: 4px;
+  border: 1px solid #CCA;
 }
 
 .ToolControl:hover {
