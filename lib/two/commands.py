@@ -166,8 +166,10 @@ def define_commands():
         ls.sort(key=lambda portal:portal.get('listpos', 0))
         subls = []
         for portal in ls:
+            ### short-scope-name flag?
             desc = yield two.execute.portal_description(app, portal, conn.uid, uidiid=iid, location=True)
             if desc:
+                desc['portid'] = str(portal['_id'])
                 subls.append(desc)
         app.log.info('### sending plist update: %s', subls)
         conn.write({'cmd':'updateplist', 'plist':subls})

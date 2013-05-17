@@ -361,6 +361,10 @@ h3.ToolTitle {
   color: #888;
 }
 
+.ToolListSelected {
+  background: yellow; /*###*/
+}
+
 .ToolGloss {
   font-size: 0.75em;
   font-style: italic;

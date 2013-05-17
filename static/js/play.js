@@ -323,6 +323,8 @@ function toolpane_fill_pane_plist(seg) {
     seg.bodyel.append(listel);
 
     seg.list = [];
+    seg.map = {}; /* maps portid to portal object */
+    seg.selection = null;
 
     toolpane_plist_update();
 
@@ -340,14 +342,39 @@ function toolpane_plist_update() {
     var el;
 
     seg.listel.empty();
+    seg.map = {};
 
     if (!seg.list.length) {
         el = $('<li>', {'class':'ToolListDimmed'}).text('(empty)');
         seg.listel.append(el);
+        seg.selection = null;
         return;
     }
 
-    /*###*/
+    for (var ix=0; ix<seg.list.length; ix++) {
+        var portal = seg.list[ix];
+
+        el = $('<li>');
+        el.append($('<span>').text(portal.world));
+        el.append(' ');
+        el.append($('<span>', {'class':'ToolGloss'}).text(portal.scope));
+        el.append($('<div>', {'class':'ToolListSub'}).text(portal.location));
+
+        portal.el = el;
+        seg.map[portal.portid] = portal;
+        el.data('portid', portal.portid);
+        seg.listel.append(el);
+    }
+
+    if (seg.selection) {
+        var portal = seg.map[seg.selection];
+        if (portal) {
+            portal.el.addClass('ToolListSelected');
+        }
+    }
+    else {
+        seg.selection = null;
+    }
 }
 
 function localepane_set_locale(desc, title) {
@@ -517,7 +544,7 @@ function focuspane_set_special(ls) {
             var extrals = [];
             if (backtarget) {
                 var ael = $('<a>', {href:'#'+backtarget});
-                ael.text('(Back to the collection.)'); /* ###localize */
+                ael.text('(Back to the collection)'); /* ###localize */
                 ael.on('click', {target:backtarget}, evhan_click_action);
                 var el = $('<p>');
                 el.append(ael);
