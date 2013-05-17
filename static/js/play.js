@@ -54,6 +54,8 @@ function build_page_structure() {
     var tooloutline = $('<div>', { 'class': 'ToolOutline' });
     var toolheader = $('<div>', { 'class': 'ToolTitleBar' });
     tooloutline.append(toolheader);
+    toolpane_build_segment('plist', true, true);
+    tooloutline.append(toolsegments['plist'].segel);
     toolpane_build_segment('prefs', false, true);
     tooloutline.append(toolsegments['prefs'].segel);
     tooloutline.append($('<div>', { 'class': 'ToolFooter' }));
@@ -251,10 +253,12 @@ function toolpane_build_segment(key, hasmenu, noinsert) {
 
     if (key == 'prefs')
         toolpane_fill_pane_prefs(seg);
+    else if (key == 'plist')
+        toolpane_fill_pane_plist(seg);
     else
         console.log('Unrecognized toolpane segment: ' + key);
 
-    leftbutel.on('click', {key:'prefs'}, toolpane_toggle_min);
+    leftbutel.on('click', {key:key}, toolpane_toggle_min);
 
     if (!noinsert) {
         /*### slide into the toolcol, above the footer. */
@@ -309,6 +313,30 @@ function toolpane_fill_pane_prefs(seg) {
     var smoothscrollbox = $('<input>', {'class':'CheckboxRight', 'type':'checkbox'});
     el.append(smoothscrollbox);
     seg.smoothscrollbox = smoothscrollbox;
+}
+
+function toolpane_fill_pane_plist(seg) {
+    seg.titleel.text('Portals'); /*###localize */
+
+    var listel = $('<ul>', {'class':'ToolList'});
+    seg.listel = listel;
+    seg.bodyel.append(listel);
+
+    seg.list = [];
+
+    toolpane_plist_update();
+}
+
+function toolpane_plist_update() {
+    var seg = toolsegments['plist'];
+    var el;
+
+    if (!seg.list.length) {
+        seg.listel.empty();
+        el = $('<li>', {'class':'ToolListDimmed'}).text('(empty)');
+        seg.listel.append(el);
+        return;
+    }
 }
 
 function localepane_set_locale(desc, title) {
