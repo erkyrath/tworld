@@ -325,6 +325,14 @@ function toolpane_fill_pane_plist(seg) {
     seg.list = [];
 
     toolpane_plist_update();
+
+    seg.rightbutel.contextMenu('popup_menu', 
+        [{ text:'Go Straight Home', click: function() {
+                    websocket_send_json({ cmd:'portstart' });
+                } }],
+        { leftClick: true,
+                position: { my:'right top', at:'right bottom', of:seg.rightbutel } } );
+
 }
 
 function toolpane_plist_update() {

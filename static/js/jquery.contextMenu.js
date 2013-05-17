@@ -35,11 +35,12 @@
       hideMenu();
     });
 
-    $.each(actions, function(me, itemOptions) {
+    $.each(actions, function(index, itemOptions) {
       if (itemOptions.link) {
         var link = itemOptions.link;
       } else {
-        var link = '<a href="#">'+me+'</a>';
+        var text = itemOptions.text; /* --ZARF */
+        var link = '<a href="#">'+text+'</a>';
       }
 
       var menuItem = $('<li>' + link + '</li>');
