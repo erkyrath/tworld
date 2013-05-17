@@ -377,6 +377,23 @@ function toolpane_plist_update() {
     }
 }
 
+function toolpane_plist_select(portid) {
+    var seg = toolsegments['plist'];
+    
+    if (portid == seg.selection)
+        portid = null;
+
+    var portal = seg.map[seg.selection];
+    if (portal) {
+        portal.el.removeClass('ToolListSelected');
+    }
+    seg.selection = portid;
+    portal = seg.map[seg.selection];
+    if (portal) {
+        portal.el.addClass('ToolListSelected');
+    }
+}
+
 function localepane_set_locale(desc, title) {
     var localeel = $('#localepane_locale');
     localeel.empty();
