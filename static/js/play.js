@@ -274,14 +274,18 @@ function toolpane_toggle_min(ev) {
     var seg = toolsegments[key];
 
     if (uiprefs[prefkey]) {
+        /* Open up */
+        if (seg.openhook)
+            seg.openhook(seg);
         uiprefs[prefkey] = false;
         seg.bodyel.slideDown(200);
-        seg.leftbutel.text('\u25BE');
+        seg.leftbutel.text('\u25BE'); /* down pointer */
     }
     else {
+        /* Minimize */
         uiprefs[prefkey] = true;
         seg.bodyel.slideUp(200);
-        seg.leftbutel.text('\u25B8');
+        seg.leftbutel.text('\u25B8'); /* right pointer */
     }
     note_uipref_changed(prefkey);
 }
@@ -327,6 +331,12 @@ function toolpane_fill_pane_plist(seg) {
     seg.selection = null;
 
     toolpane_plist_update();
+
+    /* Clear selection when opening the segment. */
+    seg.openhook = function(seg) { toolpane_plist_select(null); };
+
+    /* Click on the segment title to clear selection. */
+    seg.titleel.on('click', seg.openhook);
 
     seg.rightbutel.contextMenu('popup_menu', 
         [{ text:'Go Straight Home', click: function() {
