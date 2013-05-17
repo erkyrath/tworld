@@ -6,6 +6,7 @@ var everconnected = false;
 /* Default values for all the UI preferences. These will be overridden by
    player preferences. */
 var uiprefs = {
+    toolseg_min_prefs: true,
     leftright_percent: 75,
     updown_percent: 70,
     font_size: 100,
@@ -217,35 +218,70 @@ function toolpane_build_segment(key, hasmenu, noinsert) {
     var seg = { key:key };
     toolsegments[key] = seg;
 
+    var isclosed = uiprefs['toolseg_min_'+key];
+
     /* Build the DOM elements. */
     var segel = $('<div>', {'class':'ToolSegment'});
     var leftbutel = $('<div>', {'class':'ToolControl ToolControlLeft',
                                 'title':'Open/close this section'});
-    leftbutel.text('\u25BE'); /* down triangle */
+    if (isclosed)
+        leftbutel.text('\u25B8'); /* right pointer */
+    else
+        leftbutel.text('\u25BE'); /* down pointer */
     segel.append(leftbutel);
     var rightbutel =  $('<div>', {'class':'ToolControl ToolControlRight',
                                   'title':'Open/close this section'});
     rightbutel.text('\u25C6'); /* diamond */
+    if (!hasmenu)
+        rightbutel.addClass('ToolControlDimmed');
     segel.append(rightbutel);
     var titleel = $('<h3>', {'class':'ToolTitle'});
     titleel.text('-');
     segel.append(titleel);
     var bodyel = $('<div>');
+    if (isclosed)
+        bodyel.css({'display':'none'});
     segel.append(bodyel);
 
     seg.segel = segel;
     seg.titleel = titleel;
     seg.bodyel = bodyel;
+    seg.leftbutel = leftbutel;
+    seg.rightbutel = rightbutel;
 
     if (key == 'prefs')
         toolpane_fill_pane_prefs(seg);
     else
-        console.log('Unrecognized toolpane segment: ' + key)
+        console.log('Unrecognized toolpane segment: ' + key);
+
+    leftbutel.on('click', {key:'prefs'}, toolpane_toggle_min);
 
     if (!noinsert) {
         /*### slide into the toolcol, above the footer. */
     }
 }
+
+function toolpane_toggle_min(ev) {
+    ev.preventDefault();
+    /*### end_editing(); */
+
+    var key = ev.data.key;
+    var prefkey = 'toolseg_min_'+key;
+    var seg = toolsegments[key];
+
+    if (uiprefs[prefkey]) {
+        uiprefs[prefkey] = false;
+        seg.bodyel.slideDown(200);
+        seg.leftbutel.text('\u25BE');
+    }
+    else {
+        uiprefs[prefkey] = true;
+        seg.bodyel.slideUp(200);
+        seg.leftbutel.text('\u25B8');
+    }
+    note_uipref_changed(prefkey);
+}
+
 
 function toolpane_fill_pane_prefs(seg) {
     seg.titleel.text('Preferences');

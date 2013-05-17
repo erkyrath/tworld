@@ -302,6 +302,14 @@
   right: 30px;
 }
 
+.ToolControlDimmed {
+  color: #CCA;
+}
+.ToolControlDimmed:hover {
+  background: inherit;
+  cursor: inherit;
+}
+
 h2.ToolTitle {
   font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
   font-size: 1.2em;
