@@ -277,12 +277,12 @@
 
 .ToolControl {
   background: #EED;
-  width: 24px;
-  height: 20px;
+  width: 1.2em;
+  height: 1em;
   color: #884;
   font-family: fixed;
-  font-size: 18px;
-  margin-top: 4px;
+  font-size: 1.2em;
+  margin-top: 0.25em;
   text-align: center;
   cursor: pointer;
   border-radius: 4px;
@@ -428,6 +428,11 @@ h3.ToolTitle {
 #rightcol .ui-widget-header {
   background-image: none;
 }
+
+#rightcol input.CheckboxRight {
+  float: right;
+}
+
 
 /* Styles that apply to special content in the focus pane. (For example,
    self-description editing.)

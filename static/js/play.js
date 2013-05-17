@@ -3,9 +3,13 @@ var websocket = null;
 var connected = false;
 var everconnected = false;
 
+/* Default values for all the UI preferences. These will be overridden by
+   player preferences. */
 var uiprefs = {
     leftright_percent: 75,
     updown_percent: 70,
+    font_size: 100,
+    line_height: 135,
     smooth_scroll: true
 };
 
@@ -20,12 +24,18 @@ var KEY_DOWN = 40;
 
 var NBSP = '\u00A0';
 
+/* The db_uiprefs object contains the player preferences. They're written
+   directly into the play.html template by the web server. Copy them
+   over the defaults, where present.
+*/
 function collate_uiprefs() {
     for (var key in db_uiprefs) {
         uiprefs[key] = db_uiprefs[key];
     }
 }
 
+/* Construct the DOM for the page.
+*/
 function build_page_structure() {
     /* Clear out the body from the play.html template. */
     $('#submain').empty();
@@ -43,7 +53,8 @@ function build_page_structure() {
     var tooloutline = $('<div>', { 'class': 'ToolOutline' });
     var toolheader = $('<div>', { 'class': 'ToolTitleBar' });
     tooloutline.append(toolheader);
-    tooloutline.append($('<div>', { 'class': 'ToolSegment' }));
+    toolpane_build_segment('prefs', false, true);
+    tooloutline.append(toolsegments['prefs'].segel);
     tooloutline.append($('<div>', { 'class': 'ToolFooter' }));
 
     toolheader.append($('<h2>', { id: 'tool_title_title', 'class': 'ToolTitle' }));
@@ -79,6 +90,10 @@ function build_page_structure() {
     $('#bottomcol').css({ height: (100-uiprefs.updown_percent)+'%' });
     $('#leftcol').css({ width: uiprefs.leftright_percent+'%' });
     $('#rightcol').css({ width: (100-uiprefs.leftright_percent)+'%' });
+    var val = uiprefs.font_size / 100.0;
+    $('#main').css('font-size', val+'em');
+    val = uiprefs.line_height / 100.0;
+    $('#submain').css('line-height', val+'em');
 }
 
 function build_focuspane(contentls)
@@ -118,6 +133,40 @@ function setup_event_handlers() {
     
     $('div.ui-resizable-handle').append('<div class="ResizingThumb">');
 
+    /* The controls in the prefs pane... */
+
+    var seg = toolsegments['prefs'];
+
+    seg.fontsizeslider.slider({
+            value: uiprefs.font_size, min: 80, max: 120, step: 5,
+            stop: function(ev, ui) {
+                var val = ui.value / 100.0;
+                $('#main').css('font-size', val+'em');
+                uiprefs.font_size = Math.round(ui.value);
+                note_uipref_changed('font_size');
+            }
+        });
+
+    seg.lineheightslider.slider({
+            value: uiprefs.line_height, min: 120, max: 150, step: 5,
+            stop: function(ev, ui) {
+                var val = ui.value / 100.0;
+                $('#submain').css('line-height', val+'em');
+                uiprefs.line_height = Math.round(ui.value);
+                note_uipref_changed('line_height');
+            }
+        });
+
+    seg.smoothscrollbox.prop('checked', uiprefs.smooth_scroll);
+    seg.smoothscrollbox.on('change', function(ev) {
+            var seg = toolsegments['prefs'];
+            if (seg.smoothscrollbox.prop('checked'))
+                uiprefs.smooth_scroll = true;
+            else
+                uiprefs.smooth_scroll = false;
+            note_uipref_changed('smooth_scroll');
+        });
+
 }
 
 function open_websocket() {
@@ -152,6 +201,78 @@ function toolpane_set_world(world, scope, creator) {
     $('#tool_title_title').text(world);
     $('#tool_title_scope').text(scope);
     $('#tool_title_creator').text(creator);
+}
+
+/* Contains a map of all segments currently in the tool column.
+   (Minimized ones count. The header bar doesn't count.)
+*/
+var toolsegments = {};
+
+function toolpane_build_segment(key, hasmenu, noinsert) {
+    if (toolsegments[key]) {
+        console.log('Tool column already has segment: ' + key);
+        return;
+    }
+
+    var seg = { key:key };
+    toolsegments[key] = seg;
+
+    /* Build the DOM elements. */
+    var segel = $('<div>', {'class':'ToolSegment'});
+    var leftbutel = $('<div>', {'class':'ToolControl ToolControlLeft',
+                                'title':'Open/close this section'});
+    leftbutel.text('\u25BE'); /* down triangle */
+    segel.append(leftbutel);
+    var rightbutel =  $('<div>', {'class':'ToolControl ToolControlRight',
+                                  'title':'Open/close this section'});
+    rightbutel.text('\u25C6'); /* diamond */
+    segel.append(rightbutel);
+    var titleel = $('<h3>', {'class':'ToolTitle'});
+    titleel.text('-');
+    segel.append(titleel);
+    var bodyel = $('<div>');
+    segel.append(bodyel);
+
+    seg.segel = segel;
+    seg.titleel = titleel;
+    seg.bodyel = bodyel;
+
+    if (key == 'prefs')
+        toolpane_fill_pane_prefs(seg);
+    else
+        console.log('Unrecognized toolpane segment: ' + key)
+
+    if (!noinsert) {
+        /*### slide into the toolcol, above the footer. */
+    }
+}
+
+function toolpane_fill_pane_prefs(seg) {
+    seg.titleel.text('Preferences');
+
+    var listel = $('<ul>', {'class':'ToolList'});
+    seg.bodyel.append(listel);
+
+    var el = $('<li>').text('Text Size');
+    listel.append(el);
+    el.append($('<br>'));
+    var fontsizeslider = $('<div>');
+    el.append(fontsizeslider);
+    seg.fontsizeslider = fontsizeslider;
+
+    var el = $('<li>').text('Line Spacing');
+    listel.append(el);
+    el.append($('<br>'));
+    var lineheightslider = $('<div>');
+    el.append(lineheightslider);
+    seg.lineheightslider = lineheightslider;
+
+    var el = $('<li>');
+    listel.append(el);
+    el.append($('<label>').text('Smooth Scrolling'));
+    var smoothscrollbox = $('<input>', {'class':'CheckboxRight', 'type':'checkbox'});
+    el.append(smoothscrollbox);
+    seg.smoothscrollbox = smoothscrollbox;
 }
 
 function localepane_set_locale(desc, title) {
