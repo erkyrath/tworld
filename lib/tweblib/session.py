@@ -173,7 +173,14 @@ class SessionMgr(object):
                 portlocid = res['_id']
                 portscid = scid  # from above
             else:
-                pass ###
+                portwid = firstportal['wid']
+                portlocid = firstportal['locid']
+                portscid = firstportal['scid']
+                if portscid == 'global':
+                    res = yield motor.Op(self.app.mongodb.config.find_one, {'key':'globalscopeid'})
+                    portscid = res['val']
+                elif portscid == 'personal':
+                    portscid = scid  # from above
             if not (portwid and portscid and portlocid):
                 raise Exception('Unable to define portal')
 
