@@ -164,16 +164,16 @@ def define_commands():
             portal = cursor.next_object()
             ls.append(portal)
         cursor.close()
-        ls.sort(key=lambda portal:portal.get('listpos', 0))
-        subls = []
+        map = {}
         for portal in ls:
             ### short-scope-name flag?
             desc = yield two.execute.portal_description(app, portal, conn.uid, uidiid=iid, location=True)
             if desc:
-                desc['portid'] = str(portal['_id'])
-                subls.append(desc)
-        app.log.info('### sending plist update: %s', subls)
-        conn.write({'cmd':'updateplist', 'plist':subls})
+                strid = str(portal['_id'])
+                desc['portid'] = strid
+                desc['listpos'] = portal.get('listpos', 0.0)
+                map[strid] = desc
+        conn.write({'cmd':'updateplist', 'clear': True, 'map':map})
         
     @command('playeropen', noneedmongo=True, preconnection=True)
     def cmd_playeropen(app, task, cmd, conn):

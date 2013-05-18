@@ -764,7 +764,8 @@ def perform_action(app, task, conn, target):
             newportal['listpos'] = listpos + 1.0
             yield motor.Op(app.mongodb.portals.insert, newportal)
 
-            ### Send message; also update the client's plist
+            conn.write({'cmd':'message', 'text':'You copy the portal to your collection.'}) ###localize
+            ### and some other message
             return
 
         if restype == 'portal':

@@ -372,8 +372,8 @@ function toolpane_fill_pane_plist(seg) {
     seg.listel = listel;
     seg.bodyel.append(listel);
 
-    seg.list = [];
     seg.map = {}; /* maps portid to portal object */
+    seg.list = []; /* portals in listpos order */
     seg.selection = null;
 
     toolpane_plist_update();
@@ -393,12 +393,14 @@ function toolpane_fill_pane_plist(seg) {
 
 }
 
+/* Rebuild the contents of the plist tool segment. The seg.list and seg.map
+   have already been filled in. 
+*/
 function toolpane_plist_update() {
     var seg = toolsegments['plist'];
     var el;
 
     seg.listel.empty();
-    seg.map = {};
 
     if (!seg.list.length) {
         el = $('<li>', {'class':'ToolListDimmed'}).text('(empty)');
@@ -423,7 +425,6 @@ function toolpane_plist_update() {
             } );
 
         portal.el = el;
-        seg.map[portal.portid] = portal;
         el.data('portid', portal.portid);
         seg.listel.append(el);
     }
@@ -927,12 +928,31 @@ function cmd_update(obj) {
 
 function cmd_updateplist(obj) {
     var seg = toolsegments['plist'];
-    seg.list.length = 0;
 
-    if (obj.plist) {
-        for (var ix=0; ix<obj.plist.length; ix++)
-            seg.list.push(obj.plist[ix]);
+    /* This could have a special case for adding one new portal to the end of
+       the list. If we wanted keen animation, that is. */
+
+    if (obj.clear) {
+        seg.map = {}
     }
+
+    if (obj.map) {
+        jQuery.each(obj.map, function(portid, portal) {
+                if (portal === false) {
+                    delete seg.map[portid];
+                }
+                else {
+                    seg.map[portid] = portal;
+                }
+            });
+    }
+
+    /* Rebuild the list, regardless. */
+    seg.list.length = 0;
+    jQuery.each(seg.map, function(portid, portal) {
+            seg.list.push(portal);
+        });
+    seg.list.sort(function(p1, p2) { return p1.listpos - p2.listpos; });
 
     toolpane_plist_update();
 }
