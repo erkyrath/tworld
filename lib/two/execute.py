@@ -188,6 +188,7 @@ class EvalPropContext(object):
                 if not desttext:
                     desttext = 'The destination is hazy.' ###localize
                 portalobj['view'] = desttext;
+                self.app.log.info('### portalobj: %s', portalobj)
                 specres = ['portal', ackey, portalobj, backkey, extratext]
                 self.wasspecial = True
                 return specres
@@ -418,6 +419,9 @@ def portal_description(app, portal, uid, uidiid=None, location=False):
             scopename = '???'
 
         res = {'world':worldname, 'scope':scopename, 'creator':creatorname}
+
+        if world.get('copyable', False):
+            res['copyable'] = True
 
         if location:
             loc = yield motor.Op(app.mongodb.locations.find_one,

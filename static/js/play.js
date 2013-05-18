@@ -54,9 +54,9 @@ function build_page_structure() {
     var tooloutline = $('<div>', { 'class': 'ToolOutline' });
     var toolheader = $('<div>', { 'class': 'ToolTitleBar' });
     tooloutline.append(toolheader);
-    toolpane_build_segment('plist', true, true);
+    toolpane_build_segment('plist', true);
     tooloutline.append(toolsegments['plist'].segel);
-    toolpane_build_segment('prefs', false, true);
+    toolpane_build_segment('prefs', false);
     tooloutline.append(toolsegments['prefs'].segel);
     tooloutline.append($('<div>', { 'class': 'ToolFooter' }));
 
@@ -211,7 +211,10 @@ function toolpane_set_world(world, scope, creator) {
 */
 var toolsegments = {};
 
-function toolpane_build_segment(key, hasmenu, noinsert) {
+/* Create a segment, but do not add it to the document. The caller must
+   do that, either directly or by calling toolpane_add_segment().
+*/
+function toolpane_build_segment(key, hasmenu) {
     if (toolsegments[key]) {
         console.log('Tool column already has segment: ' + key);
         return;
@@ -255,14 +258,59 @@ function toolpane_build_segment(key, hasmenu, noinsert) {
         toolpane_fill_pane_prefs(seg);
     else if (key == 'plist')
         toolpane_fill_pane_plist(seg);
+    else if (key == 'portal')
+        toolpane_fill_pane_portal(seg);
     else
         console.log('Unrecognized toolpane segment: ' + key);
 
     leftbutel.on('click', {key:key}, toolpane_toggle_min);
 
-    if (!noinsert) {
-        /*### slide into the toolcol, above the footer. */
+    return seg;
+}
+
+function toolpane_add_segment(key, aftersegkey) {
+    var seg = toolsegments[key];
+    var afterseg = toolsegments[aftersegkey];
+
+    if (!seg)
+        return;
+
+    seg.segel.css({display:'none'});
+    seg.leftbutel.css({display:'none'});
+    seg.rightbutel.css({display:'none'});
+
+    if (afterseg) {
+        console.log('### after ' + afterseg + ': ' + seg.segel);
+        afterseg.segel.after(seg.segel);
     }
+    else {
+        console.log('### at end: ' + seg.segel);
+        $('#rightcol .ToolFooter').before(seg.segel);
+    }
+
+    seg.segel.slideDown(200, function() {
+            /* Necessary because the absolute buttons don't get clipped by the
+               segment height. */
+            seg.leftbutel.css({display:''});
+            seg.rightbutel.css({display:''});            
+        });
+}
+
+function toolpane_remove_segment(key) {
+    var seg = toolsegments[key];
+
+    if (!seg)
+        return;
+
+    var segel = seg.segel;
+    segel.slideUp(200, function() { segel.remove(); });
+
+    /* Necessary because the absolute buttons don't get clipped by the
+       segment height. */
+    seg.leftbutel.css({display:'none'});
+    seg.rightbutel.css({display:'none'});
+
+    toolsegments[key] = null;
 }
 
 function toolpane_toggle_min(ev) {
@@ -414,6 +462,44 @@ function toolpane_plist_select(portid, useasfocus) {
     }
 }
 
+/* This is called every time the focus changes. It posts, removes, or updates
+   the "details on this portal" tool segment.
+*/
+function toolpane_portal_addremove() {
+    var portal = null;
+    if (focuspane_special_val && focuspane_special_val[0] == 'portal') {
+        portal = focuspane_special_val[2];
+    }
+
+    if (!portal) {
+        /* Remove if necessary. */
+        if (toolsegments['portal'])
+            toolpane_remove_segment('portal');
+        return;
+    }
+
+    var seg = toolsegments['portal'];
+    if (!seg) {
+        seg = toolpane_build_segment('portal', false);
+        toolpane_add_segment('portal', 'plist');
+    }
+    else {
+        toolpane_portal_update();
+    }
+}
+
+function toolpane_fill_pane_portal(seg) {
+    seg.titleel.text('Portal'); /*###localize */
+
+    /*###*/
+
+    toolpane_portal_update();
+}
+
+function toolpane_portal_update() {
+    var seg = toolsegments['portal'];
+}
+
 function localepane_set_locale(desc, title) {
     var localeel = $('#localepane_locale');
     localeel.empty();
@@ -560,9 +646,9 @@ function focuspane_set_special(ls) {
     var type = '???';
     try {
         type = ls[0];
+        focuspane_special_val = ls;
         if (type == 'selfdesc') {
             /* ['selfdesc', name, pronoun, desc] */
-            focuspane_special_val = ls;
             var extrals = selfdesc_build_controls();
             focuspane_set(ls[4], extrals);
             $('.FormSelfDescPronoun').prop('value', ls[2]);
@@ -634,6 +720,7 @@ function focuspane_set_special(ls) {
         focuspane_set('### ' + type + ': ' + ls);
     }
     catch (ex) {
+        focuspane_special_val = [];
         focuspane_set('[Error creating special focus ' + type + ': ' + ex + ']');
     }
 }
@@ -756,12 +843,14 @@ function cmd_update(obj) {
         localepane_set_populace(obj.populace);
     }
     if (obj.focus !== undefined) {
+        focuspane_special_val = [];
         if (!obj.focus)
             focuspane_clear();
         else if (obj.focusspecial)
             focuspane_set_special(obj.focus);
         else
             focuspane_set(obj.focus);
+        toolpane_portal_addremove();
     }
 }
 
@@ -779,7 +868,9 @@ function cmd_updateplist(obj) {
 
 function cmd_clearfocus(obj) {
     /* Same as update { focus:false }, really */
+    focuspane_special_val = [];
     focuspane_clear();
+    toolpane_portal_addremove();
 }
 
 function cmd_message(obj) {

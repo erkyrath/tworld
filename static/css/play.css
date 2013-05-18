@@ -261,6 +261,7 @@
   border-top: 1px solid #FFF;
   border-bottom: 1px solid #BBB;
   padding: 0.25em 0px;
+  overflow: hidden;
 }
 
 .ToolFooter {
