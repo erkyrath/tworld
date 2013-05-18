@@ -178,7 +178,8 @@ class EvalPropContext(object):
                 portal = yield motor.Op(self.app.mongodb.portals.find_one,
                                         {'_id':portid})
                 yield portal_in_scope(self.app, portal, self.uid, self.wid)
-                portalobj = yield portal_description(self.app, portal, self.uid, uidiid=self.iid)
+                portalobj = yield portal_description(self.app, portal, self.uid, uidiid=self.iid, location=True)
+                portalobj['portid'] = str(portal['_id'])
                 ackey = 'port' + EvalPropContext.build_action_key()
                 self.linktargets[ackey] = ('portal', portid)
                 # Look up the destination portaldesc in a separate context.

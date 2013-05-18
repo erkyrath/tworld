@@ -464,11 +464,7 @@ function toolpane_plist_select(portid, useasfocus) {
    the "details on this portal" tool segment.
 */
 function toolpane_portal_addremove() {
-    var portal = null;
-    if (focuspane_special_val && focuspane_special_val[0] == 'portal') {
-        portal = focuspane_special_val[2];
-    }
-
+    var portal = focuspane_current_special_portal();
     if (!portal) {
         /* Remove if necessary. */
         if (toolsegments['portal'])
@@ -490,15 +486,79 @@ function toolpane_portal_addremove() {
 }
 
 function toolpane_fill_pane_portal(seg) {
-    seg.titleel.text('Portal'); /*###localize */
+    seg.titleel.text('This Portal'); /*###localize */
 
-    /*###*/
+    var listel = $('<ul>', {'class':'ToolList'});
+    seg.bodyel.append(listel);
+
+    var el = $('<li>');
+    listel.append(el);
+    var worldel = $('<span>').text('-');
+    el.append(worldel);
+    el.append(' ');
+    var scopeel = $('<span>', {'class':'ToolGloss'}).text('-');
+    el.append(scopeel);
+    el.append($('<br>'));
+    var locel = $('<span>').text('-');
+    el.append(locel);
+
+    var el = $('<li>');
+    listel.append(el);
+    var creatorel = $('<em>').text('-');
+    el.append(creatorel);
+
+    listel = $('<ul>', {'class':'ToolList'});
+    seg.bodyel.append(listel);
+
+    var copyel = $('<li>');
+    el = $('<a>', {href:'#'}).text('Copy this portal to your collection'); /*###localize*/
+    copyel.append(el);
+    listel.append(copyel);
+    var nocopyel = $('<li>').text('This portal cannot be copied'); /*###localize*/
+    listel.append(nocopyel);
+
+    copyel.on('click', function(ev) {
+            ev.preventDefault();
+            var portal = focuspane_current_special_portal();
+            if (portal) {
+                websocket_send_json({ cmd:'copyportal', portid:portal.portid });
+            }
+        });
+
+    seg.worldel = worldel;
+    seg.scopeel = scopeel;
+    seg.locel = locel;
+    seg.creatorel = creatorel;
+    seg.copyel = copyel;
+    seg.nocopyel = nocopyel;
 
     toolpane_portal_update();
 }
 
 function toolpane_portal_update() {
     var seg = toolsegments['portal'];
+
+    var portal = focuspane_current_special_portal();
+    if (!portal) {
+        seg.worldel.text('-');
+        seg.scopeel.text('-');
+        seg.locel.text('-');
+        seg.creatorel.text('-');
+        return;
+    }
+
+    seg.worldel.text(portal.world);
+    seg.scopeel.text(portal.scope);
+    seg.locel.text(portal.location);
+    seg.creatorel.text('Created by ' + portal.creator); /*###localize*/
+    if (portal.copyable) {
+        seg.copyel.show();
+        seg.nocopyel.hide();
+    }
+    else {
+        seg.nocopyel.show();
+        seg.copyel.hide();
+    }
 }
 
 function localepane_set_locale(desc, title) {
@@ -724,6 +784,16 @@ function focuspane_set_special(ls) {
         focuspane_special_val = [];
         focuspane_set('[Error creating special focus ' + type + ': ' + ex + ']');
     }
+}
+
+/* Return the portal object that focus is set to, if any; otherwise null.
+ */
+function focuspane_current_special_portal() {
+    var portal = null;
+    if (focuspane_special_val && focuspane_special_val[0] == 'portal') {
+        portal = focuspane_special_val[2];
+    }
+    return portal;
 }
 
 function selfdesc_build_controls() {
