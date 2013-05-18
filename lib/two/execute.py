@@ -455,15 +455,15 @@ def portal_description(app, portal, uid, uidiid=None, location=False):
                                    {'_id':reqscid})
 
         if scope['type'] == 'glob':
-            scopename = '(Global instance)'
+            scopename = 'Global instance'
         elif scope['type'] == 'pers':
             ### Probably leave off the name if it's you
             scopeowner = yield motor.Op(app.mongodb.players.find_one,
                                         {'_id':scope['uid']},
                                         {'name':1})
-            scopename = '(Personal instance: %s)' % (scopeowner['name'],)
+            scopename = 'Personal instance: %s' % (scopeowner['name'],)
         elif scope['type'] == 'grp':
-            scopename = '(Group: %s)' % (scope['group'],)
+            scopename = 'Group: %s' % (scope['group'],)
         else:
             scopename = '???'
 

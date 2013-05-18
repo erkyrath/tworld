@@ -417,7 +417,7 @@ function toolpane_plist_update() {
         el.append(' \u2014 '); /* em-dash */
         el.append($('<span>').text(portal.location));
         el.append(' ');
-        el.append($('<span>', {'class':'ToolGloss'}).text(portal.scope));
+        el.append($('<span>', {'class':'ToolGloss'}).text('('+portal.scope+')'));
 
         /* Click on entry to select. */
         el.on('click', {portid:portal.portid}, function(ev) {
@@ -493,24 +493,36 @@ function toolpane_fill_pane_portal(seg) {
     var listel = $('<ul>', {'class':'ToolList'});
     seg.bodyel.append(listel);
 
+    var el = $('<li>', {'class':'ToolGloss'}).text('World:'); /*### localize */
+    listel.append(el);
+
     var el = $('<li>');
     listel.append(el);
     var worldel = $('<span>').text('-');
     el.append(worldel);
+
+    var el = $('<li>', {'class':'ToolGloss'}).text('Location:'); /*### localize */
+    listel.append(el);
 
     var el = $('<li>');
     listel.append(el);
     var locel = $('<span>').text('-');
     el.append(locel);
 
+    var el = $('<li>', {'class':'ToolGloss'}).text('Instance:'); /*### localize */
+    listel.append(el);
+
     var el = $('<li>');
     listel.append(el);
     var scopeel = $('<span>').text('-');
     el.append(scopeel);
 
+    var el = $('<li>', {'class':'ToolGloss'}).text('Creator:'); /*### localize */
+    listel.append(el);
+
     var el = $('<li>');
     listel.append(el);
-    var creatorel = $('<em>').text('-');
+    var creatorel = $('<span>').text('-');
     el.append(creatorel);
 
     listel = $('<ul>', {'class':'ToolList'});
@@ -556,7 +568,7 @@ function toolpane_portal_update() {
     seg.worldel.text(portal.world);
     seg.scopeel.text(portal.scope);
     seg.locel.text(portal.location);
-    seg.creatorel.text('Created by ' + portal.creator); /*###localize*/
+    seg.creatorel.text(portal.creator);
     if (portal.copyable) {
         seg.copyel.show();
         seg.nocopyel.hide();
