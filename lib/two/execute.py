@@ -182,6 +182,10 @@ class EvalPropContext(object):
                 portalobj['portid'] = str(portal['_id'])
                 ackey = 'port' + EvalPropContext.build_action_key()
                 self.linktargets[ackey] = ('portal', portid)
+                if portalobj.get('copyable', False):
+                    copykey = 'copy' + EvalPropContext.build_action_key()
+                    self.linktargets[copykey] = ('copyportal', portid)
+                    portalobj['copyable'] = copykey
                 # Look up the destination portaldesc in a separate context.
                 ctx = EvalPropContext(self.app, portal['wid'], None, portal['locid'], level=LEVEL_FLAT)
                 desttext = yield ctx.eval('portaldesc')

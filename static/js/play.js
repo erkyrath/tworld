@@ -521,7 +521,7 @@ function toolpane_fill_pane_portal(seg) {
             ev.preventDefault();
             var portal = focuspane_current_special_portal();
             if (portal) {
-                websocket_send_json({ cmd:'copyportal', portid:portal.portid });
+                websocket_send_json({ cmd:'action', action:portal.copyable });
             }
         });
 
