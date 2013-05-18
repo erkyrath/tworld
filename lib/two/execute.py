@@ -368,23 +368,29 @@ def portal_resolve_scope(app, portal, uid, scid, world):
     the destination world object from the database. (Yes, that's all
     clumsy and uneven.)
     """
-    if portal['scid'] == 'personal' or world['instancing'] == 'solo':
+    reqscid = portal['scid']
+    if world['instancing'] == 'solo':
+        reqscid = 'personal'
+    if world['instancing'] == 'shared':
+        reqscid = 'global'
+    
+    if reqscid == 'personal':
         player = yield motor.Op(app.mongodb.players.find_one,
                                 {'_id':uid},
                                 {'scid':1})
         if not player or not player['scid']:
             raise ErrorMessageException('You have no personal scope!')
         newscid = player['scid']
-    elif portal['scid'] == 'global' or world['instancing'] == 'shared':
+    elif reqscid == 'global':
         config = yield motor.Op(app.mongodb.config.find_one,
                                 {'key':'globalscopeid'})
         if not config:
             raise ErrorMessageException('There is no global scope!')
         newscid = config['val']
-    elif portal['scid'] == 'same':
+    elif reqscid == 'same':
         newscid = scid
     else:
-        newscid = portal['scid']
+        newscid = reqscid
     assert isinstance(newscid, ObjectId), 'newscid is not ObjectId'
     return newscid
     
@@ -414,19 +420,26 @@ def portal_description(app, portal, uid, uidiid=None, location=False):
             creatorname = creator.get('name', '???')
         else:
             creatorname = '???'
+
+        # This logic is parallel to portal_resolve_scope().
+        reqscid = portal['scid']
+        if world['instancing'] == 'solo':
+            reqscid = 'personal'
+        if world['instancing'] == 'shared':
+            reqscid = 'global'
             
-        if portal['scid'] == 'personal' or world['instancing'] == 'solo':
+        if reqscid == 'personal':
             player = yield motor.Op(app.mongodb.players.find_one,
                                     {'_id':uid},
                                     {'scid':1})
             scope = yield motor.Op(app.mongodb.scopes.find_one,
                                    {'_id':player['scid']})
-        elif portal['scid'] == 'global' or world['instancing'] == 'shared':
+        elif reqscid == 'global':
             config = yield motor.Op(app.mongodb.config.find_one,
                                     {'key':'globalscopeid'})
             scope = yield motor.Op(app.mongodb.scopes.find_one,
                                    {'_id':config['val']})
-        elif portal['scid'] == 'same':
+        elif reqscid == 'same':
             if not uidiid:
                 playstate = yield motor.Op(app.mongodb.playstate.find_one,
                                            {'_id':uid},
@@ -439,12 +452,12 @@ def portal_description(app, portal, uid, uidiid=None, location=False):
                                    {'_id':instance['scid']})
         else:
             scope = yield motor.Op(app.mongodb.scopes.find_one,
-                                   {'_id':portal['scid']})
+                                   {'_id':reqscid})
 
         if scope['type'] == 'glob':
             scopename = '(Global instance)'
         elif scope['type'] == 'pers':
-        ### Probably leave off the name if it's you
+            ### Probably leave off the name if it's you
             scopeowner = yield motor.Op(app.mongodb.players.find_one,
                                         {'_id':scope['uid']},
                                         {'name':1})
@@ -707,7 +720,51 @@ def perform_action(app, task, conn, target):
 
             # Check that the portal is accessible.
             yield portal_in_reach(app, portal, conn.uid, wid)
-            app.log.info('### copyportal: %s', portal)
+
+            world = yield motor.Op(app.mongodb.worlds.find_one,
+                                   {'_id':portal['wid']})
+            if not world:
+                raise ErrorMessageException('Destination world not found.')
+            newwid = world['_id']
+
+            location = yield motor.Op(app.mongodb.locations.find_one,
+                                      {'_id':portal['locid'], 'wid':newwid})
+            if not location:
+                raise ErrorMessageException('Destination location not found.')
+            newlocid = location['_id']
+            
+            newscid = yield portal_resolve_scope(app, portal, conn.uid, scid, world)
+
+            
+            player = yield motor.Op(app.mongodb.players.find_one,
+                                    {'_id':conn.uid},
+                                    {'plistid':1})
+            plistid = player['plistid']
+
+            newportal = { 'plistid':plistid,
+                          'wid':newwid, 'scid':newscid, 'locid':newlocid,
+                          }
+            res = yield motor.Op(app.mongodb.portals.find_one,
+                                 newportal)
+            if res:
+                raise MessageException('This portal is already in your collection.') ###localize
+
+            # Look through the player's list and find the entry with the
+            # highest listpos.
+            res = yield motor.Op(app.mongodb.portals.aggregate, [
+                    {'$match': {'plistid':plistid}},
+                    {'$sort': {'listpos':-1}},
+                    {'$limit': 1},
+                    ])
+            app.log.info('### aggregate: %s', res)
+            listpos = 0.0
+            if res and res['result']:
+                listpos = res['result'][0].get('listpos', 0.0)
+                
+            newportal['listpos'] = listpos + 1.0
+            yield motor.Op(app.mongodb.portals.insert, newportal)
+
+            ### Send message; also update the client's plist
             return
 
         if restype == 'portal':
