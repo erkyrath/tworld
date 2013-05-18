@@ -177,7 +177,7 @@ class EvalPropContext(object):
                     self.updateacdepends(ctx)
                 portal = yield motor.Op(self.app.mongodb.portals.find_one,
                                         {'_id':portid})
-                yield portal_in_scope(self.app, portal, self.uid, self.wid)
+                yield portal_in_reach(self.app, portal, self.uid, self.wid)
                 portalobj = yield portal_description(self.app, portal, self.uid, uidiid=self.iid, location=True)
                 portalobj['portid'] = str(portal['_id'])
                 ackey = 'port' + EvalPropContext.build_action_key()
@@ -327,7 +327,7 @@ def find_symbol(app, wid, iid, locid, key, dependencies=None):
 
 
 @tornado.gen.coroutine
-def portal_in_scope(app, portal, uid, wid):
+def portal_in_reach(app, portal, uid, wid):
     """Make sure that a portal (object) is reachable by the player (uid)
     who is in world wid. Raises a ErrorMessageException if not.
 
@@ -356,6 +356,37 @@ def portal_in_scope(app, portal, uid, wid):
                 raise ErrorMessageException('You are not in this portlist\'s world.')
     else:
         raise ErrorMessageException('Portal does not have a placement.')
+
+@tornado.gen.coroutine
+def portal_resolve_scope(app, portal, uid, scid, world):
+    """Figure out what scope we are porting to. The portal scid
+    value may be a special value such as 'personal', 'global',
+    'same'. We also obey the (higher priority) world-instancing
+    definition.
+
+    The scid argument must be where the player is now; the world must be
+    the destination world object from the database. (Yes, that's all
+    clumsy and uneven.)
+    """
+    if portal['scid'] == 'personal' or world['instancing'] == 'solo':
+        player = yield motor.Op(app.mongodb.players.find_one,
+                                {'_id':uid},
+                                {'scid':1})
+        if not player or not player['scid']:
+            raise ErrorMessageException('You have no personal scope!')
+        newscid = player['scid']
+    elif portal['scid'] == 'global' or world['instancing'] == 'shared':
+        config = yield motor.Op(app.mongodb.config.find_one,
+                                {'key':'globalscopeid'})
+        if not config:
+            raise ErrorMessageException('There is no global scope!')
+        newscid = config['val']
+    elif portal['scid'] == 'same':
+        newscid = scid
+    else:
+        newscid = portal['scid']
+    assert isinstance(newscid, ObjectId), 'newscid is not ObjectId'
+    return newscid
     
 @tornado.gen.coroutine
 def portal_description(app, portal, uid, uidiid=None, location=False):
@@ -667,6 +698,18 @@ def perform_action(app, task, conn, target):
             task.set_dirty(conn.uid, DIRTY_FOCUS)
             return
         
+        if restype == 'copyportal':
+            portid = target[1]
+            portal = yield motor.Op(app.mongodb.portals.find_one,
+                                      {'_id':portid})
+            if not portal:
+                raise ErrorMessageException('Portal not found.')
+
+            # Check that the portal is accessible.
+            yield portal_in_reach(app, portal, conn.uid, wid)
+            app.log.info('### copyportal: %s', portal)
+            return
+
         if restype == 'portal':
             portid = target[1]
             portal = yield motor.Op(app.mongodb.portals.find_one,
@@ -675,7 +718,7 @@ def perform_action(app, task, conn, target):
                 raise ErrorMessageException('Portal not found.')
 
             # Check that the portal is accessible.
-            yield portal_in_scope(app, portal, conn.uid, wid)
+            yield portal_in_reach(app, portal, conn.uid, wid)
 
             world = yield motor.Op(app.mongodb.worlds.find_one,
                                    {'_id':portal['wid']})
@@ -689,28 +732,7 @@ def perform_action(app, task, conn, target):
                 raise ErrorMessageException('Destination location not found.')
             newlocid = location['_id']
 
-            # Figure out what scope we are porting to. The portal scid
-            # value may be a special value such as 'personal', 'global',
-            # 'same'. We also obey the (higher priority) world-instancing
-            # definition.
-            if portal['scid'] == 'personal' or world['instancing'] == 'solo':
-                player = yield motor.Op(app.mongodb.players.find_one,
-                                        {'_id':conn.uid},
-                                        {'scid':1})
-                if not player or not player['scid']:
-                    raise ErrorMessageException('You have no personal scope!')
-                newscid = player['scid']
-            elif portal['scid'] == 'global' or world['instancing'] == 'shared':
-                config = yield motor.Op(app.mongodb.config.find_one,
-                                        {'key':'globalscopeid'})
-                if not config:
-                    raise ErrorMessageException('There is no global scope!')
-                newscid = config['val']
-            elif portal['scid'] == 'same':
-                newscid = scid
-            else:
-                newscid = portal['scid']
-            assert isinstance(newscid, ObjectId), 'newscid is not ObjectId'
+            newscid = yield portal_resolve_scope(app, portal, conn.uid, scid, world)
 
             # Load up the instance, but only to check minaccess.
             instance = yield motor.Op(app.mongodb.instances.find_one,
