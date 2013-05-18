@@ -414,9 +414,10 @@ function toolpane_plist_update() {
 
         el = $('<li>');
         el.append($('<span>').text(portal.world));
+        el.append(' \u2014 '); /* em-dash */
+        el.append($('<span>').text(portal.location));
         el.append(' ');
         el.append($('<span>', {'class':'ToolGloss'}).text(portal.scope));
-        el.append($('<div>', {'class':'ToolListSub'}).text(portal.location));
 
         /* Click on entry to select. */
         el.on('click', {portid:portal.portid}, function(ev) {
@@ -496,12 +497,16 @@ function toolpane_fill_pane_portal(seg) {
     listel.append(el);
     var worldel = $('<span>').text('-');
     el.append(worldel);
-    el.append(' ');
-    var scopeel = $('<span>', {'class':'ToolGloss'}).text('-');
-    el.append(scopeel);
-    el.append($('<br>'));
+
+    var el = $('<li>');
+    listel.append(el);
     var locel = $('<span>').text('-');
     el.append(locel);
+
+    var el = $('<li>');
+    listel.append(el);
+    var scopeel = $('<span>').text('-');
+    el.append(scopeel);
 
     var el = $('<li>');
     listel.append(el);
