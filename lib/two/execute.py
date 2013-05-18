@@ -178,6 +178,7 @@ class EvalPropContext(object):
                 portal = yield motor.Op(self.app.mongodb.portals.find_one,
                                         {'_id':portid})
                 yield portal_in_scope(self.app, portal, self.uid, self.wid)
+                portalobj = yield portal_description(self.app, portal, self.uid, uidiid=self.iid)
                 ackey = 'port' + EvalPropContext.build_action_key()
                 self.linktargets[ackey] = ('portal', portid)
                 # Look up the destination portaldesc in a separate context.
@@ -186,7 +187,8 @@ class EvalPropContext(object):
                 self.updateacdepends(ctx)
                 if not desttext:
                     desttext = 'The destination is hazy.' ###localize
-                specres = ['portal', ackey, desttext, backkey, extratext]
+                portalobj['view'] = desttext;
+                specres = ['portal', ackey, portalobj, backkey, extratext]
                 self.wasspecial = True
                 return specres
             except Exception as ex:

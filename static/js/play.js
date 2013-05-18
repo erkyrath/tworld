@@ -573,7 +573,7 @@ function focuspane_set_special(ls) {
         }
         if (type == 'portal') {
             var target = ls[1];
-            var desttext = ls[2];
+            var portalobj = ls[2];
             var backtarget = ls[3];
             var extratext = ls[4];
             /* Note that extratext, if present, may be a full-fledged
@@ -588,7 +588,7 @@ function focuspane_set_special(ls) {
                 extrals.push(el);
             }
             var el = $('<p>');
-            el.text(desttext);
+            el.text(portalobj.view);
             extrals.push(el);
             var ael = $('<a>', {href:'#'+target});
             ael.text('Enter the portal.'); /* ###localize */
