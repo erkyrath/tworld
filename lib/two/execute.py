@@ -193,7 +193,6 @@ class EvalPropContext(object):
                 if not desttext:
                     desttext = 'The destination is hazy.' ###localize
                 portalobj['view'] = desttext;
-                self.app.log.info('### portalobj: %s', portalobj)
                 specres = ['portal', ackey, portalobj, backkey, extratext]
                 self.wasspecial = True
                 return specres
@@ -870,7 +869,7 @@ def perform_action(app, task, conn, target):
     if restype == 'code':
         raise ErrorMessageException('Code events are not yet supported.') ###
     
-    if restype in ('text', 'portal', 'portlist', 'selfdesc'):
+    if restype in ('text', 'portal', 'portlist', 'selfdesc', 'editstr'):
         # Set focus to this symbol-name
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':conn.uid},

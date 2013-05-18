@@ -266,6 +266,8 @@ def parse_prop(prop):
             return {'type':'code', 'text':val}
         elif key == 'selfdesc':
             return {'type':'selfdesc', 'text':val}
+        elif key == 'editstr':
+            return {'type':'editstr', 'key':val}
         elif key == 'portal':
             subls = [ subval.strip() for subval in val.split(',') ]
             if len(subls) != 3:
