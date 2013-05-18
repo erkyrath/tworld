@@ -280,11 +280,9 @@ function toolpane_add_segment(key, aftersegkey) {
     seg.rightbutel.css({display:'none'});
 
     if (afterseg) {
-        console.log('### after ' + afterseg + ': ' + seg.segel);
         afterseg.segel.after(seg.segel);
     }
     else {
-        console.log('### at end: ' + seg.segel);
         $('#rightcol .ToolFooter').before(seg.segel);
     }
 
@@ -480,6 +478,9 @@ function toolpane_portal_addremove() {
 
     var seg = toolsegments['portal'];
     if (!seg) {
+        /* Make sure it appears open -- but don't bother notifying the
+           server. */
+        uiprefs['toolseg_min_portal'] = false;
         seg = toolpane_build_segment('portal', false);
         toolpane_add_segment('portal', 'plist');
     }
