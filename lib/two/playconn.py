@@ -73,9 +73,7 @@ class PlayerConnectionTable(object):
             uset.remove(conn)
             if not uset:
                 del self.uidmap[conn.uid]
-        conn.connid = None
-        conn.stream = None
-        conn.twwcid = None
+        conn.close()
 
     def dumplog(self):
         self.log.debug('PlayerConnectionTable has %d entries', len(self.map))
@@ -111,7 +109,25 @@ class PlayerConnection(object):
         self.localedependencies = set()
         self.focusdependencies = set()
         self.populacedependencies = set()
-        
+
+    def __repr__(self):
+        return '<PlayerConnection (%d): %s>' % (self.connid, self.email,)
+
+    def close(self):
+        """Clean up dangling references.
+        """
+        self.table = None
+        self.connid = None
+        self.stream = None
+        self.twwcid = None
+
+        self.localeactions = None
+        self.focusactions = None
+        self.populaceactions = None
+
+        self.localedependencies = None
+        self.focusdependencies = None
+        self.populacedependencies = None
         
     def write(self, msg):
         """Shortcut to send a message to a player via this connection.

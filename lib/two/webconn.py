@@ -106,6 +106,8 @@ class WebConnIOStream(tornado.iostream.IOStream):
         except:
             pass
         self.twtable.log.error('Closed: %s', self)
+        # Clean up dangling references.
+        self.twhost = None
         self.twbuffer = None
         self.twtable = None
         self.twwcid = None
