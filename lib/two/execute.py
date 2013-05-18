@@ -762,10 +762,22 @@ def perform_action(app, task, conn, target):
                 listpos = res['result'][0].get('listpos', 0.0)
                 
             newportal['listpos'] = listpos + 1.0
-            yield motor.Op(app.mongodb.portals.insert, newportal)
+            newportid = yield motor.Op(app.mongodb.portals.insert, newportal)
+            newportal['_id'] = newportid
+
+            ### short-scope-name flag?
+            portaldesc = yield portal_description(app, portal, conn.uid, uidiid=iid, location=True)
+            if portaldesc:
+                strid = str(newportid)
+                portaldesc['portid'] = strid
+                portaldesc['listpos'] = newportal['listpos']
+                map = { strid: portaldesc }
+                subls = app.playconns.get_for_uid(conn.uid)
+                if subls:
+                    for subconn in subls:
+                        subconn.write({'cmd':'updateplist', 'map':map})
 
             conn.write({'cmd':'message', 'text':'You copy the portal to your collection.'}) ###localize
-            ### and some other message
             return
 
         if restype == 'portal':
