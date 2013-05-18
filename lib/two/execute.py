@@ -159,6 +159,30 @@ class EvalPropContext(object):
             except Exception as ex:
                 return '[Exception: %s]' % (ex,)
                 
+        if depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'editstr':
+            assert self.accum is not None, 'EvalPropContext.accum should not be None here'
+            try:
+                extratext = None
+                val = res.get('text', None)
+                if val:
+                    # Look up the extra text in a separate context.
+                    ctx = EvalPropContext(self.app, self.wid, self.iid, self.locid, self.uid, level=LEVEL_DISPLAY)
+                    extratext = yield ctx.eval(val, lookup=False)
+                    self.updateacdepends(ctx)
+                # Look up the current symbol value.
+                editkey = 'editstr' + EvalPropContext.build_action_key()
+                self.linktargets[editkey] = ('editstr', res['key'])
+                ctx = EvalPropContext(self.app, self.wid, self.iid, self.locid, self.uid, level=LEVEL_FLAT)
+                curvalue = yield ctx.eval(res['key'])
+                specres = ['editstr',
+                           editkey,
+                           curvalue,
+                           extratext]
+                self.wasspecial = True
+                return specres
+            except Exception as ex:
+                return '[Exception: %s]' % (ex,)
+                
         if depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'portal':
             assert self.accum is not None, 'EvalPropContext.accum should not be None here'
             try:
@@ -674,7 +698,15 @@ def generate_update(app, conn, dirty):
     
 
 @tornado.gen.coroutine
-def perform_action(app, task, conn, target):
+def perform_action(app, task, cmd, conn, target):
+    """Carry out an action command. These are the commands which we have
+    set up in the player's environment (localeactions, focusactions, etc);
+    the player has just triggered one of them.
+
+    The cmd argument is usually irrelevant -- we've already extracted
+    the target argument from it. But in a few cases, we'll need additional
+    fields from it.
+    """
     playstate = yield motor.Op(app.mongodb.playstate.find_one,
                                {'_id':conn.uid},
                                {'iid':1, 'locid':1, 'focus':1})
@@ -710,6 +742,19 @@ def perform_action(app, task, conn, target):
             task.set_dirty(conn.uid, DIRTY_FOCUS)
             return
         
+        if restype == 'editstr':
+            key = target[1]
+            val = getattr(cmd, 'val', None)
+            if val is None:
+                raise ErrorMessageException('No value given for editstr.')
+            val = str(val)
+            yield motor.Op(app.mongodb.instanceprop.update,
+                           {'iid':iid, 'locid':locid, 'key':key},
+                           {'iid':iid, 'locid':locid, 'key':key, 'val':val},
+                           upsert=True)
+            task.set_data_change( ('instanceprop', iid, locid, key) )
+            return
+            
         if restype == 'copyportal':
             portid = target[1]
             portal = yield motor.Op(app.mongodb.portals.find_one,

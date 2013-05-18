@@ -727,13 +727,20 @@ function focuspane_set_special(ls) {
         type = ls[0];
         focuspane_special_val = ls;
         if (type == 'selfdesc') {
-            /* ['selfdesc', name, pronoun, desc] */
+            /* ['selfdesc', name, pronoun, desc, extratext] */
             var extrals = selfdesc_build_controls();
             focuspane_set(ls[4], extrals);
             $('.FormSelfDescPronoun').prop('value', ls[2]);
             selfdesc_update_labels();
             $('.FormSelfDescPronoun').on('change', selfdesc_pronoun_changed);
             $('.FormSelfDescDesc').on('blur', selfdesc_desc_blur);
+            return;
+        }
+        if (type == 'editstr') {
+            /* ['editstr', key, value, extratext] */
+            var extrals = editstr_build_controls();
+            focuspane_set(ls[3], extrals);
+            $('.FormEditStrValue').on('blur', editstr_value_blur);
             return;
         }
         if (type == 'portal') {
@@ -815,7 +822,7 @@ function focuspane_current_special_portal() {
 }
 
 function selfdesc_build_controls() {
-    /* ['selfdesc', name, pronoun, desc] */
+    /* ['selfdesc', name, pronoun, desc, extratext] */
     var extrals = [];
     var el, divel, optel;
 
@@ -913,6 +920,36 @@ function selfdesc_update_labels() {
         break;
     }
     $('.FormSelfDescLabel2').text(val);
+}
+
+function editstr_build_controls() {
+    /* ['editstr', key, value, extratext] */
+    var extrals = [];
+    var el, divel, optel;
+
+    divel = $('<div>', { 'class':'FocusSection' });
+    extrals.push(divel);
+    el = $('<textarea>', { 'class':'FormEditStrValue FocusInput', rows:2,
+                           autocapitalize:'on', autofocus:'autofocus',
+                           name:'desc' });
+    el.text(focuspane_special_val[2]);
+    divel.append(el);
+
+    return extrals;
+}
+
+function editstr_value_blur() {
+    var val = $('.FormEditStrValue').prop('value');
+    val = val.replace(new RegExp('\\s+', 'g'), ' ');
+    val = jQuery.trim(val);
+    $('.FormEditStrValue').prop('value', val);
+
+    if (val == focuspane_special_val[2])
+        return;
+
+    focuspane_special_val[2] = val;
+    console.log('### new desc: ' + val);
+    websocket_send_json({ cmd:'action', action:focuspane_special_val[1], val:val });
 }
 
 /* All the commands that can be received from the server. */

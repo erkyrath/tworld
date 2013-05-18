@@ -436,7 +436,7 @@ def define_commands():
             action = conn.populaceactions.get(cmd.action)
         if action is None:
             raise ErrorMessageException('Action is not available.')
-        res = yield two.execute.perform_action(app, task, conn, action)
+        res = yield two.execute.perform_action(app, task, cmd, conn, action)
         
     @command('dropfocus', doeswrite=True)
     def cmd_dropfocus(app, task, cmd, conn):
