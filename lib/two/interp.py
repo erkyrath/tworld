@@ -77,10 +77,10 @@ class PlayerRef(InterpNode):
         self.key = key
         self.expr = expr
     def __repr__(self):
-        if expr is None:
-            return '<PlayerRef "%s">' % (key,)
+        if self.expr is None:
+            return '<PlayerRef "%s">' % (self.key,)
         else:
-            return '<PlayerRef "%s" %s>' % (key, expr)
+            return '<PlayerRef "%s" %s>' % (self.key, self.expr)
     def __eq__(self, obj):
         return (isinstance(obj, PlayerRef) and self.key == obj.key and self.expr == obj.expr)
     def __ne__(self, obj):
