@@ -17,22 +17,36 @@ class Interpolate(InterpNode):
 class Link(InterpNode):
     def __init__(self, target=None):
         self.target = target
+        self.external = False
     def __repr__(self):
-        return '<Link "%s">' % (self.target,)
+        if not self.external:
+            return '<Link "%s">' % (self.target,)
+        else:
+            return '<Link (ext) "%s">' % (self.target,)
     def __eq__(self, obj):
-        return (isinstance(obj, Link) and self.target == obj.target)
+        return (isinstance(obj, Link) and self.target == obj.target and self.external == obj.external)
     def __ne__(self, obj):
-        return not (isinstance(obj, Link) and self.target == obj.target)
+        return not (isinstance(obj, Link) and self.target == obj.target and self.external == obj.external)
+    @staticmethod
+    def looks_url_like(val):
+        val = val.strip()
+        if val.startswith('http:'):
+            return True
         
 class EndLink(InterpNode):
+    def __init__(self, external=False):
+        self.external = external
     def __repr__(self):
         return '<EndLink>'
     def __eq__(self, obj):
-        return (isinstance(obj, EndLink))
+        return (isinstance(obj, EndLink) and self.external == obj.external)
     def __ne__(self, obj):
-        return not (isinstance(obj, EndLink))
+        return not (isinstance(obj, EndLink) and self.external == obj.external)
     def describe(self):
-        return ['/link']
+        if not self.external:
+            return ['/link']
+        else:
+            return ['/exlink']
 
 class ParaBreak(InterpNode):
     def __repr__(self):
@@ -118,9 +132,13 @@ def parse(text):
             if text[pos] == ']':
                 append_text_with_paras(res, text, start, pos)
                 chunk = text[linkstart:pos]
-                curlink.target = sluggify(chunk)
+                if Link.looks_url_like(chunk):
+                    curlink.target = chunk.strip()
+                    curlink.external = True
+                else:
+                    curlink.target = sluggify(chunk)
+                res.append(EndLink(curlink.external))
                 curlink = None
-                res.append(EndLink())
                 start = pos+1
                 break
             if text[pos] == '|':
@@ -131,8 +149,9 @@ def parse(text):
                     raise ValueError('link | missing ]')
                 chunk = text[start:pos]
                 curlink.target = chunk.strip()
+                curlink.external = Link.looks_url_like(chunk)
+                res.append(EndLink(curlink.external))
                 curlink = None
-                res.append(EndLink())
                 start = pos+1
                 break
             if text[pos] == '[' and pos+1 < len(text) and text[pos+1] != '[':

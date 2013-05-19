@@ -278,9 +278,12 @@ class EvalPropContext(object):
                         self.accum.append(nod)
                     continue
                 if isinstance(nod, interp.Link):
-                    ackey = EvalPropContext.build_action_key()
-                    self.linktargets[ackey] = nod.target
-                    self.accum.append( ['link', ackey] )
+                    if not nod.external:
+                        ackey = EvalPropContext.build_action_key()
+                        self.linktargets[ackey] = nod.target
+                        self.accum.append( ['link', ackey] )
+                    else:
+                        self.accum.append( ['exlink', nod.target] )
                     continue
                 if isinstance(nod, interp.Interpolate):
                     ### Should execute code here, but right now we only
