@@ -961,6 +961,8 @@ function cmd_event(obj) {
 function cmd_update(obj) {
     if (obj.world !== undefined) {
         toolpane_set_world(obj.world.world, obj.world.scope, obj.world.creator);
+        /* Changing worlds is a good time to deselect the plist entry. */
+        toolpane_plist_select(null);
     }
     if (obj.locale !== undefined) {
         localepane_set_locale(obj.locale.desc, obj.locale.name);
