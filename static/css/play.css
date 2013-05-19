@@ -376,6 +376,13 @@ ul.ToolList + ul.ToolList {
   font-style: italic;
 }
 
+.ToolLabelRight {
+  font-size: 0.75em;
+  font-style: italic;
+  float: right;
+  margin-left: 20px;
+}
+
 /* Styles that concern the widgets in the tool column -- the menu, the
    sliders, and so on.
 */

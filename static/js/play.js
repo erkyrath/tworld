@@ -493,35 +493,27 @@ function toolpane_fill_pane_portal(seg) {
     var listel = $('<ul>', {'class':'ToolList'});
     seg.bodyel.append(listel);
 
-    var el = $('<li>', {'class':'ToolGloss'}).text('World:'); /*### localize */
-    listel.append(el);
-
     var el = $('<li>');
     listel.append(el);
+    el.append($('<div>', {'class':'ToolLabelRight'}).text('world')); /*### localize */
     var worldel = $('<span>').text('-');
     el.append(worldel);
 
-    var el = $('<li>', {'class':'ToolGloss'}).text('Location:'); /*### localize */
-    listel.append(el);
-
     var el = $('<li>');
     listel.append(el);
+    el.append($('<div>', {'class':'ToolLabelRight'}).text('location')); /*### localize */
     var locel = $('<span>').text('-');
     el.append(locel);
 
-    var el = $('<li>', {'class':'ToolGloss'}).text('Instance:'); /*### localize */
-    listel.append(el);
-
     var el = $('<li>');
     listel.append(el);
+    el.append($('<div>', {'class':'ToolLabelRight'}).text('instance')); /*### localize */
     var scopeel = $('<span>').text('-');
     el.append(scopeel);
 
-    var el = $('<li>', {'class':'ToolGloss'}).text('Creator:'); /*### localize */
-    listel.append(el);
-
     var el = $('<li>');
     listel.append(el);
+    el.append($('<div>', {'class':'ToolLabelRight'}).text('creator')); /*### localize */
     var creatorel = $('<span>').text('-');
     el.append(creatorel);
 
