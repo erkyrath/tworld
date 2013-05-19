@@ -296,6 +296,12 @@ class EvalPropContext(object):
                         # a string.
                         self.accum.append(str_or_null(subres))
                     continue
+                if isinstance(nod, interp.PlayerRef):
+                    player = yield motor.Op(self.app.mongodb.players.find_one,
+                                            {'_id':self.uid},
+                                            {'name':1, 'pronoun':1})
+                    self.accum.append(player['name']) ### more clever
+                    continue
                 self.accum.append(nod.describe())
             
         except Exception as ex:
