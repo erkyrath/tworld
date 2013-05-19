@@ -800,7 +800,6 @@ def perform_action(app, task, cmd, conn, target):
                     {'$sort': {'listpos':-1}},
                     {'$limit': 1},
                     ])
-            app.log.info('### aggregate: %s', res)
             listpos = 0.0
             if res and res['result']:
                 listpos = res['result'][0].get('listpos', 0.0)
@@ -935,7 +934,23 @@ def perform_action(app, task, cmd, conn, target):
                                   {'_id':1})
         if not location:
             raise ErrorMessageException('No such location: %s' % (lockey,))
-        
+
+        player = yield motor.Op(app.mongodb.players.find_one,
+                                {'_id':conn.uid},
+                                {'name':1})
+        playername = player['name']
+            
+        msg = res.get('oleave', None)
+        if msg is None:
+            msg = '%s leaves.' % (playername,) ###localize
+        else:
+            ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_MESSAGE)
+            msg = yield ctx.eval(msg, lookup=False)
+        if msg:
+            others = yield task.find_locale_players(notself=True)
+            if others:
+                task.write_event(others, msg)
+                
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':conn.uid},
                        {'$set':{'locid':location['_id'], 'focus':None,
@@ -949,6 +964,23 @@ def perform_action(app, task, cmd, conn, target):
         others = yield task.find_locale_players(notself=True)
         if others:
             task.set_dirty(others, DIRTY_POPULACE)
+            
+        msg = res.get('oarrive', None)
+        if msg is None:
+            msg = '%s arrives.' % (playername,) ###localize
+        else:
+            ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_MESSAGE)
+            msg = yield ctx.eval(msg, lookup=False)
+        if msg:
+            # others is already set
+            if others:
+                task.write_event(others, msg)
+        msg = res.get('text', None)
+        if msg:
+            ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_MESSAGE)
+            msg = yield ctx.eval(msg, lookup=False)
+            task.write_event(conn.uid, msg)
+            
     else:
         raise ErrorMessageException('Action invoked unsupported property type: %s' % (restype,))
     
