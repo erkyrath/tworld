@@ -1,8 +1,21 @@
 import re
 
 class InterpNode(object):
+    """Base class for special objects parsed out of a string by the
+    parse() method.
+    """
     def describe(self):
         return repr(self)
+    @staticmethod
+    def parse(val):
+        val = val.strip()
+        if not val.startswith('$'):
+            return Interpolate(val)
+        if val == '$para':
+            return ParaBreak()
+        if val == '$name':
+            return PlayerRef('name')
+        return '###'
 
 class Interpolate(InterpNode):
     def __init__(self, expr):
@@ -15,9 +28,9 @@ class Interpolate(InterpNode):
         return not (isinstance(obj, Interpolate) and self.expr == obj.expr)
 
 class Link(InterpNode):
-    def __init__(self, target=None):
+    def __init__(self, target=None, external=False):
         self.target = target
-        self.external = False
+        self.external = external
     def __repr__(self):
         if not self.external:
             return '<Link "%s">' % (self.target,)
@@ -32,6 +45,7 @@ class Link(InterpNode):
         val = val.strip()
         if val.startswith('http:'):
             return True
+        return False
         
 class EndLink(InterpNode):
     def __init__(self, external=False):
@@ -57,6 +71,20 @@ class ParaBreak(InterpNode):
         return not (isinstance(obj, ParaBreak))
     def describe(self):
         return ['para']
+
+class PlayerRef(InterpNode):
+    def __init__(self, key, expr=None):
+        self.key = key
+        self.expr = expr
+    def __repr__(self):
+        if expr is None:
+            return '<PlayerRef "%s">' % (key,)
+        else:
+            return '<PlayerRef "%s" %s>' % (key, expr)
+    def __eq__(self, obj):
+        return (isinstance(obj, PlayerRef) and self.key == obj.key and self.expr == obj.expr)
+    def __ne__(self, obj):
+        return not (isinstance(obj, PlayerRef) and self.key == obj.key and self.expr == obj.expr)
 
 ### LineBreak
 ### If, Else, Elif, End
@@ -111,8 +139,8 @@ def parse(text):
             pos = text.find(']]', start)
             if (pos < 0):
                 raise ValueError('interpolated text missing ]]')
-            chunk = text[start:pos].strip()
-            res.append(Interpolate(chunk))
+            chunk = text[start:pos]
+            res.append(InterpNode.parse(chunk))
             start = pos+2
             continue
 
@@ -163,8 +191,8 @@ def parse(text):
             pos = text.find(']]', start)
             if (pos < 0):
                 raise ValueError('interpolated text in link missing ]]')
-            chunk = text[start:pos].strip()
-            res.append(Interpolate(chunk))
+            chunk = text[start:pos]
+            res.append(InterpNode.parse(chunk))
             start = pos+2
             continue
         
@@ -278,11 +306,21 @@ class TestInterpModule(unittest.TestCase):
         ls = parse('One.\nTwo.')
         self.assertEqual(ls, ['One.\nTwo.'])
 
-        ls = parse('One.\n\nTwo.')
-        self.assertEqual(ls, ['One.', ParaBreak(), 'Two.'])
+        ls = parse('One.\n\nTwo.[[$para]]Three.')
+        self.assertEqual(ls, ['One.', ParaBreak(), 'Two.', ParaBreak(), 'Three.'])
 
         ls = parse('\nOne. \n \n Two.\n\n\nThree. \n\t\n  ')
         self.assertEqual(ls, ['\nOne.', ParaBreak(), 'Two.', ParaBreak(), 'Three.', ParaBreak()])
+
+        ls = parse('[foo|http://eblong.com/]')
+        self.assertEqual(ls, [Link('http://eblong.com/', True), 'foo', EndLink(True)])
+
+        ls = parse('One [foo| http://eblong.com/ ] two.')
+        self.assertEqual(ls, ['One ', Link('http://eblong.com/', True), 'foo', EndLink(True), ' two.'])
+
+        ls = parse('[[name]] [[$name]] [[ $name ]].')
+        self.assertEqual(ls, [Interpolate('name'), ' ', PlayerRef('name'), ' ', PlayerRef('name'), '.'])
+        
 
         self.assertRaises(ValueError, parse, '[bar')
         self.assertRaises(ValueError, parse, '[[bar')
