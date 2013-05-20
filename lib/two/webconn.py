@@ -18,6 +18,16 @@ class WebConnectionTable(object):
         self.listensock = None
         self.map = {}  # maps twwcids to IOStreams (normally just one)
 
+    def close(self):
+        """Close every socket, including the listener, in preparation
+        for a shutdown.
+        """
+        if (self.listensock):
+            self.listensock.close()
+            self.listensock = None
+        for conn in self.all():
+            conn.close()
+
     def get(self, twwcid):
         return self.map.get(twwcid, None)
 
@@ -25,6 +35,9 @@ class WebConnectionTable(object):
         return list(self.map.values())
 
     def listen(self):
+        """Begin listening for incoming tweb connections. This is called
+        when the ioloop begins.
+        """
         self.ioloop = tornado.ioloop.IOLoop.current()
         
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
@@ -80,6 +93,8 @@ class WebConnIOStream(tornado.iostream.IOStream):
         return '<WebConnIOStream %d (%s)>' % (self.twwcid, self.twhost,)
         
     def twread(self, dat):
+        """Callback: invoked when the stream receives new data.
+        """
         if not self.twtable:
             return  # must have already closed
         self.twbuffer.extend(dat)
@@ -96,6 +111,8 @@ class WebConnIOStream(tornado.iostream.IOStream):
                 self.twtable.log.info('Malformed message: %s', ex)
 
     def twclose(self, dat):
+        """Callback: invoked when the stream closes.
+        """
         try:
             self.twtable.map.pop(self.twwcid, None)
             # Say goodbye to all connections on this stream!

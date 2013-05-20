@@ -38,6 +38,7 @@ class Tworld(object):
 
         # Miscellaneous.
         self.caughtinterrupt = False
+        self.shuttingdown = False
 
         # When the IOLoop starts, we'll set up periodic tasks.
         tornado.ioloop.IOLoop.instance().add_callback(self.init_timers)
@@ -58,8 +59,24 @@ class Tworld(object):
         res.start()
 
     def shutdown(self):
-        ### close mongo and all tweb connections!
-        sys.exit(0)
+        """This is called when an orderly shutdown is requested. (Either
+        an admin request, or by the interrupt handler.) It should only
+        be called as part of its own command queue event (shutdownprocess).
+
+        We set the shuttingdown flag, which means the command queue is
+        frozen. Then we close all the sockets. Then we wait a second, to
+        allow the sockets to finish closing. (IOStream doesn't seem to
+        have an async close, seriously, wtf.) Then we exit the process.
+        """
+        self.shuttingdown = True
+        self.mongomgr.close()
+        self.webconns.close()
+        self.log.info('Waiting 1 second for sockets to drain...')
+        def finalshutdown():
+            self.log.info('Shutting down for real.')
+            sys.exit(0)
+        self.ioloop.add_timeout(datetime.timedelta(seconds=1.0),
+                                finalshutdown)
 
     def interrupt_handler(self, signum, stackframe):
         """This is called when Python catches a SIGINT (ctrl-C) signal.
@@ -68,7 +85,7 @@ class Tworld(object):
         We don't want to interrupt a command (in the command queue). So
         we queue up a special command which will shut down the process.
         But in case that doesn't fly -- say, if the queue is jammed up --
-        we shut down immediately on the second attempt.
+        we shut down immediately on the second interrupt.
         """
         if self.caughtinterrupt:
             self.log.error('Interrupt! Shutting down immediately!')
@@ -89,6 +106,9 @@ class Tworld(object):
                                 lambda:self.queue_command(obj))
 
     def queue_command(self, obj, connid=0, twwcid=0):
+        if self.shuttingdown:
+            self.log.warning('Not queueing command, because server is shutting down')
+            return
         if type(obj) is dict:
             obj = wcproto.namespace_wrapper(obj)
         # If this command was caused by a message from tweb, twwcid is

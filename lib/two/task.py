@@ -145,6 +145,9 @@ class Task(object):
         """
         self.log.info('### handling message %s', self.cmdobj)
 
+        if self.app.shuttingdown:
+            raise Exception('The server is shutting down.')
+
         cmdname = self.cmdobj.cmd
         connid = self.connid
         twwcid = self.twwcid

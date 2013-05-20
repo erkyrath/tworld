@@ -54,7 +54,12 @@ def define_commands():
 
     @command('shutdownprocess', isserver=True, noneedmongo=True)
     def cmd_shutdownprocess(app, task, cmd, stream):
+        """Shut down the process. We do this from a command, so that we
+        can say for sure that no other command is in flight.
+        """
         app.shutdown()
+        # At this point ioloop is still running, but the command queue
+        # is frozen. A sys.exit will be along shortly.
 
     @command('connect', isserver=True, noneedmongo=True)
     def cmd_connect(app, task, cmd, stream):

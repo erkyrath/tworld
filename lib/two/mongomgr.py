@@ -31,11 +31,24 @@ class MongoMgr(object):
         res = tornado.ioloop.PeriodicCallback(self.monitor_mongo_status, 3000)
         res.start()
 
+    def close(self):
+        """Close the connection to mongodb. (The monitor will start it
+        right back up again, or try to.)
+        """
+        if self.mongo:
+            self.mongo.disconnect()
+            self.mongo = None
+        self.app.mongodb = None
+
     @tornado.gen.coroutine
     def monitor_mongo_status(self):
         if (self.mongotimerbusy):
             self.log.warning('monitor_mongo_status: already in flight; did a previous call jam?')
             return
+        if (self.app.shuttingdown):
+            self.log.warning('monitor_mongo_status: server is shutting down, never mind')
+            return
+        
         self.mongotimerbusy = True
         
         if (self.mongoavailable):
@@ -48,9 +61,7 @@ class MongoMgr(object):
                 self.log.error('Mongo client not alive: %s', ex)
                 self.mongoavailable = False
             if (not self.mongoavailable):
-                self.mongo.disconnect()
-                self.mongo = None
-                self.app.mongodb = None
+                self.close()
             
         if (not self.mongoavailable):
             try:
