@@ -1,6 +1,8 @@
 
+import sys
 import datetime
 import logging
+import signal
 
 import tornado.ioloop
 import tornado.gen
@@ -34,6 +36,9 @@ class Tworld(object):
         self.queue = []
         self.commandbusy = False
 
+        # Miscellaneous.
+        self.caughtinterrupt = False
+
         # When the IOLoop starts, we'll set up periodic tasks.
         tornado.ioloop.IOLoop.instance().add_callback(self.init_timers)
         
@@ -42,12 +47,35 @@ class Tworld(object):
         self.webconns.listen()
         self.mongomgr.init_timers()
 
+        # Catch SIGINT (ctrl-C) with our own signal handler.
+        signal.signal(signal.SIGINT, self.interrupt_handler)
+
         # This periodic command kicks disconnected players to the void.
         # (Every three minutes, plus an uneven fraction of a second.)
         def func():
             self.queue_command({'cmd':'checkdisconnected'})
         res = tornado.ioloop.PeriodicCallback(func, 180100)
         res.start()
+
+    def shutdown(self):
+        ### close mongo and all tweb connections!
+        sys.exit(0)
+
+    def interrupt_handler(self, signum, stackframe):
+        """This is called when Python catches a SIGINT (ctrl-C) signal.
+        (It replaces the usual behavior of raising KeyboardInterrupt.)
+
+        We don't want to interrupt a command (in the command queue). So
+        we queue up a special command which will shut down the process.
+        But in case that doesn't fly -- say, if the queue is jammed up --
+        we shut down immediately on the second attempt.
+        """
+        if self.caughtinterrupt:
+            self.log.error('Interrupt! Shutting down immediately!')
+            raise KeyboardInterrupt()
+        self.log.warning('Interrupt! Queueing shutdown!')
+        self.caughtinterrupt = True
+        self.queue_command({'cmd':'shutdownprocess'})
 
     def schedule_command(self, obj, delay):
         """Schedule a command to be queued, delay seconds in the future.

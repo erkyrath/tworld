@@ -52,6 +52,10 @@ def define_commands():
     tornado.gen.coroutine -- you don't need to declare that.
     """
 
+    @command('shutdownprocess', isserver=True, noneedmongo=True)
+    def cmd_shutdownprocess(app, task, cmd, stream):
+        app.shutdown()
+
     @command('connect', isserver=True, noneedmongo=True)
     def cmd_connect(app, task, cmd, stream):
         assert stream is not None, 'Tweb connect command from no stream.'
