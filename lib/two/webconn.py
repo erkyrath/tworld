@@ -1,3 +1,11 @@
+"""
+Keep track of the tweb servers that are connected.
+
+(The way tworld is currently built, there will be no more than one tweb
+connected at a time. But we have some of the infrastructure necessary
+for several.)
+"""
+
 import types
 import errno
 import socket
@@ -9,6 +17,10 @@ import tornado.platform
 from twcommon import wcproto
 
 class WebConnectionTable(object):
+    """WebConnectionTable manages the set of WebConnIOStreams connected
+    at any given time.
+    """
+    
     def __init__(self, app):
         # Keep a link to the owning application.
         self.app = app
@@ -29,9 +41,13 @@ class WebConnectionTable(object):
             conn.close()
 
     def get(self, twwcid):
+        """Look up a WebConnIOStream by its twwcid.
+        """
         return self.map.get(twwcid, None)
 
     def all(self):
+        """A (non-dynamic) list of all tweb connections.
+        """
         return list(self.map.values())
 
     def listen(self):
@@ -57,6 +73,10 @@ class WebConnectionTable(object):
         self.log.info('Listening on port %d', self.app.opts.tworld_port)
 
     def listen_ready(self, fd, events):
+        """Callback: invoked when somebody connects to the listening socket.
+        We accept the connection (perhaps several, if they're piled up)
+        and begin reading data from it.
+        """
         while True:
             sock = None
             try:
@@ -77,6 +97,10 @@ class WebConnectionTable(object):
             stream.read_until_close(stream.twclose, stream.twread)
 
 class WebConnIOStream(tornado.iostream.IOStream):
+    """The connection to the tweb server. This is an ordinary Tornado
+    async stream connection.
+    """
+    
     # Counter for generating twwcid values. These are only used internally
     # as dict keys -- we don't share them with tweb.
     counter = 1

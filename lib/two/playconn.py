@@ -1,8 +1,21 @@
+"""
+Keep track of which players are connected.
+
+Each player is connected through a tweb server, so each PlayerConnection
+is associated with a WebConnIOStream. (In fact, the way tworld is currently
+set up, each PlayerConnection is associated with the *same* WebConnIOStream.
+We only have one.)
+"""
+
 from bson.objectid import ObjectId
 
 from twcommon import wcproto
 
 class PlayerConnectionTable(object):
+    """PlayerConnectionTable manages the set of PlayerConnections for the
+    application.
+    """
+    
     def __init__(self, app):
         # Keep a link to the owning application.
         self.app = app
@@ -87,6 +100,14 @@ class PlayerConnectionTable(object):
             self.log.debug('ERROR: uidmap has %d entries!', uidsum)
 
 class PlayerConnection(object):
+    """PlayerConnection represents one connected player.
+
+    It's possible for a player to be connected more than once, in which
+    case there will be more than one PlayerConnection with the same uid.
+    We are careful to send the same update messages and events to each
+    of them.
+    """
+    
     def __init__(self, table, connid, uid, email, stream):
         self.table = table
         self.connid = connid
