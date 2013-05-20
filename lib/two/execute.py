@@ -271,16 +271,59 @@ class EvalPropContext(object):
             assert self.accum is not None, 'EvalPropContext.accum should not be None here'
 
             nodls = interp.parse(res.get('text', ''))
+            
+            # While trawling through nodls, we may encounter $if/$end
+            # nodes. This keeps track of them. A True value in suppstack
+            # means that an $if has come out false.
+            suppstack = []
+            # This value is always sum(suppstack), which is the count of
+            # True values in suppstack. (This works in Python.)
+            suppressed = 0
+            
             for nod in nodls:
                 if not (isinstance(nod, interp.InterpNode)):
                     # String.
-                    if nod:
+                    if nod and not suppressed:
                         self.accum.append(nod)
                     continue
                 
                 nodkey = nod.classname
                 # This switch statement might be better off as a method
                 # lookup table. But only if it gets long.
+
+                if nodkey == 'If':
+                    if suppressed:
+                        # Can't get any more suppressed.
+                        suppstack.append(False)
+                        continue
+                    ifval = yield find_symbol(self.app, self.wid, self.iid, self.locid, nod.expr, dependencies=self.dependencies)
+                    if ifval:
+                        suppstack.append(False)
+                    else:
+                        suppstack.append(True)
+                        suppressed += 1
+                    continue
+                        
+                if nodkey == 'End':
+                    if len(suppstack) == 0:
+                        self.accum.append('[$end without matching $if]')
+                        continue
+                    suppstack.pop()
+                    suppressed = sum(suppstack)
+                    continue
+
+                if nodkey == 'Else':
+                    if len(suppstack) == 0:
+                        self.accum.append('[$else without matching $if]')
+                        continue
+                    suppstack[-1] = not suppstack[-1]
+                    suppressed = sum(suppstack)
+                    continue
+
+                # The rest of these nodes cannot affect the suppression
+                # state.
+                if suppressed:
+                    continue
                 
                 if nodkey == 'Link':
                     if not nod.external:

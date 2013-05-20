@@ -28,6 +28,14 @@ class InterpNode(object):
         # This could probably be more efficient
         if key == '$para':
             return ParaBreak()
+        if key == '$if':
+            return If(val)
+        if key == '$elif':
+            return ElIf(val)
+        if key == '$else':
+            return Else()
+        if key == '$end':
+            return End()
         if key == '$name' or key == '$Name':
             return PlayerRef('name') ### val may be an expression
         if key == '$we':
@@ -63,6 +71,30 @@ class Interpolate(InterpNode):
     def __eq__(self, obj):
         return (isinstance(obj, Interpolate) and self.expr == obj.expr)
 
+class If(InterpNode):
+    classname = 'If'
+    def __init__(self, expr):
+        self.expr = expr
+    def __repr__(self):
+        return '<If "%s">' % (self.expr,)
+    def __eq__(self, obj):
+        return (isinstance(obj, If) and self.expr == obj.expr)
+    
+class ElIf(InterpNode):
+    classname = 'ElIf'
+    def __init__(self, expr):
+        self.expr = expr
+    def __repr__(self):
+        return '<ElIf "%s">' % (self.expr,)
+    def __eq__(self, obj):
+        return (isinstance(obj, ElIf) and self.expr == obj.expr)
+    
+class Else(InterpNode):
+    classname = 'Else'
+    
+class End(InterpNode):
+    classname = 'End'
+    
 class Link(InterpNode):
     classname = 'Link'
     def __init__(self, target=None, external=False):
@@ -136,8 +168,7 @@ class PlayerRef(InterpNode):
     def __eq__(self, obj):
         return (isinstance(obj, PlayerRef) and self.key == obj.key and self.expr == obj.expr)
 
-### LineBreak
-### If, Else, Elif, End
+### LineBreak?
 
 re_bracketgroup = re.compile('[[]+')
 re_closeorbarorinterp = re.compile(']|[|]|[[]')
