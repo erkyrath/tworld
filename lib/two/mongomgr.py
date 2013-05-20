@@ -36,7 +36,10 @@ class MongoMgr(object):
         right back up again, or try to.)
         """
         if self.mongo:
-            self.mongo.disconnect()
+            try:
+                self.mongo.disconnect()
+            except Exception as ex:
+                self.log.error('Problem disconnecting mongo: %s', ex)
             self.mongo = None
         self.app.mongodb = None
 
