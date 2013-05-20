@@ -57,10 +57,14 @@ def define_commands():
         """Shut down the process. We do this from a command, so that we
         can say for sure that no other command is in flight.
         """
-        val = 'Server broadcast: Server is shutting down!'
+        restartreason = getattr(cmd, 'restarting', False)
+        if restartreason:
+            val = 'Server broadcast: Server is restarting!'
+        else:
+            val = 'Server broadcast: Server is shutting down!'
         for stream in app.webconns.all():
             stream.write(wcproto.message(0, {'cmd':'messageall', 'text':val}))
-        app.shutdown()
+        app.shutdown(restartreason)
         # At this point ioloop is still running, but the command queue
         # is frozen. A sys.exit will be along shortly.
 

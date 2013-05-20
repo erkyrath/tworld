@@ -61,11 +61,12 @@ rootform = logging.Formatter('[%(levelname).1s %(asctime)s: %(module)s:%(lineno)
 roothandler.setFormatter(rootform)
 ### log rotation, see volityd.py again...
 
-if opts.debug:
-    tornado.autoreload.start()
-
+import twcommon.autoreload
 import two.app
-
 app = two.app.Tworld(opts)
+
+if opts.debug:
+    twcommon.autoreload.sethandler(app.autoreload_handler)
+    tornado.autoreload.start()
 
 tornado.ioloop.IOLoop.instance().start()

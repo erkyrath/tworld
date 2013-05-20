@@ -15,6 +15,7 @@ import two.mongomgr
 import two.commands
 import two.task
 import twcommon.misc
+import twcommon.autoreload
 from twcommon import wcproto
 
 class Tworld(object):
@@ -58,7 +59,7 @@ class Tworld(object):
         res = tornado.ioloop.PeriodicCallback(func, 180100)
         res.start()
 
-    def shutdown(self):
+    def shutdown(self, reason=None):
         """This is called when an orderly shutdown is requested. (Either
         an admin request, or by the interrupt handler.) It should only
         be called as part of its own command queue event (shutdownprocess).
@@ -72,9 +73,14 @@ class Tworld(object):
         self.mongomgr.close()
         self.webconns.close()
         self.log.info('Waiting 1 second for sockets to drain...')
-        def finalshutdown():
-            self.log.info('Shutting down for real.')
-            sys.exit(0)
+        if reason == 'autoreload':
+            def finalshutdown():
+                self.log.info('Autoreloading for real.')
+                twcommon.autoreload.autoreload()
+        else:
+            def finalshutdown():
+                self.log.info('Shutting down for real.')
+                sys.exit(0)
         self.ioloop.add_timeout(datetime.timedelta(seconds=1.0),
                                 finalshutdown)
 
@@ -93,6 +99,10 @@ class Tworld(object):
         self.log.warning('Interrupt! Queueing shutdown!')
         self.caughtinterrupt = True
         self.queue_command({'cmd':'shutdownprocess'})
+
+    def autoreload_handler(self):
+        self.log.warning('Queueing autoreload shutdown!')
+        self.queue_command({'cmd':'shutdownprocess', 'restarting':'autoreload'})
 
     def schedule_command(self, obj, delay):
         """Schedule a command to be queued, delay seconds in the future.
