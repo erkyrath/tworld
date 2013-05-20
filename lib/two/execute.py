@@ -277,7 +277,12 @@ class EvalPropContext(object):
                     if nod:
                         self.accum.append(nod)
                     continue
-                if isinstance(nod, interp.Link):
+                
+                nodkey = nod.classname
+                # This switch statement might be better off as a method
+                # lookup table. But only if it gets long.
+                
+                if nodkey == 'Link':
                     if not nod.external:
                         ackey = EvalPropContext.build_action_key()
                         self.linktargets[ackey] = nod.target
@@ -285,9 +290,8 @@ class EvalPropContext(object):
                     else:
                         self.accum.append( ['exlink', nod.target] )
                     continue
-                if isinstance(nod, interp.Interpolate):
-                    ### Should execute code here, but right now we only
-                    ### allow symbol lookup.
+                
+                if nodkey == 'Interpolate':
                     subres = yield self.evalkey(nod.expr, depth+1)
                     # {text} objects have already added their contents to
                     # the accum array.
@@ -296,12 +300,18 @@ class EvalPropContext(object):
                         # a string.
                         self.accum.append(str_or_null(subres))
                     continue
-                if isinstance(nod, interp.PlayerRef):
+                
+                if nodkey == 'PlayerRef':
                     player = yield motor.Op(self.app.mongodb.players.find_one,
                                             {'_id':self.uid},
                                             {'name':1, 'pronoun':1})
-                    self.accum.append(player['name']) ### more clever
+                    if nod.key == 'name':
+                        self.accum.append(player['name'])
+                    else:
+                        self.accum.append(interp.resolve_pronoun(player, nod.key))
                     continue
+
+                # Otherwise...
                 self.accum.append(nod.describe())
             
         except Exception as ex:

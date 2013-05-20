@@ -15,15 +15,36 @@ class InterpNode(object):
         return repr(self)
     
     @staticmethod
-    def parse(val):
+    def parse(expr):
+        """An interpolated expression that starts with a dollar sign is
+        a special token. Parse it and return the appropriate InterpNode
+        object. If it doesn't start with $, it's an Interpolate object.
+        """
+        expr = expr.strip()
+        if not expr.startswith('$'):
+            return Interpolate(expr)
+        key, dummy, val = expr.partition(' ')
         val = val.strip()
-        if not val.startswith('$'):
-            return Interpolate(val)
-        if val == '$para':
+        # This could probably be more efficient
+        if key == '$para':
             return ParaBreak()
-        if val == '$name':
-            return PlayerRef('name')
-        return '###'
+        if key == '$name' or key == '$Name':
+            return PlayerRef('name') ### val may be an expression
+        if key == '$we':
+            return PlayerRef('we')
+        if key == '$us':
+            return PlayerRef('us')
+        if key == '$our':
+            return PlayerRef('our')
+        if key == '$ours':
+            return PlayerRef('ours')
+        if key == '$ourself':
+            return PlayerRef('ourself')
+        if key == '$We':
+            return PlayerRef('We')
+        if key == '$Our':
+            return PlayerRef('Our')
+        return '[Unknown key: %s]' % (key,)
 
 class Interpolate(InterpNode):
     classname = 'Interpolate'
@@ -222,6 +243,13 @@ pronoun_map_we = {
     'they': 'they',
     'name': '', # suffix
     }
+pronoun_map_We = {
+    'he': 'He',
+    'she': 'She',
+    'it': 'It',
+    'they': 'They',
+    'name': '', # suffix
+    }
 pronoun_map_us = {
     'he': 'him',
     'she': 'her',
@@ -234,6 +262,13 @@ pronoun_map_our = {
     'she': 'her',
     'it': 'its',
     'they': 'their',
+    'name': "'s", # suffix
+    }
+pronoun_map_Our = {
+    'he': 'His',
+    'she': 'Her',
+    'it': 'Its',
+    'they': 'Their',
     'name': "'s", # suffix
     }
 pronoun_map_ours = {
@@ -250,11 +285,22 @@ pronoun_map_ourself = {
     'they': 'themself',
     'name': '', # suffix
     }
+pronoun_map_map = {
+    'we': pronoun_map_we,
+    'We': pronoun_map_We,
+    'us': pronoun_map_us,
+    'our': pronoun_map_our,
+    'Our': pronoun_map_Our,
+    'ours': pronoun_map_ours,
+    'ourself': pronoun_map_ourself,
+    }
 
-def pronoun_map(player, map):
+def resolve_pronoun(player, mapkey):
     if not player:
         player = { 'name': 'nobody', 'pronoun': 'it' }
+    map = pronoun_map_map[mapkey]
     if player['pronoun'] == 'name':
+        # Add the suffix to the player's name
         return player['name'] + map['name']
     res = map.get(player['pronoun'], None)
     if not res:
