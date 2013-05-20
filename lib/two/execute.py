@@ -273,11 +273,13 @@ class EvalPropContext(object):
             nodls = interp.parse(res.get('text', ''))
             
             # While trawling through nodls, we may encounter $if/$end
-            # nodes. This keeps track of them. A True value in suppstack
-            # means that an $if has come out false.
+            # nodes. This keeps track of them. Specifically: a 0 value
+            # means "within a true conditional"; 1 means "within a
+            # false conditional"; 2 means "in an else/elif after a true
+            # conditional."
             suppstack = []
-            # This value is always sum(suppstack), which is the count of
-            # True values in suppstack. (This works in Python.)
+            # We suppress output if any value in suppstack is nonzero.
+            # It's easiest to track sum(suppstack), so that's what this is.
             suppressed = 0
             
             for nod in nodls:
@@ -294,14 +296,35 @@ class EvalPropContext(object):
                 if nodkey == 'If':
                     if suppressed:
                         # Can't get any more suppressed.
-                        suppstack.append(False)
+                        suppstack.append(0)
                         continue
                     ifval = yield find_symbol(self.app, self.wid, self.iid, self.locid, nod.expr, dependencies=self.dependencies)
                     if ifval:
-                        suppstack.append(False)
+                        suppstack.append(0)
                     else:
-                        suppstack.append(True)
+                        suppstack.append(1)
                         suppressed += 1
+                    continue
+                        
+                if nodkey == 'ElIf':
+                    if len(suppstack) == 0:
+                        self.accum.append('[$elif without matching $if]')
+                        continue
+                    if not suppressed:
+                        # We follow a successful "if". Suppress now.
+                        suppstack[-1] = 2
+                        suppressed = sum(suppstack)
+                        continue
+                    if suppstack[-1] == 2:
+                        # We had a successful "if" earlier, so no change.
+                        continue
+                    # We follow an unsuccessful "if". Maybe suppress.
+                    ifval = yield find_symbol(self.app, self.wid, self.iid, self.locid, nod.expr, dependencies=self.dependencies)
+                    if ifval:
+                        suppstack[-1] = 0
+                    else:
+                        suppstack[-1] = 1
+                    suppressed = sum(suppstack)
                     continue
                         
                 if nodkey == 'End':
@@ -316,7 +339,12 @@ class EvalPropContext(object):
                     if len(suppstack) == 0:
                         self.accum.append('[$else without matching $if]')
                         continue
-                    suppstack[-1] = not suppstack[-1]
+                    val = suppstack[-1]
+                    if val == 1:
+                        val = 0
+                    else:
+                        val = 2
+                    suppstack[-1] = val
                     suppressed = sum(suppstack)
                     continue
 
@@ -356,6 +384,10 @@ class EvalPropContext(object):
 
                 # Otherwise...
                 self.accum.append(nod.describe())
+
+            # End of nodls interaction.
+            if len(suppstack) > 0:
+                self.accum.append('[$if without matching $end]')
             
         except Exception as ex:
             return '[Exception: %s]' % (ex,)
