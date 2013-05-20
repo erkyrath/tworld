@@ -4,8 +4,16 @@ class InterpNode(object):
     """Base class for special objects parsed out of a string by the
     parse() method.
     """
+    def __repr__(self):
+        return '<%s>' % (self.classname,)
+    
+    def __eq__(self, obj):
+        return (isinstance(obj, InterpNode) and self.classname == obj.classname)
+    def __ne__(self, obj):
+        return not self.__eq__(obj)
     def describe(self):
         return repr(self)
+    
     @staticmethod
     def parse(val):
         val = val.strip()
@@ -18,16 +26,16 @@ class InterpNode(object):
         return '###'
 
 class Interpolate(InterpNode):
+    classname = 'Interpolate'
     def __init__(self, expr):
         self.expr = expr
     def __repr__(self):
         return '<Interpolate "%s">' % (self.expr,)
     def __eq__(self, obj):
         return (isinstance(obj, Interpolate) and self.expr == obj.expr)
-    def __ne__(self, obj):
-        return not (isinstance(obj, Interpolate) and self.expr == obj.expr)
 
 class Link(InterpNode):
+    classname = 'Link'
     def __init__(self, target=None, external=False):
         self.target = target
         self.external = external
@@ -38,8 +46,7 @@ class Link(InterpNode):
             return '<Link (ext) "%s">' % (self.target,)
     def __eq__(self, obj):
         return (isinstance(obj, Link) and self.target == obj.target and self.external == obj.external)
-    def __ne__(self, obj):
-        return not (isinstance(obj, Link) and self.target == obj.target and self.external == obj.external)
+
     @staticmethod
     def looks_url_like(val):
         val = val.strip()
@@ -48,14 +55,12 @@ class Link(InterpNode):
         return False
         
 class EndLink(InterpNode):
+    classname = 'EndLink'
     def __init__(self, external=False):
         self.external = external
-    def __repr__(self):
-        return '<EndLink>'
     def __eq__(self, obj):
         return (isinstance(obj, EndLink) and self.external == obj.external)
-    def __ne__(self, obj):
-        return not (isinstance(obj, EndLink) and self.external == obj.external)
+
     def describe(self):
         if not self.external:
             return ['/link']
@@ -63,16 +68,12 @@ class EndLink(InterpNode):
             return ['/exlink']
 
 class ParaBreak(InterpNode):
-    def __repr__(self):
-        return '<ParaBreak>'
-    def __eq__(self, obj):
-        return (isinstance(obj, ParaBreak))
-    def __ne__(self, obj):
-        return not (isinstance(obj, ParaBreak))
+    classname = 'ParaBreak'
     def describe(self):
         return ['para']
 
 class PlayerRef(InterpNode):
+    classname = 'PlayerRef'
     def __init__(self, key, expr=None):
         self.key = key
         self.expr = expr
@@ -83,8 +84,6 @@ class PlayerRef(InterpNode):
             return '<PlayerRef "%s" %s>' % (self.key, self.expr)
     def __eq__(self, obj):
         return (isinstance(obj, PlayerRef) and self.key == obj.key and self.expr == obj.expr)
-    def __ne__(self, obj):
-        return not (isinstance(obj, PlayerRef) and self.key == obj.key and self.expr == obj.expr)
 
 ### LineBreak
 ### If, Else, Elif, End
