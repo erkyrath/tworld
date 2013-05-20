@@ -414,7 +414,7 @@ function toolpane_plist_update() {
 
         el = $('<li>');
         el.append($('<span>').text(portal.world));
-        el.append(' \u2014 '); /* em-dash */
+        el.append(' \u2013 '); /* en-dash */
         el.append($('<span>').text(portal.location));
         el.append(' ');
         el.append($('<span>', {'class':'ToolGloss'}).text('('+portal.scope+')'));

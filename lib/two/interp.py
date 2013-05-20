@@ -44,6 +44,14 @@ class InterpNode(object):
             return PlayerRef('We')
         if key == '$Our':
             return PlayerRef('Our')
+        if key == '$em':
+            return Style('emph')
+        if key == '$/em':
+            return EndStyle('emph')
+        if key == '$fixed':
+            return Style('fixed')
+        if key == '$/fixed':
+            return EndStyle('fixed')
         return '[Unknown key: %s]' % (key,)
 
 class Interpolate(InterpNode):
@@ -87,6 +95,28 @@ class EndLink(InterpNode):
             return ['/link']
         else:
             return ['/exlink']
+
+class Style(InterpNode):
+    classname = 'Style'
+    def __init__(self, key=None):
+        self.key = key
+    def __repr__(self):
+        return '<Style "%s">' % (self.key,)
+    def __eq__(self, obj):
+        return (isinstance(obj, Style) and self.key == obj.key)
+    def describe(self):
+        return ['style', self.key]
+
+class EndStyle(InterpNode):
+    classname = 'EndStyle'
+    def __init__(self, key=None):
+        self.key = key
+    def __repr__(self):
+        return '<EndStyle "%s">' % (self.key,)
+    def __eq__(self, obj):
+        return (isinstance(obj, EndStyle) and self.key == obj.key)
+    def describe(self):
+        return ['/style', self.key]
 
 class ParaBreak(InterpNode):
     classname = 'ParaBreak'
