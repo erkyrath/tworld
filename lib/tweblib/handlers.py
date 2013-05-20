@@ -459,7 +459,6 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
         Note that message is a string here. The UTF-8 bytes have been decoded,
         but it hasn't been de-jsoned.
         """
-        self.application.twlog.info('### message: %s' % (msg,))
         if not self.twconn or not self.twconn.available:
             self.application.twlog.warning('Websocket connection is not available')
             self.write_tw_error('Your connection is not registered.')
