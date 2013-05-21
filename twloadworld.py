@@ -106,10 +106,16 @@ class World(object):
         for (key, propval) in self.props.items():
             if is_interp_text(propval):
                 all_interp_props.append( (propval['text'], None) )
+            if is_move(propval):
+                if propval['loc'] not in self.locations:
+                    print('Warning: move prop "%s" in %s goes to undefined loc: %s' % (key, None, propval['loc']))
         for (lockey, loc) in self.locations.items():
             for (key, propval) in loc.props.items():
                 if is_interp_text(propval):
                     all_interp_props.append( (propval['text'], lockey) )
+                if is_move(propval):
+                    if propval['loc'] not in self.locations:
+                        print('Warning: move prop "%s" in %s goes to undefined loc: %s' %(key, lockey, propval['loc']))
             
 
         for (text, lockey) in all_interp_props:
@@ -415,6 +421,9 @@ def prop_to_string(val):
 def is_interp_text(res):
     ### events also?
     return (type(res) is dict and res.get('type', None) == 'text')
+
+def is_move(res):
+    return (type(res) is dict and res.get('type', None) == 'move')
 
 errorcount = 0
 
