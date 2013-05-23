@@ -45,6 +45,7 @@ client = pymongo.MongoClient(tz_aware=True)
 db = client[opts.mongo_database]
 
 initial_config = {
+    'dbversion': 1,
     'playerfields': {
         'desc': 'an ordinary explorer.',
         'pronoun': 'it',
