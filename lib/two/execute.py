@@ -1004,6 +1004,22 @@ def perform_action(app, task, cmd, conn, target):
             task.write_event(others, newval)
         return
 
+    if restype == 'panic':
+        # Display an event.
+        val = res.get('text', None)
+        if val:
+            ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_MESSAGE)
+            newval = yield ctx.eval(val, lookup=False)
+            task.write_event(conn.uid, newval)
+        val = res.get('otext', None)
+        if val:
+            others = yield task.find_locale_players(notself=True)
+            ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_MESSAGE)
+            newval = yield ctx.eval(val, lookup=False)
+            task.write_event(others, newval)
+        app.queue_command({'cmd':'tovoid', 'uid':conn.uid, 'portin':True})
+        return
+
     if restype == 'code':
         raise ErrorMessageException('Code events are not yet supported.') ###
     

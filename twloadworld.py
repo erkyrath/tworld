@@ -266,6 +266,8 @@ def parse_prop(prop):
             return {'type':'focus', 'key':val}
         elif key == 'event':
             return {'type':'event', 'text':val}
+        elif key == 'panic':
+            return {'type':'panic', 'text':val} # theoretically the text is optional
         elif key == 'text':
             return {'type':'text', 'text':val}
         elif key == 'code':
@@ -398,6 +400,11 @@ def prop_to_string(val):
         return '*focus %s' % (val['key'],)
     if key == 'event':
         res = '*event %s' % (val['text'],)
+        if 'otext' in val:
+            res += ('\n\t- otext: ' + val['otext'])
+        return res
+    if key == 'panic':
+        res = '*panic %s' % (val['text'],)
         if 'otext' in val:
             res += ('\n\t- otext: ' + val['otext'])
         return res
