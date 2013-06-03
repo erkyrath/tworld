@@ -1,5 +1,8 @@
 
+import ast
+
 import tornado.gen
+import bson
 from bson.objectid import ObjectId
 import motor
 
@@ -440,6 +443,50 @@ def define_commands():
                        {'iid':iid, 'locid':locid, 'key':key})
         task.set_data_change( ('instanceprop', iid, locid, key) )
         raise MessageException('Instance property deleted: %s' % (origkey,))
+                
+    @command('meta_setprop', doeswrite=True)
+    def cmd_meta_setprop(app, task, cmd, conn):
+        ### only for world creator! (and unstable!)
+        if len(cmd.args) == 0:
+            raise MessageException('Usage: /setprop key val')
+        origkey = cmd.args[0]
+        key = origkey
+        newval = ' '.join(cmd.args[1:])
+        try:
+            newval = ast.literal_eval(newval)
+            # We test-encode the new value to bson, so that we can be strict
+            # and catch errors.
+            dummy = bson.BSON.encode({'val':newval}, check_keys=True)
+        except Exception as ex:
+            raise ErrorMessageException('Invalid property value: %s (%s)' % (newval, ex))
+        playstate = yield motor.Op(app.mongodb.playstate.find_one,
+                                   {'_id':conn.uid},
+                                   {'iid':1, 'locid':1})
+        iid = playstate['iid']
+        if not iid:
+            # In the void, there should be no actions.
+            raise ErrorMessageException('You are between worlds.')
+        instance = yield motor.Op(app.mongodb.instances.find_one,
+                                  {'_id':iid})
+        wid = instance['wid']
+        locid = playstate['locid']
+        if '.' in key:
+            lockey, dummy, key = key.partition('.')
+            if not lockey:
+                locid = None
+            else:
+                location = yield motor.Op(app.mongodb.locations.find_one,
+                                          {'wid':wid, 'key':lockey},
+                                          {'_id':1})
+                if not location:
+                    raise ErrorMessageException('No such location: %s' % (lockey,))
+                locid = location['_id']
+        yield motor.Op(app.mongodb.instanceprop.update,
+                       {'iid':iid, 'locid':locid, 'key':key},
+                       {'iid':iid, 'locid':locid, 'key':key, 'val':newval},
+                       upsert=True)
+        task.set_data_change( ('instanceprop', iid, locid, key) )
+        raise MessageException('Instance property set: %s = %s' % (origkey, repr(newval)))
                 
     @command('meta_move', doeswrite=True)
     def cmd_meta_move(app, task, cmd, conn):
