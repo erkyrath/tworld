@@ -173,6 +173,7 @@ class PlayerRef(InterpNode):
 re_bracketgroup = re.compile('[[]+')
 re_closeorbarorinterp = re.compile(']|[|][|]?|[[]')
 re_twolinebreaks = re.compile('[ \t]*\n[ \t]*\n[ \t\n]*')
+re_initdollar = re.compile('\\s*[$]')
 
 def append_text_with_paras(dest, text, start=0, end=None):
     if end is None:
@@ -227,11 +228,24 @@ def parse(text):
             start = pos+2
             continue
 
+        start = start+1
+        
+        if re_initdollar.match(text, start):
+            # Special case: [$foo] is treated the same as [[$foo]]. Not a
+            # link, but an interpolation.
+            pos = text.find(']', start)
+            if (pos < 0):
+                raise ValueError('interpolated $symbol missing ]')
+            chunk = text[start:pos]
+            res.append(InterpNode.parse(chunk))
+            start = pos+1
+            continue
+
         # Read a [...] or [...|...] link. This (the first part) may
         # contain a mix of text and interpolations. We may also have
         # a [...||...] link, in which case the second part is pasted
         # into the text as well as the target.
-        start = start+1
+
         linkstart = start
         assert curlink is None
         curlink = Link()
@@ -433,6 +447,9 @@ class TestInterpModule(unittest.TestCase):
         ls = parse('\nOne. \n \n Two.\n\n\nThree. \n\t\n  ')
         self.assertEqual(ls, ['\nOne.', ParaBreak(), 'Two.', ParaBreak(), 'Three.', ParaBreak()])
 
+        ls = parse('[||Link] to [this||and\n\nthat].')
+        self.assertEqual(ls, [Link('link'), ' Link', EndLink(), ' to ', Link('and_that'), 'this', ' and', ParaBreak(), 'that', EndLink(), '.'])
+
         ls = parse('[foo|http://eblong.com/]')
         self.assertEqual(ls, [Link('http://eblong.com/', True), 'foo', EndLink(True)])
 
@@ -444,6 +461,9 @@ class TestInterpModule(unittest.TestCase):
         
         ls = parse('This is an [[$em]]italic[[$/em]] word.')
         self.assertEqual(ls, ['This is an ', Style('emph'), 'italic', EndStyle('emph'), ' word.'])
+
+        ls = parse('An [$em]italic[ $/em ] word.[$para]Yeah.')
+        self.assertEqual(ls, ['An ', Style('emph'), 'italic', EndStyle('emph'), ' word.', ParaBreak(), 'Yeah.'])
 
 
         self.assertRaises(ValueError, parse, '[bar')
