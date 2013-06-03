@@ -266,11 +266,17 @@ class RegisterHandler(MyRequestHandler):
         elif ('@' in name):
             formerror = 'Your player name may not contain the @ sign.'
             formfocus = 'name'
+        elif (len(name) > 32):
+            formerror = 'Your name is limited to 32 characters.'
+            formfocus = 'name'
         elif (not email):
             formerror = 'You must enter an email address.'
             formfocus = 'email'
         elif ('@' not in email):
             formerror = 'Your email address must contain an @ sign.'
+            formfocus = 'email'
+        elif (len(email) > 128):
+            formerror = 'Your email address is limited to 128 characters.'
             formfocus = 'email'
         elif (not password):
             formerror = 'You must enter your password.'
@@ -280,6 +286,9 @@ class RegisterHandler(MyRequestHandler):
             formfocus = 'password2'
         elif (len(password) < 6):
             formerror = 'Please use at least six characters in your password.'
+            formfocus = 'password'
+        elif (len(password) > 128):
+            formerror = 'Please use no more than 128 characters in your password.'
             formfocus = 'password'
         elif (password != password2):
             formerror = 'The passwords you entered were not the same.'
