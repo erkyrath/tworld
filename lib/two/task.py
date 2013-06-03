@@ -219,15 +219,23 @@ class Task(object):
             if cmd.restrict == 'creator':
                 # Player must be the creator of the world he is in.
                 ### And it must be an unstable version.
-                playstate = yield motor.Op(self.app.mongodb.playstate.find_one,
-                                           {'_id':conn.uid},
-                                           {'iid':1})
-                instance = yield motor.Op(self.app.mongodb.instances.find_one,
-                                          {'_id':playstate['iid']})
-                world = yield motor.Op(self.app.mongodb.worlds.find_one,
-                                          {'_id':instance['wid']})
-                if world.get('creator', None) != conn.uid:
-                    raise ErrorMessageException('Command may only be invoked by this world\'s creator: "%s"' % (cmdname,))
+                # (Or an admin, anywhere.)
+                player = yield motor.Op(self.app.mongodb.players.find_one,
+                                        {'_id':conn.uid},
+                                        {'admin':1})
+                if (player and player.get('admin', False)):
+                    # Admins always have creator rights.
+                    pass
+                else:
+                    playstate = yield motor.Op(self.app.mongodb.playstate.find_one,
+                                               {'_id':conn.uid},
+                                               {'iid':1})
+                    instance = yield motor.Op(self.app.mongodb.instances.find_one,
+                                              {'_id':playstate['iid']})
+                    world = yield motor.Op(self.app.mongodb.worlds.find_one,
+                                           {'_id':instance['wid']})
+                    if world.get('creator', None) != conn.uid:
+                        raise ErrorMessageException('Command may only be invoked by this world\'s creator: "%s"' % (cmdname,))
 
             if not conn:
                 # Newly-established connection. Only 'playeropen' will be
