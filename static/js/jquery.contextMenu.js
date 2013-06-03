@@ -49,9 +49,17 @@
         menuItem.attr("class", itemOptions.klass);
       }
 
-      menuItem.appendTo(menu).bind('click', function(e) {
-        itemOptions.click(activeElement);
+      if (itemOptions.enableHook) {
+        menuItem.data('enableHook', itemOptions.enableHook);
+      }
+
+      menuItem.appendTo(menu);
+
+      menuItem.bind('click', function(e) {
         e.preventDefault();
+        /* Check whether the item is disabled. --ZARF */
+        if (!menuItem.data('disabled'))
+          itemOptions.click(activeElement);
       });
     });
 
@@ -86,6 +94,20 @@
           options.showMenu.call(menu, activeElement);
         }
 
+        /* Call enableHooks, if any --ZARF */
+        menu.children('li').each(function(index, el) {
+          var menuItem = $(el);
+          var hook = menuItem.data('enableHook');
+          if (hook) {
+            var res = hook.call(menu, menuItem);
+            menuItem.data('disabled', !res);
+            if (res)
+                menuItem.removeClass('Disabled');
+            else
+                menuItem.addClass('Disabled');
+          }
+        });
+        
         /* --ZARF
         // Bind to the closed event if there is a hideMenu handler specified
         if (options.hideMenu) {
