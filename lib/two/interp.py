@@ -171,11 +171,13 @@ class PlayerRef(InterpNode):
 ### LineBreak?
 
 re_bracketgroup = re.compile('[[]+')
-re_closeorbarorinterp = re.compile(']|[|]|[[]')
+re_closeorbarorinterp = re.compile(']|[|][|]?|[[]')
 re_twolinebreaks = re.compile('[ \t]*\n[ \t]*\n[ \t\n]*')
 
-def append_text_with_paras(dest, text, start, end):
-    if (end <= start):
+def append_text_with_paras(dest, text, start=0, end=None):
+    if end is None:
+        end = len(text)
+    if end <= start:
         return
 
     text = text[start:end]
@@ -226,7 +228,9 @@ def parse(text):
             continue
 
         # Read a [...] or [...|...] link. This (the first part) may
-        # contain a mix of text and interpolations.
+        # contain a mix of text and interpolations. We may also have
+        # a [...||...] link, in which case the second part is pasted
+        # into the text as well as the target.
         start = start+1
         linkstart = start
         assert curlink is None
@@ -252,13 +256,18 @@ def parse(text):
                 break
             if text[pos] == '|':
                 append_text_with_paras(res, text, start, pos)
-                start = pos+1
+                start = match.end()
+                doublebar = (start - match.start() > 1)
                 pos = text.find(']', start)
                 if pos < 0:
                     raise ValueError('link | missing ]')
                 chunk = text[start:pos]
-                curlink.target = chunk.strip()
-                curlink.external = Link.looks_url_like(chunk)
+                if doublebar:
+                    append_text_with_paras(res, ' '+chunk)
+                    curlink.target = sluggify(chunk)
+                else:
+                    curlink.target = chunk.strip()
+                    curlink.external = Link.looks_url_like(chunk)
                 res.append(EndLink(curlink.external))
                 curlink = None
                 start = pos+1
@@ -409,6 +418,12 @@ class TestInterpModule(unittest.TestCase):
         ls = parse('[One [[two]] three[[four]][[five]].| foobar ]')
         self.assertEqual(ls, [Link('foobar'), 'One ', Interpolate('two'), ' three', Interpolate('four'), Interpolate('five'), '.', EndLink()])
 
+        ls = parse('[hello||world]')
+        self.assertEqual(ls, [Link('world'), 'hello', ' world', EndLink()])
+
+        ls = parse('[Bottle of || red wine].')
+        self.assertEqual(ls, [Link('red_wine'), 'Bottle of ', '  red wine', EndLink(), '.'])
+
         ls = parse('One.\nTwo.')
         self.assertEqual(ls, ['One.\nTwo.'])
 
@@ -427,6 +442,9 @@ class TestInterpModule(unittest.TestCase):
         ls = parse('[[name]] [[$name]] [[ $name ]].')
         self.assertEqual(ls, [Interpolate('name'), ' ', PlayerRef('name'), ' ', PlayerRef('name'), '.'])
         
+        ls = parse('This is an [[$em]]italic[[$/em]] word.')
+        self.assertEqual(ls, ['This is an ', Style('emph'), 'italic', EndStyle('emph'), ' word.'])
+
 
         self.assertRaises(ValueError, parse, '[bar')
         self.assertRaises(ValueError, parse, '[[bar')
