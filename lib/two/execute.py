@@ -6,6 +6,7 @@ from bson.objectid import ObjectId
 import motor
 
 from twcommon.excepts import MessageException, ErrorMessageException
+from twcommon.misc import MAX_DESCLINE_LENGTH
 from two import interp
 
 LEVEL_DISPSPECIAL = 4
@@ -845,6 +846,8 @@ def perform_action(app, task, cmd, conn, target):
             if val is None:
                 raise ErrorMessageException('No value given for editstr.')
             val = str(val)
+            if len(val) > MAX_DESCLINE_LENGTH:
+                val = val[0:MAX_DESCLINE_LENGTH]
             yield motor.Op(app.mongodb.instanceprop.update,
                            {'iid':iid, 'locid':locid, 'key':key},
                            {'iid':iid, 'locid':locid, 'key':key, 'val':val},

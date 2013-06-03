@@ -616,9 +616,12 @@ def define_commands():
                            {'$set': {'pronoun':cmd.pronoun}})
             task.set_data_change( ('players', conn.uid, 'pronoun') )
         if getattr(cmd, 'desc', None):
+            val = str(cmd.desc)
+            if len(val) > twcommon.misc.MAX_DESCLINE_LENGTH:
+                val = val[0:twcommon.misc.MAX_DESCLINE_LENGTH]
             yield motor.Op(app.mongodb.players.update,
                            {'_id':conn.uid},
-                           {'$set': {'desc':cmd.desc}})
+                           {'$set': {'desc':val}})
             task.set_data_change( ('players', conn.uid, 'desc') )
         
     @command('say')
