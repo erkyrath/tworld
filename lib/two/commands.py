@@ -364,6 +364,65 @@ def define_commands():
     def cmd_meta_panicstart(app, task, cmd, conn):
         app.queue_command({'cmd':'portstart'}, connid=task.connid, twwcid=task.twwcid)
 
+    @command('meta_move', doeswrite=True)
+    def cmd_meta_move(app, task, cmd, conn):
+        ### only for world creator! (and unstable!)
+        if len(cmd.args) != 1:
+            raise MessageException('usage: /move location-key')
+        lockey = cmd.args[0]
+        playstate = yield motor.Op(app.mongodb.playstate.find_one,
+                                   {'_id':conn.uid},
+                                   {'iid':1, 'locid':1, 'focus':1})
+        iid = playstate['iid']
+        if not iid:
+            # In the void, there should be no actions.
+            raise ErrorMessageException('You are between worlds.')
+        instance = yield motor.Op(app.mongodb.instances.find_one,
+                                  {'_id':iid})
+        wid = instance['wid']
+        ### Following code is identical to 'move' in perform_action,
+        ### except that the leave/arrive messages are fixed.
+        location = yield motor.Op(app.mongodb.locations.find_one,
+                                  {'wid':wid, 'key':lockey},
+                                  {'_id':1})
+        if not location:
+            raise ErrorMessageException('No such location: %s' % (lockey,))
+        
+        player = yield motor.Op(app.mongodb.players.find_one,
+                                {'_id':conn.uid},
+                                {'name':1})
+        playername = player['name']
+            
+        msg = '%s disappears.' % (playername,) ###localize
+        if msg:
+            others = yield task.find_locale_players(notself=True)
+            if others:
+                task.write_event(others, msg)
+                
+        yield motor.Op(app.mongodb.playstate.update,
+                       {'_id':conn.uid},
+                       {'$set':{'locid':location['_id'], 'focus':None,
+                                'lastmoved': task.starttime }})
+        task.set_dirty(conn.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_POPULACE)
+        task.set_data_change( ('playstate', conn.uid, 'locid') )
+        
+        # We set everybody in the destination room DIRTY_POPULACE.
+        # (Players in the starting room have a dependency, which is already
+        # covered.)
+        others = yield task.find_locale_players(notself=True)
+        if others:
+            task.set_dirty(others, DIRTY_POPULACE)
+            
+        msg = '%s appears.' % (playername,) ###localize
+        if msg:
+            # others is already set
+            if others:
+                task.write_event(others, msg)
+        msg = 'Your location changes.' ###localize
+        if msg:
+            task.write_event(conn.uid, msg)
+        
+        
     @command('meta_holler')
     def cmd_meta_holler(app, task, cmd, conn):
         ### admin only!
