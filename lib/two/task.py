@@ -204,6 +204,8 @@ class Task(object):
             if not cmd:
                 raise ErrorMessageException('Unknown player command: "%s"' % (cmdname,))
 
+            # Check various limitations on the command.
+
             if cmd.isserver:
                 raise ErrorMessageException('Command may not be invoked by a player: "%s"' % (cmdname,))
 
@@ -213,6 +215,19 @@ class Task(object):
                                         {'admin':1})
                 if not (player and player.get('admin', False)):
                     raise ErrorMessageException('Command may only be invoked by an administrator: "%s"' % (cmdname,))
+
+            if cmd.restrict == 'creator':
+                # Player must be the creator of the world he is in.
+                ### And it must be an unstable version.
+                playstate = yield motor.Op(self.app.mongodb.playstate.find_one,
+                                           {'_id':conn.uid},
+                                           {'iid':1})
+                instance = yield motor.Op(self.app.mongodb.instances.find_one,
+                                          {'_id':playstate['iid']})
+                world = yield motor.Op(self.app.mongodb.worlds.find_one,
+                                          {'_id':instance['wid']})
+                if world.get('creator', None) != conn.uid:
+                    raise ErrorMessageException('Command may only be invoked by this world\'s creator: "%s"' % (cmdname,))
 
             if not conn:
                 # Newly-established connection. Only 'playeropen' will be
