@@ -386,7 +386,7 @@ function toolpane_fill_pane_plist(seg) {
 
     seg.rightbutel.contextMenu('popup_menu', 
         [
-            { text:'Go Straight Home', /*###localize*/
+            { text:'Return to Start', /*###localize*/
                     click: function() {
                     websocket_send_json({ cmd:'portstart' });
                 } },
