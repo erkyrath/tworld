@@ -312,8 +312,8 @@ def append_to_prop(dic, key, ln):
         subval = subval.strip()
         if val.get('type', None) == 'portlist' and subkey == 'portal':
             subls = [ s2val.strip() for s2val in subval.split(',') ]
-            if len(subls) != 3:
-                error('Portal property must have three fields')
+            if len(subls) != 4:
+                error('Portal property must have four fields')
                 return None
             val['_templist'].append(subls)
         else:
