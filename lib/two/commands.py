@@ -364,11 +364,31 @@ def define_commands():
     def cmd_meta_panicstart(app, task, cmd, conn):
         app.queue_command({'cmd':'portstart'}, connid=task.connid, twwcid=task.twwcid)
 
+    @command('meta_getprop')
+    def cmd_meta_getprop(app, task, cmd, conn):
+        ### only for world creator! (and unstable!)
+        if len(cmd.args) != 1:
+            raise MessageException('Usage: /getprop key')
+        key = cmd.args[0]
+        playstate = yield motor.Op(app.mongodb.playstate.find_one,
+                                   {'_id':conn.uid},
+                                   {'iid':1, 'locid':1})
+        iid = playstate['iid']
+        if not iid:
+            # In the void, there should be no actions.
+            raise ErrorMessageException('You are between worlds.')
+        locid = playstate['locid']
+        res = yield motor.Op(app.mongodb.instanceprop.find_one,
+                             {'iid':iid, 'locid':locid, 'key':key})
+        if not res:
+            raise MessageException('Instance property not set: %s' % (key,))
+        raise MessageException('Instance property: %s = %s' % (key, repr(res['val'])))
+
     @command('meta_move', doeswrite=True)
     def cmd_meta_move(app, task, cmd, conn):
         ### only for world creator! (and unstable!)
         if len(cmd.args) != 1:
-            raise MessageException('usage: /move location-key')
+            raise MessageException('Usage: /move location-key')
         lockey = cmd.args[0]
         playstate = yield motor.Op(app.mongodb.playstate.find_one,
                                    {'_id':conn.uid},
