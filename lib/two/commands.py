@@ -242,16 +242,11 @@ def define_commands():
             newscid = newloc['scid']
             newlocid = newloc['locid']
         else:
-            # Look through the player's list and find the entry with the
-            # lowest listpos.
+            # Look through the player's list and find the preferred entry.
             plistid = player['plistid']
-            res = yield motor.Op(app.mongodb.portals.aggregate, [
-                    {'$match': {'plistid':plistid}},
-                    {'$sort': {'listpos':1}},
-                    {'$limit': 1},
-                    ])
-            if res and res['result']:
-                res = res['result'][0]
+            res = yield motor.Op(app.mongodb.portals.find_one,
+                                 {'plistid':plistid, 'preferred':True})
+            if res:
                 newwid = res['wid']
                 newscid = res['scid']
                 newlocid = res['locid']

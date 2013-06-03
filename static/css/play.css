@@ -412,6 +412,14 @@ ul.ToolList + ul.ToolList {
   background: #BB8;
 }
 
+#popup_menu li.Disabled {
+  background: inherit;
+}
+
+#popup_menu .Disabled a {
+  color: #977;
+}
+
 .DoneButton {
   font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
   font-size: 0.9em;

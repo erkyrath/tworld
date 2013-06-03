@@ -385,11 +385,25 @@ function toolpane_fill_pane_plist(seg) {
     seg.titleel.on('click', seg.openhook);
 
     seg.rightbutel.contextMenu('popup_menu', 
-        [{ text:'Go Straight Home', click: function() {
+        [
+            { text:'Go Straight Home', /*###localize*/
+                    click: function() {
                     websocket_send_json({ cmd:'portstart' });
-                } }],
-        { leftClick: true,
-                position: { my:'right top', at:'right bottom', of:seg.rightbutel } } );
+                } },
+            { text:'Set as Home Portal', /*###localize*/
+                    enableHook: function() { return toolsegments['plist'].selection; },
+                    click: function() {
+                    var seg = toolsegments['plist'];
+                    var portal = seg.map[seg.selection];
+                    if (portal) {
+                        websocket_send_json({ cmd:'setpreferredportal', portid:portal.portid });
+                    }
+                } }
+         ],
+        { 
+            leftClick: true,
+            position: { my:'right top', at:'right bottom', of:seg.rightbutel }
+        } );
 
 }
 
