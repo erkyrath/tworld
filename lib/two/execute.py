@@ -589,6 +589,9 @@ def portal_description(app, portal, uid, uidiid=None, location=False):
         if world.get('copyable', False):
             res['copyable'] = True
 
+        if portal.get('preferred', False):
+            res['preferred'] = True
+
         if location:
             loc = yield motor.Op(app.mongodb.locations.find_one,
                                  {'_id':portal['locid']})

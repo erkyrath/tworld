@@ -390,7 +390,7 @@ function toolpane_fill_pane_plist(seg) {
                     click: function() {
                     websocket_send_json({ cmd:'portstart' });
                 } },
-            { text:'Set as Home Portal', /*###localize*/
+            { text:'Set as Panic Portal', /*###localize*/
                     enableHook: function() { return toolsegments['plist'].selection; },
                     click: function() {
                     var seg = toolsegments['plist'];

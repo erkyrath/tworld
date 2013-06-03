@@ -408,6 +408,26 @@ def define_commands():
         task.set_dirty(conn.uid, DIRTY_FOCUS)
 
         
+    @command('setpreferredportal')
+    def cmd_setpreferredportal(app, task, cmd, conn):
+        # This updates the database, but not in a way that notifies anybody.
+        player = yield motor.Op(app.mongodb.players.find_one,
+                                {'_id':conn.uid},
+                                {'plistid':1})
+        portal = yield motor.Op(app.mongodb.portals.find_one,
+                                {'_id':ObjectId(cmd.portid), 'plistid':player['plistid']})
+        if not portal:
+            raise ErrorMessageException('No such portal in your collection.')
+        # Remove all preferred flags for this player
+        yield motor.Op(app.mongodb.portals.update,
+                       {'plistid':player['plistid'], 'preferred':True},
+                       {'$unset': {'preferred':1}},
+                       multi=True)
+        # And set the new one
+        yield motor.Op(app.mongodb.portals.update,
+                       {'_id':portal['_id']},
+                       {'$set': {'preferred':True}})
+        
     @command('selfdesc', doeswrite=True)
     def cmd_selfdesc(app, task, cmd, conn):
         if getattr(cmd, 'pronoun', None):
