@@ -614,6 +614,9 @@ for val in args:
         dbloc = db.locations.find_one({'wid':wid, 'key':lockey})
         if dbloc:
             loc.locid = dbloc['_id']
+            if dbloc.get('name', None) != loc.name:
+                print('Updating location name: %s' % (loc.key,))
+                db.locations.update({'_id':loc.locid}, {'$set':{'name':loc.name}})
         else:
             print('Creating location: %s' % (loc.key,))
             dbloc = {
