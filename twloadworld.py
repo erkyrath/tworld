@@ -278,10 +278,10 @@ def parse_prop(prop):
             return {'type':'editstr', 'key':val}
         elif key == 'portal':
             subls = [ subval.strip() for subval in val.split(',') ]
-            if len(subls) != 3:
-                error('Portal property must have three fields')
+            if len(subls) != 4:
+                error('Portal property must have four fields')
                 return None
-            return {'type':'portal', '_temptrio':subls}
+            return {'type':'portal', '_tempquad':subls}
         else:
             error('Unknown special property type: *%s' % (key,))
             return None
@@ -330,26 +330,30 @@ def transform_prop(world, db, val):
     key = val.get('type', None)
     
     if key == 'portal':
-        trio = val['_temptrio']
-        toworld = db.worlds.find_one({'name':trio[0]})
+        quad = val['_tempquad']
+        tocreator = db.players.find_one({'name':quad[1]})
+        if not tocreator:
+            error('Creator not found for portal: %s, %s' % (quad[0], quad[1]))
+            return '[Portal world creator not found]'
+        toworld = db.worlds.find_one({'name':quad[0], 'creator':tocreator['_id']})
         if not toworld:
-            error('World not found for portal: %s' % (trio[0],))
+            error('World not found for portal: %s, %s' % (quad[0], quad[1]))
             return '[Portal world not found]'
-        toloc = db.locations.find_one({'wid':toworld['_id'], 'key':trio[2]})
+        toloc = db.locations.find_one({'wid':toworld['_id'], 'key':quad[3]})
         if not toloc:
-            error('Location not found for portal: %s, %s' % (trio[0], trio[2]))
+            error('Location not found for portal: %s, %s' % (quad[0], quad[3]))
             return '[Portal location not found]'
         query = { 'inwid':world.wid, 'wid':toworld['_id'], 'locid':toloc['_id'] }
-        if trio[1] in ('personal', 'global', 'same'):
-            query['scid'] = trio[1]
+        if quad[2] in ('personal', 'global', 'same'):
+            query['scid'] = quad[2]
         else:
-            query['scid'] = ObjectId(trio[1])
+            query['scid'] = ObjectId(quad[2])
         portal = db.portals.find_one(query)
         if portal:
             portid = portal['_id']
         else:
             portid = db.portals.insert(query)
-            print('Created portal %s (%s)' % (trio, portid,))
+            print('Created portal %s (%s)' % (quad, portid,))
         newval = { 'type':'portal', 'portid':portid }
         if 'text' in val:
             newval['text'] = val['text']
@@ -364,24 +368,28 @@ def transform_prop(world, db, val):
         # Clean out the portlist and rebuild it
         db.portals.remove({'plistid':plistid})
         listpos = 0.0
-        for trio in val['_templist']:
-            toworld = db.worlds.find_one({'name':trio[0]})
+        for quad in val['_templist']:
+            tocreator = db.players.find_one({'name':quad[1]})
+            if not tocreator:
+                error('Creator not found for portal: %s, %s' % (quad[0], quad[1]))
+                return '[Portal world creator not found]'
+            toworld = db.worlds.find_one({'name':quad[0], 'creator':tocreator['_id']})
             if not toworld:
-                error('World not found for portal: %s' % (trio[0],))
+                error('World not found for portal: %s' % (quad[0],))
                 return '[Portal world not found]'
-            toloc = db.locations.find_one({'wid':toworld['_id'], 'key':trio[2]})
+            toloc = db.locations.find_one({'wid':toworld['_id'], 'key':quad[3]})
             if not toloc:
-                error('Location not found for portal: %s, %s' % (trio[0], trio[2]))
+                error('Location not found for portal: %s, %s' % (quad[0], quad[3]))
                 return '[Portal location not found]'
             query = { 'plistid':plistid, 'wid':toworld['_id'], 'locid':toloc['_id'] }
-            if trio[1] in ('personal', 'global', 'same'):
-                query['scid'] = trio[1]
+            if quad[2] in ('personal', 'global', 'same'):
+                query['scid'] = quad[2]
             else:
-                query['scid'] = ObjectId(trio[1])
+                query['scid'] = ObjectId(quad[2])
             query['listpos'] = listpos
             listpos += 1.0
             portid = db.portals.insert(query)
-            print('Created portal %s (%s)' % (trio, portid,))
+            print('Created portal %s (%s)' % (quad, portid,))
         newval = { 'type':'portlist', 'plistid':plistid }
         if 'text' in val:
             newval['text'] = val['text']
@@ -412,7 +420,7 @@ def prop_to_string(val):
         res = '*selfdesc %s' % (val['text'],)
         return res
     if key == 'portal':
-        res = '*portal %s' % (val['_temptrio'],)
+        res = '*portal %s' % (val['_tempquad'],)
         if 'text' in val:
             res += ('\n\t- text: ' + val['text'])
         return res
