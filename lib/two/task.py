@@ -207,6 +207,13 @@ class Task(object):
             if cmd.isserver:
                 raise ErrorMessageException('Command may not be invoked by a player: "%s"' % (cmdname,))
 
+            if cmd.restrict == 'admin':
+                player = yield motor.Op(self.app.mongodb.players.find_one,
+                                        {'_id':conn.uid},
+                                        {'admin':1})
+                if not (player and player.get('admin', False)):
+                    raise ErrorMessageException('Command may only be invoked by an administrator: "%s"' % (cmdname,))
+
             if not conn:
                 # Newly-established connection. Only 'playeropen' will be
                 # accepted. (Another twwcid case; we'll have to sneak the

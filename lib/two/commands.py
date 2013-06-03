@@ -17,10 +17,13 @@ class Command:
     # in this dict.
     all_commands = {}
 
-    def __init__(self, name, func, isserver=False, noneedmongo=False, preconnection=False, doeswrite=False):
+    def __init__(self, name, func, isserver=False, restrict=None, noneedmongo=False, preconnection=False, doeswrite=False):
         self.name = name
         self.func = tornado.gen.coroutine(func)
+        # isserver could be merged into restrict='server', since restrict
+        # only applies to player commands.
         self.isserver = isserver
+        self.restrict = restrict
         self.noneedmongo = noneedmongo
         self.preconnection = preconnection
         self.doeswrite = doeswrite
@@ -334,9 +337,8 @@ def define_commands():
         conn.write({'cmd':'message', 'text':'Refreshing display...'})
         app.queue_command({'cmd':'connrefreshall', 'connid':conn.connid})
         
-    @command('meta_actionmaps')
+    @command('meta_actionmaps', restrict='debug')
     def cmd_meta_actionmaps(app, task, cmd, conn):
-        ### debug
         val = 'Locale action map: %s' % (conn.localeactions,)
         conn.write({'cmd':'message', 'text':val})
         val = 'Populace action map: %s' % (conn.populaceactions,)
@@ -344,9 +346,8 @@ def define_commands():
         val = 'Focus action map: %s' % (conn.focusactions,)
         conn.write({'cmd':'message', 'text':val})
 
-    @command('meta_dependencies')
+    @command('meta_dependencies', restrict='debug')
     def cmd_meta_dependencies(app, task, cmd, conn):
-        ### debug
         val = 'Locale dependency set: %s' % (conn.localedependencies,)
         conn.write({'cmd':'message', 'text':val})
         val = 'Populace dependency set: %s' % (conn.populacedependencies,)
@@ -354,9 +355,8 @@ def define_commands():
         val = 'Focus dependency set: %s' % (conn.focusdependencies,)
         conn.write({'cmd':'message', 'text':val})
         
-    @command('meta_exception')
+    @command('meta_exception', restrict='debug')
     def cmd_meta_exception(app, task, cmd, conn):
-        ### debug
         raise Exception('You asked for an exception.')
 
     @command('meta_panic')
@@ -367,9 +367,8 @@ def define_commands():
     def cmd_meta_panicstart(app, task, cmd, conn):
         app.queue_command({'cmd':'portstart'}, connid=task.connid, twwcid=task.twwcid)
 
-    @command('meta_getprop')
+    @command('meta_getprop', restrict='creator')
     def cmd_meta_getprop(app, task, cmd, conn):
-        ### only for world creator! (and unstable!)
         if len(cmd.args) != 1:
             raise MessageException('Usage: /getprop key')
         origkey = cmd.args[0]
@@ -406,9 +405,8 @@ def define_commands():
             raise MessageException('World property: %s = %s' % (origkey, repr(res['val'])))
         raise MessageException('Instance/world property not set: %s' % (origkey,))
 
-    @command('meta_delprop', doeswrite=True)
+    @command('meta_delprop', restrict='creator', doeswrite=True)
     def cmd_meta_delprop(app, task, cmd, conn):
-        ### only for world creator! (and unstable!)
         if len(cmd.args) != 1:
             raise MessageException('Usage: /delprop key')
         origkey = cmd.args[0]
@@ -444,9 +442,8 @@ def define_commands():
         task.set_data_change( ('instanceprop', iid, locid, key) )
         raise MessageException('Instance property deleted: %s' % (origkey,))
                 
-    @command('meta_setprop', doeswrite=True)
+    @command('meta_setprop', restrict='creator', doeswrite=True)
     def cmd_meta_setprop(app, task, cmd, conn):
-        ### only for world creator! (and unstable!)
         if len(cmd.args) == 0:
             raise MessageException('Usage: /setprop key val')
         origkey = cmd.args[0]
@@ -488,9 +485,8 @@ def define_commands():
         task.set_data_change( ('instanceprop', iid, locid, key) )
         raise MessageException('Instance property set: %s = %s' % (origkey, repr(newval)))
                 
-    @command('meta_move', doeswrite=True)
+    @command('meta_move', restrict='creator', doeswrite=True)
     def cmd_meta_move(app, task, cmd, conn):
-        ### only for world creator! (and unstable!)
         if len(cmd.args) != 1:
             raise MessageException('Usage: /move location-key')
         lockey = cmd.args[0]
@@ -547,9 +543,8 @@ def define_commands():
             task.write_event(conn.uid, msg)
         
         
-    @command('meta_holler')
+    @command('meta_holler', restrict='admin')
     def cmd_meta_holler(app, task, cmd, conn):
-        ### admin only!
         val = 'Admin broadcast: ' + (' '.join(cmd.args))
         for stream in app.webconns.all():
             stream.write(wcproto.message(0, {'cmd':'messageall', 'text':val}))
