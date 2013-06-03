@@ -403,6 +403,44 @@ def define_commands():
             raise MessageException('World property: %s = %s' % (origkey, repr(res['val'])))
         raise MessageException('Instance/world property not set: %s' % (origkey,))
 
+    @command('meta_delprop', doeswrite=True)
+    def cmd_meta_delprop(app, task, cmd, conn):
+        ### only for world creator! (and unstable!)
+        if len(cmd.args) != 1:
+            raise MessageException('Usage: /delprop key')
+        origkey = cmd.args[0]
+        key = origkey
+        playstate = yield motor.Op(app.mongodb.playstate.find_one,
+                                   {'_id':conn.uid},
+                                   {'iid':1, 'locid':1})
+        iid = playstate['iid']
+        if not iid:
+            # In the void, there should be no actions.
+            raise ErrorMessageException('You are between worlds.')
+        instance = yield motor.Op(app.mongodb.instances.find_one,
+                                  {'_id':iid})
+        wid = instance['wid']
+        locid = playstate['locid']
+        if '.' in key:
+            lockey, dummy, key = key.partition('.')
+            if not lockey:
+                locid = None
+            else:
+                location = yield motor.Op(app.mongodb.locations.find_one,
+                                          {'wid':wid, 'key':lockey},
+                                          {'_id':1})
+                if not location:
+                    raise ErrorMessageException('No such location: %s' % (lockey,))
+                locid = location['_id']
+        res = yield motor.Op(app.mongodb.instanceprop.find_one,
+                             {'iid':iid, 'locid':locid, 'key':key})
+        if not res:
+            raise MessageException('Instance property not set: %s' % (origkey,))
+        yield motor.Op(app.mongodb.instanceprop.remove,
+                       {'iid':iid, 'locid':locid, 'key':key})
+        task.set_data_change( ('instanceprop', iid, locid, key) )
+        raise MessageException('Instance property deleted: %s' % (origkey,))
+                
     @command('meta_move', doeswrite=True)
     def cmd_meta_move(app, task, cmd, conn):
         ### only for world creator! (and unstable!)
