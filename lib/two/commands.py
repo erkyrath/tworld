@@ -369,7 +369,8 @@ def define_commands():
         ### only for world creator! (and unstable!)
         if len(cmd.args) != 1:
             raise MessageException('Usage: /getprop key')
-        key = cmd.args[0]
+        origkey = cmd.args[0]
+        key = origkey
         playstate = yield motor.Op(app.mongodb.playstate.find_one,
                                    {'_id':conn.uid},
                                    {'iid':1, 'locid':1})
@@ -377,12 +378,30 @@ def define_commands():
         if not iid:
             # In the void, there should be no actions.
             raise ErrorMessageException('You are between worlds.')
+        instance = yield motor.Op(app.mongodb.instances.find_one,
+                                  {'_id':iid})
+        wid = instance['wid']
         locid = playstate['locid']
+        if '.' in key:
+            lockey, dummy, key = key.partition('.')
+            if not lockey:
+                locid = None
+            else:
+                location = yield motor.Op(app.mongodb.locations.find_one,
+                                          {'wid':wid, 'key':lockey},
+                                          {'_id':1})
+                if not location:
+                    raise ErrorMessageException('No such location: %s' % (lockey,))
+                locid = location['_id']
         res = yield motor.Op(app.mongodb.instanceprop.find_one,
                              {'iid':iid, 'locid':locid, 'key':key})
-        if not res:
-            raise MessageException('Instance property not set: %s' % (key,))
-        raise MessageException('Instance property: %s = %s' % (key, repr(res['val'])))
+        if res:
+            raise MessageException('Instance property: %s = %s' % (origkey, repr(res['val'])))
+        res = yield motor.Op(app.mongodb.worldprop.find_one,
+                                 {'wid':wid, 'locid':locid, 'key':key})
+        if res:
+            raise MessageException('World property: %s = %s' % (origkey, repr(res['val'])))
+        raise MessageException('Instance/world property not set: %s' % (origkey,))
 
     @command('meta_move', doeswrite=True)
     def cmd_meta_move(app, task, cmd, conn):
