@@ -225,7 +225,7 @@ def define_commands():
         # shortly thereafter and send them to a destination.
         player = yield motor.Op(app.mongodb.players.find_one,
                                 {'_id':cmd.uid},
-                                {'name':1, 'scid':1})
+                                {'name':1, 'scid':1, 'plistid':1})
         playstate = yield motor.Op(app.mongodb.playstate.find_one,
                                    {'_id':cmd.uid})
         if not player or not playstate:
@@ -235,23 +235,38 @@ def define_commands():
             app.log.info('Player %s is already in the world', playername)
             return
         # Figure out what destination was set. If none, default to the
-        # start world. ### Player's chosen panic location!
+        # player's chosen panic location. If none, try the start world.
         newloc = playstate.get('portto', None)
         if newloc:
             newwid = newloc['wid']
             newscid = newloc['scid']
             newlocid = newloc['locid']
         else:
-            res = yield motor.Op(app.mongodb.config.find_one,
-                                 {'key':'startworldloc'})
-            lockey = res['val']
-            res = yield motor.Op(app.mongodb.config.find_one,
-                                 {'key':'startworldid'})
-            newwid = res['val']
-            newscid = player['scid']
-            res = yield motor.Op(app.mongodb.locations.find_one,
-                                 {'wid':newwid, 'key':lockey})
-            newlocid = res['_id']
+            # Look through the player's list and find the entry with the
+            # lowest listpos.
+            plistid = player['plistid']
+            res = yield motor.Op(app.mongodb.portals.aggregate, [
+                    {'$match': {'plistid':plistid}},
+                    {'$sort': {'listpos':1}},
+                    {'$limit': 1},
+                    ])
+            if res and res['result']:
+                res = res['result'][0]
+                newwid = res['wid']
+                newscid = res['scid']
+                newlocid = res['locid']
+            else:
+                # Last hope: the start world.
+                res = yield motor.Op(app.mongodb.config.find_one,
+                                     {'key':'startworldloc'})
+                lockey = res['val']
+                res = yield motor.Op(app.mongodb.config.find_one,
+                                     {'key':'startworldid'})
+                newwid = res['val']
+                newscid = player['scid']
+                res = yield motor.Op(app.mongodb.locations.find_one,
+                                     {'wid':newwid, 'key':lockey})
+                newlocid = res['_id']
         app.log.info('### player portin to %s, %s, %s', newwid, newscid, newlocid)
         
         instance = yield motor.Op(app.mongodb.instances.find_one,
@@ -459,7 +474,6 @@ def define_commands():
         playstate = yield motor.Op(app.mongodb.playstate.find_one,
                                    {'_id':conn.uid},
                                    {'focus':1})
-        app.log.info('### playstate: %s', playstate)
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':conn.uid},
                        {'$set':{'focus':None}})
