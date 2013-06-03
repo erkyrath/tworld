@@ -538,7 +538,7 @@ function toolpane_fill_pane_portal(seg) {
     el = $('<a>', {href:'#'}).text('Copy this portal to your collection'); /*###localize*/
     copyel.append(el);
     listel.append(copyel);
-    var nocopyel = $('<li>').text('This portal cannot be copied'); /*###localize*/
+    var nocopyel = $('<li>', {'class':'StyleEmph'}).text('This portal cannot be copied'); /*###localize*/
     listel.append(nocopyel);
 
     copyel.on('click', function(ev) {

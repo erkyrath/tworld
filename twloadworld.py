@@ -215,6 +215,8 @@ def parse_world(filename):
                 world.name = val
             elif key == '$creator':
                 world.creator = val
+            elif key == '$copyable':
+                world.copyable = not (val.lower()[0] in ['0', 'n', 'f'])
             elif key == '$instancing':
                 world.instancing = val
                 if val not in ('shared', 'solo', 'standard'):
@@ -529,7 +531,7 @@ else:
     dbworld = {
         'creator': world.creatoruid,
         'name': world.name,
-        'copyable': True,
+        'copyable': world.copyable,
         'instancing': world.instancing,
         }
     wid = db.worlds.insert(dbworld)
