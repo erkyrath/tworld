@@ -114,7 +114,6 @@ handlers = [
     (r'/play', tweblib.handlers.PlayHandler),
     (r'/admin', tweblib.handlers.AdminMainHandler),
     (r'/websocket', tweblib.handlers.PlayWebSocketHandler),
-    (r'/test', tweblib.handlers.TestHandler),
     ]
 
 # Add in all the top_pages handlers.

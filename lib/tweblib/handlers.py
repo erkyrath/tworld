@@ -529,9 +529,3 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
         except Exception as ex:
             self.application.twlog.warning('Unable to send error to websocket (%s): %s', msg, ex)
         
-class TestHandler(MyRequestHandler):
-    """Debugging -- will go away eventually.
-    """
-    def get(self):
-        self.render('test.html', foo=11, xsrf=self.xsrf_form_html())
-
