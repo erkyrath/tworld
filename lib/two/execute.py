@@ -1,7 +1,9 @@
 import random
 import datetime
+import ast
 
 import tornado.gen
+import bson
 from bson.objectid import ObjectId
 import motor
 
@@ -277,13 +279,44 @@ class EvalPropContext(object):
         # But at MESSAGE/DISPLAY/EXEC level, a {text} object is parsed out;
         # a {code} object is executed.
 
-        try:
-            assert self.accum is not None, 'EvalPropContext.accum should not be None here'
-            yield self.interpolate_text(res.get('text', ''), depth=depth)
-        except Exception as ex:
-            return '[Exception: %s]' % (ex,)
+        assert self.accum is not None, 'EvalPropContext.accum should not be None here'
+        if objtype == 'text':
+            try:
+                yield self.interpolate_text(res.get('text', ''), depth=depth)
+            except Exception as ex:
+                return '[Exception: %s]' % (ex,)
+        elif objtype == 'code':
+            try:
+                yield self.execute_code(res.get('text', ''), depth=depth)
+            except Exception as ex:
+                raise ErrorMessageException(str(ex))
+        else:
+            return '[Unhandled object type: %s]' % (objtype,)
 
         return res
+
+    @tornado.gen.coroutine
+    def execute_code(self, text, depth):
+        ### Currently hardwired to handle only the "symbol = value" case.
+        key, dummy, val = text.partition('=')
+        key = key.strip()
+        val = val.strip()
+        newval = ast.literal_eval(val)
+        
+        # We test-encode the new value to bson, so that we can be strict
+        # and catch errors.
+        dummy = bson.BSON.encode({'val':newval}, check_keys=True)
+        if not key.isidentifier():
+            ### Permits Unicode identifiers, but whatever
+            raise Exception('Symbol assignment to invalid key: %s' % (key,))
+
+        iid = self.iid
+        locid = self.locid
+        yield motor.Op(self.app.mongodb.instanceprop.update,
+                       {'iid':iid, 'locid':locid, 'key':key},
+                       {'iid':iid, 'locid':locid, 'key':key, 'val':newval},
+                       upsert=True)
+        self.changeset.add( ('instanceprop', iid, locid, key) )
 
     @tornado.gen.coroutine
     def interpolate_text(self, text, depth):
@@ -1042,8 +1075,8 @@ def perform_action(app, task, cmd, conn, target):
         val = res.get('text', None)
         if val:
             ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_EXECUTE)
-            newval = yield ctx.eval(val, lookup=False)
-            app.log.info('### execute returns: %s', repr(newval))
+            # Pass in the whole {code} object
+            newval = yield ctx.eval(res, lookup=False)
             if ctx.changeset:
                 task.add_data_changes(ctx.changeset)
         return

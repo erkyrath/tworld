@@ -478,6 +478,9 @@ def define_commands():
                 if not location:
                     raise ErrorMessageException('No such location: %s' % (lockey,))
                 locid = location['_id']
+        if not key.isidentifier():
+            ### Permits Unicode identifiers, but whatever
+            raise ErrorMessageException('Symbol assignment to invalid key: %s' % (key,))
         yield motor.Op(app.mongodb.instanceprop.update,
                        {'iid':iid, 'locid':locid, 'key':key},
                        {'iid':iid, 'locid':locid, 'key':key, 'val':newval},
