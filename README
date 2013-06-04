@@ -20,7 +20,7 @@ placeholder. The database schema is likely to change in non-compatible
 ways before Tworld hits beta, never mind 1.0.
 
 
-* Requirements:
+* Requirements
 
 Python 3 (3.3 or later)
 MongoDB (2.4 or later)
@@ -33,6 +33,18 @@ on MacOS, I use Homebrew. Python comes with its own package manager, pip3;
 use this to install Tornado, PyMongo, and Motor.
 
 
-* License: 
+* Installation notes
+
+At the moment, you're on your own. I will regularize and document this
+as the system gets closer to beta.
+
+The overview: Tworld runs as a trio of daemon processes (mongod, tweb, and
+tworld). To run them, you will need a private server, or a shared compute
+service such as Linode or Amazon EC2. Tworld is not suitable for a shared
+web-hosting service; these usually forbid long-running processes such as
+chat and MUD apps.
+
+
+* License
 
 Open-source under the MIT license. See the "LICENSE" file.
