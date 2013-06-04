@@ -188,8 +188,7 @@ def define_commands():
         cursor.close()
         map = {}
         for portal in ls:
-            ### short-scope-name flag?
-            desc = yield two.execute.portal_description(app, portal, conn.uid, uidiid=iid, location=True)
+            desc = yield two.execute.portal_description(app, portal, conn.uid, uidiid=iid, location=True, short=True)
             if desc:
                 strid = str(portal['_id'])
                 desc['portid'] = strid

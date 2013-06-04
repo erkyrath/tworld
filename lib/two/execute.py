@@ -560,11 +560,13 @@ def portal_resolve_scope(app, portal, uid, scid, world):
     return newscid
     
 @tornado.gen.coroutine
-def portal_description(app, portal, uid, uidiid=None, location=False):
+def portal_description(app, portal, uid, uidiid=None, location=False, short=False):
     """Return a (JSONable) object describing a portal in human-readable
     strings. Returns None if a problem arises.
 
     The argument may be a portal object or an ObjectId referring to one.
+    If location is true, include the location name. If short is true,
+    use a shorter form of the scope label.
     """
     try:
         if isinstance(portal, ObjectId):
@@ -620,15 +622,28 @@ def portal_description(app, portal, uid, uidiid=None, location=False):
                                    {'_id':reqscid})
 
         if scope['type'] == 'glob':
-            scopename = 'Global instance'
+            if short:
+                scopename = 'global'
+            else:
+                scopename = 'Global instance'
+        elif scope['type'] == 'pers' and scope['uid'] == uid:
+            if short:
+                scopename = 'personal'
+            else: 
+                scopename = 'Personal instance'
         elif scope['type'] == 'pers':
-            ### Probably leave off the name if it's you
             scopeowner = yield motor.Op(app.mongodb.players.find_one,
                                         {'_id':scope['uid']},
                                         {'name':1})
-            scopename = 'Personal instance: %s' % (scopeowner['name'],)
+            if short:
+                scopename = 'personal: %s' % (scopeowner['name'],)
+            else: 
+                scopename = 'Personal instance: %s' % (scopeowner['name'],)
         elif scope['type'] == 'grp':
-            scopename = 'Group: %s' % (scope['group'],)
+            if short:
+                scopename = 'group: %s' % (scope['group'],)
+            else:
+                scopename = 'Group instance: %s' % (scope['group'],)
         else:
             scopename = '???'
 
@@ -955,8 +970,7 @@ def perform_action(app, task, cmd, conn, target):
             newportid = yield motor.Op(app.mongodb.portals.insert, newportal)
             newportal['_id'] = newportid
 
-            ### short-scope-name flag?
-            portaldesc = yield portal_description(app, portal, conn.uid, uidiid=iid, location=True)
+            portaldesc = yield portal_description(app, portal, conn.uid, uidiid=iid, location=True, short=True)
             if portaldesc:
                 strid = str(newportid)
                 portaldesc['portid'] = strid
