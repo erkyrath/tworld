@@ -2,7 +2,7 @@ Tworld -- a choice-based shared online text environment sandbox
 
 Tworld pre-release version 0.01.
 Designed by Andrew Plotkin <erkyrath@eblong.com>.
-
+Site: <https://github.com/erkyrath/tworld>
 
 Tworld is a text MUD engine in a new style. It runs as a web application,
 offering hypertext environments (hyperlink-based actions rather than a
