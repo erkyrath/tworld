@@ -9,6 +9,7 @@ from twcommon.excepts import MessageException, ErrorMessageException
 from twcommon.misc import MAX_DESCLINE_LENGTH
 from two import interp
 
+LEVEL_EXECUTE = 5
 LEVEL_DISPSPECIAL = 4
 LEVEL_DISPLAY = 3
 LEVEL_MESSAGE = 2
@@ -36,9 +37,12 @@ class EvalPropContext(object):
         self.accum = None
         self.linktargets = None
         self.dependencies = None
+        self.changeset = None
         ### Will need CPU-limiting someday.
 
     def updateacdepends(self, ctx):
+        """Merge in the actions and dependencies from a subcontext.        
+        """
         assert self.accum is not None, 'EvalPropContext.accum should not be None here'
         if ctx.linktargets:
             self.linktargets.update(ctx.linktargets)
@@ -64,6 +68,8 @@ class EvalPropContext(object):
         DISPLAY: A string or, for {text} objects, a description.
         DISPSPECIAL: A string; for {text}, a description; for other {}
             objects, special client objects. (Used only for focus.)
+        EXECUTE: A string or, for {text} objects, a description. (But
+            the result may not be used at all.)
 
         (A description is an array of strings and tag-arrays, JSONable and
         passable to the client.)
@@ -92,7 +98,7 @@ class EvalPropContext(object):
                 # Skip all styles, links, etc. Just paste together strings.
                 return ''.join([ val for val in self.accum if type(val) is str ])
             return str(res)
-        if (self.level == LEVEL_DISPLAY):
+        if (self.level == LEVEL_DISPLAY or self.level == LEVEL_EXECUTE):
             if is_text_object(res):
                 return self.accum
             return str_or_null(res)
@@ -111,7 +117,7 @@ class EvalPropContext(object):
         result contains interpolated strings, this calls itself recursively.
 
         Returns an object or description array. (The latter only at
-        MESSAGE/DISPLAY/DISPSPECIAL level.)
+        MESSAGE/DISPLAY/DISPSPECIAL/EXEC level.)
 
         The top-level call to evalkey() may set up the description accumulator
         and linktargets. Lower-level calls use the existing ones.
@@ -134,6 +140,8 @@ class EvalPropContext(object):
             assert self.accum is None, 'EvalPropContext.accum should be None at depth zero'
             self.accum = []
             self.linktargets = {}
+            if self.level == LEVEL_EXECUTE:
+                self.changeset = set()
         
         if depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'selfdesc':
             assert self.accum is not None, 'EvalPropContext.accum should not be None here'
@@ -260,140 +268,144 @@ class EvalPropContext(object):
             except Exception as ex:
                 return '[Exception: %s]' % (ex,)
 
-        if not(objtype == 'text'
-               and self.level in (LEVEL_MESSAGE, LEVEL_DISPLAY, LEVEL_DISPSPECIAL)):
+        if not(objtype in ('text', 'code')
+               and self.level in (LEVEL_MESSAGE, LEVEL_DISPLAY, LEVEL_DISPSPECIAL, LEVEL_EXECUTE)):
             # For most cases, the type returned by the database is the
             # type we want.
             return res
 
-        # But at MESSAGE/DISPLAY level, a {text} object is parsed out.
+        # But at MESSAGE/DISPLAY/EXEC level, a {text} object is parsed out;
+        # a {code} object is executed.
 
         try:
             assert self.accum is not None, 'EvalPropContext.accum should not be None here'
-
-            nodls = interp.parse(res.get('text', ''))
-            
-            # While trawling through nodls, we may encounter $if/$end
-            # nodes. This keeps track of them. Specifically: a 0 value
-            # means "within a true conditional"; 1 means "within a
-            # false conditional"; 2 means "in an else/elif after a true
-            # conditional."
-            suppstack = []
-            # We suppress output if any value in suppstack is nonzero.
-            # It's easiest to track sum(suppstack), so that's what this is.
-            suppressed = 0
-            
-            for nod in nodls:
-                if not (isinstance(nod, interp.InterpNode)):
-                    # String.
-                    if nod and not suppressed:
-                        self.accum.append(nod)
-                    continue
-                
-                nodkey = nod.classname
-                # This switch statement might be better off as a method
-                # lookup table. But only if it gets long.
-
-                if nodkey == 'If':
-                    if suppressed:
-                        # Can't get any more suppressed.
-                        suppstack.append(0)
-                        continue
-                    ifval = yield find_symbol(self.app, self.wid, self.iid, self.locid, nod.expr, dependencies=self.dependencies)
-                    if ifval:
-                        suppstack.append(0)
-                    else:
-                        suppstack.append(1)
-                        suppressed += 1
-                    continue
-                        
-                if nodkey == 'ElIf':
-                    if len(suppstack) == 0:
-                        self.accum.append('[$elif without matching $if]')
-                        continue
-                    if not suppressed:
-                        # We follow a successful "if". Suppress now.
-                        suppstack[-1] = 2
-                        suppressed = sum(suppstack)
-                        continue
-                    if suppstack[-1] == 2:
-                        # We had a successful "if" earlier, so no change.
-                        continue
-                    # We follow an unsuccessful "if". Maybe suppress.
-                    ifval = yield find_symbol(self.app, self.wid, self.iid, self.locid, nod.expr, dependencies=self.dependencies)
-                    if ifval:
-                        suppstack[-1] = 0
-                    else:
-                        suppstack[-1] = 1
-                    suppressed = sum(suppstack)
-                    continue
-                        
-                if nodkey == 'End':
-                    if len(suppstack) == 0:
-                        self.accum.append('[$end without matching $if]')
-                        continue
-                    suppstack.pop()
-                    suppressed = sum(suppstack)
-                    continue
-
-                if nodkey == 'Else':
-                    if len(suppstack) == 0:
-                        self.accum.append('[$else without matching $if]')
-                        continue
-                    val = suppstack[-1]
-                    if val == 1:
-                        val = 0
-                    else:
-                        val = 2
-                    suppstack[-1] = val
-                    suppressed = sum(suppstack)
-                    continue
-
-                # The rest of these nodes cannot affect the suppression
-                # state.
-                if suppressed:
-                    continue
-                
-                if nodkey == 'Link':
-                    if not nod.external:
-                        ackey = EvalPropContext.build_action_key()
-                        self.linktargets[ackey] = nod.target
-                        self.accum.append( ['link', ackey] )
-                    else:
-                        self.accum.append( ['exlink', nod.target] )
-                    continue
-                
-                if nodkey == 'Interpolate':
-                    subres = yield self.evalkey(nod.expr, depth+1)
-                    # {text} objects have already added their contents to
-                    # the accum array.
-                    if not is_text_object(subres):
-                        # Anything not a {text} object gets interpolated as
-                        # a string.
-                        self.accum.append(str_or_null(subres))
-                    continue
-                
-                if nodkey == 'PlayerRef':
-                    player = yield motor.Op(self.app.mongodb.players.find_one,
-                                            {'_id':self.uid},
-                                            {'name':1, 'pronoun':1})
-                    if nod.key == 'name':
-                        self.accum.append(player['name'])
-                    else:
-                        self.accum.append(interp.resolve_pronoun(player, nod.key))
-                    continue
-
-                # Otherwise...
-                self.accum.append(nod.describe())
-
-            # End of nodls interaction.
-            if len(suppstack) > 0:
-                self.accum.append('[$if without matching $end]')
-            
+            yield self.interpolate_text(res.get('text', ''), depth=depth)
         except Exception as ex:
             return '[Exception: %s]' % (ex,)
 
         return res
+
+    @tornado.gen.coroutine
+    def interpolate_text(self, text, depth):
+
+        nodls = interp.parse(text)
+        
+        # While trawling through nodls, we may encounter $if/$end
+        # nodes. This keeps track of them. Specifically: a 0 value
+        # means "within a true conditional"; 1 means "within a
+        # false conditional"; 2 means "in an else/elif after a true
+        # conditional."
+        suppstack = []
+        # We suppress output if any value in suppstack is nonzero.
+        # It's easiest to track sum(suppstack), so that's what this is.
+        suppressed = 0
+        
+        for nod in nodls:
+            if not (isinstance(nod, interp.InterpNode)):
+                # String.
+                if nod and not suppressed:
+                    self.accum.append(nod)
+                continue
+            
+            nodkey = nod.classname
+            # This switch statement might be better off as a method
+            # lookup table. But only if it gets long.
+
+            if nodkey == 'If':
+                if suppressed:
+                    # Can't get any more suppressed.
+                    suppstack.append(0)
+                    continue
+                ifval = yield find_symbol(self.app, self.wid, self.iid, self.locid, nod.expr, dependencies=self.dependencies)
+                if ifval:
+                    suppstack.append(0)
+                else:
+                    suppstack.append(1)
+                    suppressed += 1
+                continue
+                    
+            if nodkey == 'ElIf':
+                if len(suppstack) == 0:
+                    self.accum.append('[$elif without matching $if]')
+                    continue
+                if not suppressed:
+                    # We follow a successful "if". Suppress now.
+                    suppstack[-1] = 2
+                    suppressed = sum(suppstack)
+                    continue
+                if suppstack[-1] == 2:
+                    # We had a successful "if" earlier, so no change.
+                    continue
+                # We follow an unsuccessful "if". Maybe suppress.
+                ifval = yield find_symbol(self.app, self.wid, self.iid, self.locid, nod.expr, dependencies=self.dependencies)
+                if ifval:
+                    suppstack[-1] = 0
+                else:
+                    suppstack[-1] = 1
+                suppressed = sum(suppstack)
+                continue
+                    
+            if nodkey == 'End':
+                if len(suppstack) == 0:
+                    self.accum.append('[$end without matching $if]')
+                    continue
+                suppstack.pop()
+                suppressed = sum(suppstack)
+                continue
+
+            if nodkey == 'Else':
+                if len(suppstack) == 0:
+                    self.accum.append('[$else without matching $if]')
+                    continue
+                val = suppstack[-1]
+                if val == 1:
+                    val = 0
+                else:
+                    val = 2
+                suppstack[-1] = val
+                suppressed = sum(suppstack)
+                continue
+
+            # The rest of these nodes cannot affect the suppression
+            # state.
+            if suppressed:
+                continue
+            
+            if nodkey == 'Link':
+                if not nod.external:
+                    ackey = EvalPropContext.build_action_key()
+                    self.linktargets[ackey] = nod.target
+                    self.accum.append( ['link', ackey] )
+                else:
+                    self.accum.append( ['exlink', nod.target] )
+                continue
+            
+            if nodkey == 'Interpolate':
+                subres = yield self.evalkey(nod.expr, depth+1)
+                # {text} objects have already added their contents to
+                # the accum array.
+                if not is_text_object(subres):
+                    # Anything not a {text} object gets interpolated as
+                    # a string.
+                    self.accum.append(str_or_null(subres))
+                continue
+            
+            if nodkey == 'PlayerRef':
+                player = yield motor.Op(self.app.mongodb.players.find_one,
+                                        {'_id':self.uid},
+                                        {'name':1, 'pronoun':1})
+                if nod.key == 'name':
+                    self.accum.append(player['name'])
+                else:
+                    self.accum.append(interp.resolve_pronoun(player, nod.key))
+                continue
+
+            # Otherwise...
+            self.accum.append(nod.describe())
+
+        # End of nodls interaction.
+        if len(suppstack) > 0:
+            self.accum.append('[$if without matching $end]')
 
 def is_text_object(res):
     return (type(res) is dict and res.get('type', None) == 'text')
@@ -1027,7 +1039,14 @@ def perform_action(app, task, cmd, conn, target):
         return
 
     if restype == 'code':
-        raise ErrorMessageException('Code events are not yet supported.') ###
+        val = res.get('text', None)
+        if val:
+            ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_EXECUTE)
+            newval = yield ctx.eval(val, lookup=False)
+            app.log.info('### execute returns: %s', repr(newval))
+            if ctx.changeset:
+                task.add_data_changes(ctx.changeset)
+        return
     
     if restype in ('text', 'portal', 'portlist', 'selfdesc', 'editstr'):
         # Set focus to this symbol-name
