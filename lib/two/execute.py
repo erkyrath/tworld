@@ -298,6 +298,8 @@ class EvalPropContext(object):
     @tornado.gen.coroutine
     def execute_code(self, text, depth):
         ### Currently hardwired to handle only the "symbol = value" case.
+        if self.level != LEVEL_EXECUTE:
+            raise Exception('non-executable context')
         key, dummy, val = text.partition('=')
         key = key.strip()
         val = val.strip()
