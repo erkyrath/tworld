@@ -739,7 +739,14 @@ function focuspane_set_special(ls) {
             $('.FormSelfDescPronoun').prop('value', ls[2]);
             selfdesc_update_labels();
             $('.FormSelfDescPronoun').on('change', selfdesc_pronoun_changed);
+            /* Accept edits on enter, or if the focus leaves the textarea. */
             $('.FormSelfDescDesc').on('blur', selfdesc_desc_blur);
+            $('.FormSelfDescDesc').on('keypress', function(ev) {
+                    if (ev.which == KEY_RETURN) {
+                        ev.preventDefault();
+                        selfdesc_desc_blur();
+                    }
+                });
             return;
         }
         if (type == 'editstr') {
@@ -747,6 +754,12 @@ function focuspane_set_special(ls) {
             var extrals = editstr_build_controls();
             focuspane_set(ls[3], extrals);
             $('.FormEditStrValue').on('blur', editstr_value_blur);
+            $('.FormEditStrValue').on('keypress', function(ev) {
+                    if (ev.which == KEY_RETURN) {
+                        ev.preventDefault();
+                        editstr_value_blur();
+                    }
+                });
             return;
         }
         if (type == 'portal') {
@@ -954,7 +967,6 @@ function editstr_value_blur() {
         return;
 
     focuspane_special_val[2] = val;
-    console.log('### new desc: ' + val);
     websocket_send_json({ cmd:'action', action:focuspane_special_val[1], val:val });
 }
 
