@@ -15,9 +15,10 @@ interface. However, I suspect it will remain useful for various cases
 
 import sys
 import os
-import json
 import datetime
+import ast
 
+import bson
 from bson.objectid import ObjectId
 import pymongo
 
@@ -289,7 +290,11 @@ def parse_prop(prop):
             return None
 
     try:
-        return json.loads(prop)
+        propval = ast.literal_eval(prop)
+        # We test-encode the new value to bson, so that we can be strict
+        # and catch errors.
+        dummy = bson.BSON.encode({'val':propval}, check_keys=True)
+        return propval
     except:
         pass
         
@@ -402,7 +407,7 @@ def transform_prop(world, db, val):
         
 def prop_to_string(val):
     if type(val) is not dict:
-        return json.dumps(val)
+        return repr(val)
     key = val.get('type', None)
     if key == 'move':
         return '*move %s' % (val['loc'],)
@@ -422,7 +427,7 @@ def prop_to_string(val):
         res = '*selfdesc %s' % (val['text'],)
         return res
     if key == 'portal':
-        res = '*portal %s' % (val['_tempquad'],)
+        res = '*portal %s' % (', '.join(val['_tempquad']),)
         if 'text' in val:
             res += ('\n\t- text: ' + val['text'])
         return res
@@ -433,7 +438,7 @@ def prop_to_string(val):
         return val
     if key == 'code':
         return '*code %s' % (val['text'],)
-    return json.dumps(val)
+    return repr(val)
 
 def is_interp_text(res):
     ### events also?
