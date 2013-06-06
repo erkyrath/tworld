@@ -110,6 +110,7 @@ for key in [ 'debug', 'template_path', 'static_path', 'cookie_secret' ]:
 handlers = [
     (r'/', tweblib.handlers.MainHandler),
     (r'/register', tweblib.handlers.RegisterHandler),
+    (r'/recover', tweblib.handlers.RecoverHandler),
     (r'/logout', tweblib.handlers.LogOutHandler),
     (r'/play', tweblib.handlers.PlayHandler),
     (r'/admin', tweblib.handlers.AdminMainHandler),

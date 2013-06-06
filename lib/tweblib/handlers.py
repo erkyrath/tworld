@@ -231,6 +231,7 @@ class RegisterHandler(MyRequestHandler):
     def get(self):
         yield self.find_current_session()
         if self.twsession:
+            # Can't register if you're already logged in!
             self.redirect('/')
             return
         self.render('register.html')
@@ -325,6 +326,15 @@ class RegisterHandler(MyRequestHandler):
         map['init_password'] = None
         map['init_password2'] = None
         return map
+
+class RecoverHandler(MyRequestHandler):
+    """The page for recovering a lost password.
+    """
+    @tornado.web.asynchronous
+    @tornado.gen.coroutine
+    def get(self):
+        yield self.find_current_session()
+        self.render('recover.html')
 
 class LogOutHandler(MyRequestHandler):
     """The sign-out page.
