@@ -297,7 +297,8 @@ class EvalPropContext(object):
 
     @tornado.gen.coroutine
     def execute_code(self, text, depth):
-        ### Currently hardwired to handle only the "symbol = value" case.
+        ### Currently hardwired to handle only the "symbol = value"
+        ### and '.symbol = value" cases.
         if self.level != LEVEL_EXECUTE:
             raise Exception('non-executable context')
         key, dummy, val = text.partition('=')
@@ -305,6 +306,12 @@ class EvalPropContext(object):
         val = val.strip()
         newval = ast.literal_eval(val)
         
+        iid = self.iid
+        locid = self.locid
+        if key.startswith('.'):
+            key = key[1:]
+            locid = None
+            
         # We test-encode the new value to bson, so that we can be strict
         # and catch errors.
         dummy = bson.BSON.encode({'val':newval}, check_keys=True)
@@ -312,8 +319,6 @@ class EvalPropContext(object):
             ### Permits Unicode identifiers, but whatever
             raise Exception('Symbol assignment to invalid key: %s' % (key,))
 
-        iid = self.iid
-        locid = self.locid
         yield motor.Op(self.app.mongodb.instanceprop.update,
                        {'iid':iid, 'locid':locid, 'key':key},
                        {'iid':iid, 'locid':locid, 'key':key, 'val':newval},
