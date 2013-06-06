@@ -170,6 +170,7 @@ class PlayerRef(InterpNode):
         return (isinstance(obj, PlayerRef) and self.key == obj.key and self.expr == obj.expr)
 
 ### LineBreak?
+### Bracket, CloseBracket? (for literal '[' ']')
 
 re_bracketgroup = re.compile('[[]+')
 re_closeorbarorinterp = re.compile(']|[|][|]?|[[]')
@@ -177,6 +178,13 @@ re_twolinebreaks = re.compile('[ \t]*\n[ \t]*\n[ \t\n]*')
 re_initdollar = re.compile('\\s*[$]')
 
 def append_text_with_paras(dest, text, start=0, end=None):
+    """
+    Append literal text to a destination list. A blank line (two or more
+    newlines in a row with only whitespace between) is converted into a
+    ParaBreak node.
+    (This does not care about square brackets; those should be dealt with
+    already.)
+    """
     if end is None:
         end = len(text)
     if end <= start:
