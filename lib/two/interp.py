@@ -1,4 +1,5 @@
 import re
+import unicodedata
 
 class InterpNode(object):
     """Base class for special objects parsed out of a string by the
@@ -199,6 +200,12 @@ def append_text_with_paras(dest, text, start=0, end=None):
             dest.append(el)
 
 def parse(text):
+    """
+    Parse a string into a description list -- a list of strings and
+    InterpNodes. This is responsible for finding square brackets and
+    turning them into the correct nodes, according to a somewhat ornate
+    set of rules. (Note unit tests, below.)
+    """
     if type(text) is not str:
         raise ValueError('interpolated text must be string')
     res = []
@@ -307,8 +314,16 @@ re_extrawhite = re.compile('  +')
 re_startdigit = re.compile('^[0-9]')
 
 def sluggify(text):
+    """
+    Convert an arbitrary string to a valid Python (2) identifier that
+    'reads the same'. We preserve letters and digits, while lowercasing
+    and converting other characters to underscores. We try to avoid too
+    many underscores in a row, but also try to keep them meaningful. (So
+    'dr who' and 'Dr__Who' sluggify differently.)
     ### Would be nice to follow Py3 identifier rules here, for Unicode.
+    """
     text = text.lower()
+    text = unicodedata.normalize('NFKD', text)  # Split off accent marks
     text = re_nonidentchars.sub(' ', text)  # Punctuation to spaces
     text = re_extrawhite.sub(' ', text)     # Remove redundant spaces
     text = text.strip()
@@ -380,6 +395,10 @@ pronoun_map_map = {
     }
 
 def resolve_pronoun(player, mapkey):
+    """
+    Work out the pronoun string for a given player and a canonical pronoun.
+    ('We', 'us', 'our', etc.)
+    """
     if not player:
         player = { 'name': 'nobody', 'pronoun': 'it' }
     map = pronoun_map_map[mapkey]
@@ -390,6 +409,7 @@ def resolve_pronoun(player, mapkey):
     if not res:
         res = map.get('it')
     return res
+
 
 import unittest
 
@@ -402,6 +422,8 @@ class TestInterpModule(unittest.TestCase):
             ('.', '_'), ('..', '_'), ('. . .', '_'),
             (' _ ', '_'), (' _  _ ', '___'),
             ('a', 'a'), ('Hello', 'hello'), ('  one  two  ', 'one_two'),
+            ('Dr. Who?', 'dr_who'), ('Dr__who', 'dr__who'),
+            ('x\xE4 \xF8b', 'xa_b'), ('x\u24E4\xB9\uFF0A\uFF21y', 'xu1_ay'),
             ('a-Z_0-9', 'a_z_0_9'), ('95', '_95'), ('.001a', '_001a'),
             ]
         for (val, res) in tests:
