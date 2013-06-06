@@ -7,7 +7,13 @@ twsetup: Copyright (c) 2013, Andrew Plotkin
 This script sets up the Mongo database with the bare minimum of data
 needed to run Tworld. You will typically run this exactly once when
 setting up your server.
+
+For development purposes, this is also able to upgrade an earlier database
+schema to the current version. Use the --upgradedb option in this case.
 """
+
+# The database version created by this version of the script.
+DBVERSION = 2
 
 import sys
 import os
@@ -29,6 +35,10 @@ tornado.options.define(
     callback=lambda path: tornado.options.parse_config_file(path, final=False))
 
 tornado.options.define(
+    'python_path', type=str,
+    help='Python modules directory (optional)')
+
+tornado.options.define(
     'mongo_database', type=str, default='tworld',
     help='name of mongodb database')
 
@@ -36,16 +46,27 @@ tornado.options.define(
     'admin_email', type=str,
     help='email address of server admin')
 
+tornado.options.define(
+    'upgradedb', type=bool,
+    help='upgrade an old database to the current schema')
+
 # Parse 'em up.
 tornado.options.parse_command_line()
 opts = tornado.options.options
 
+if opts.python_path:
+    sys.path.insert(0, opts.python_path)
+
+from two.interp import sluggify
+
+
+# Open the client connection.
 
 client = pymongo.MongoClient(tz_aware=True)
 db = client[opts.mongo_database]
 
 initial_config = {
-    'dbversion': 1,
+    'dbversion': DBVERSION,
     'playerfields': {
         'desc': 'an ordinary explorer.',
         'pronoun': 'it',
@@ -53,6 +74,30 @@ initial_config = {
     'startworldloc': 'start',
     'firstportal': None,
     }
+
+curversion = 0
+res = db.config.find_one({'key':'dbversion'})
+if res:
+    curversion = res['val']
+
+def upgrade_to_v2():
+    print('Upgrading to v2...')
+    cursor = db.players.find({}, {'name':1})
+    for player in cursor:
+        namekey = sluggify(player['name'])
+        db.players.update({'_id':player['_id']}, {'$set':{'namekey':namekey}})
+    
+if curversion < DBVERSION:
+    if not opts.upgradedb:
+        print('Database schema (%d) is behind the current version (%d). Must use --upgradedb option!' % (curversion, DBVERSION,))
+        sys.exit(1)
+    if curversion < 2:
+        upgrade_to_v2()
+    db.config.update({'key':'dbversion'},
+                     {'key':'dbversion', 'val':DBVERSION}, upsert=True)
+else:
+    if opts.upgradedb:
+        print('Upgrade is not required.')
 
 # All the indexes we need. (Except _id, which comes free.)
 
@@ -62,6 +107,7 @@ db.sessions.create_index('sid', unique=True)
 
 db.players.create_index('email', unique=True)
 db.players.create_index('name', unique=True)
+db.players.create_index('namekey')
 
 # Compound index
 db.playstate.create_index([('iid', pymongo.ASCENDING), ('locid', pymongo.ASCENDING)])
@@ -116,6 +162,7 @@ else:
         raise Exception('You must define admin_email in the config file!')
     adminplayer = {
         'name': 'Admin',
+        'namekey': sluggify('Admin'),
         'admin': True,
         'email': opts.admin_email,
         'pwsalt': binascii.hexlify(os.urandom(8)),

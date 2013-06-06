@@ -20,6 +20,7 @@ import motor
 
 import twcommon.misc
 from twcommon.excepts import MessageException
+from two.interp import sluggify
 
 class SessionMgr(object):
     """
@@ -89,6 +90,7 @@ class SessionMgr(object):
             raise MessageException('Database not available.')
 
         # Check for collisions first.
+        #### namekey!
         try:
             resname = yield motor.Op(self.app.mongodb.players.find_one,
                                      { 'name': name })
@@ -110,6 +112,7 @@ class SessionMgr(object):
         
         player = {
             'name': name,
+            'namekey': sluggify(name),
             'email': email,
             'pwsalt': pwsalt,
             'password': cryptpw,
