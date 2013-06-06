@@ -89,18 +89,23 @@ class SessionMgr(object):
         if (not self.app.mongodb):
             raise MessageException('Database not available.')
 
+        namekey = sluggify(name)
+        
         # Check for collisions first.
-        #### namekey!
         try:
             resname = yield motor.Op(self.app.mongodb.players.find_one,
                                      { 'name': name })
+            resnamekey = yield motor.Op(self.app.mongodb.players.find_one,
+                                     { 'namekey': namekey })
             resemail = yield motor.Op(self.app.mongodb.players.find_one,
                                      { 'email': email })
         except Exception as ex:
             raise MessageException('Database error: %s' % ex)
 
         if (resname):
-            raise MessageException('That player name is already in use.')
+            raise MessageException('The player name %s is already in use.' % (name,))
+        if (resnamekey):
+            raise MessageException('The player name %s is already in use.' % (resnamekey['name'],))
         if (resemail):
             raise MessageException('That email address is already registered.')
 
@@ -112,7 +117,7 @@ class SessionMgr(object):
         
         player = {
             'name': name,
-            'namekey': sluggify(name),
+            'namekey': namekey,
             'email': email,
             'pwsalt': pwsalt,
             'password': cryptpw,
