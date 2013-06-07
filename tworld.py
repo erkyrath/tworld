@@ -58,6 +58,7 @@ if opts.python_path:
     sys.path.insert(0, opts.python_path)
 
 
+# Set up the logging configuration.
 logconf = {
     'format': '[%(levelname).1s %(asctime)s: %(module)s:%(lineno)d] %(message)s',
     'datefmt': '%b-%d %H:%M:%S',
@@ -70,6 +71,8 @@ else:
     logconf['stream'] = sys.stdout
 logging.basicConfig(**logconf)
 
+
+# Now that we have a python_path, we can import the tworld-specific modules.
 
 import twcommon.autoreload
 import two.app

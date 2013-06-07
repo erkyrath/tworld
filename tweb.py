@@ -54,9 +54,16 @@ tornado.options.define(
 tornado.options.define(
     'port', type=int, default=4000,
     help='port number to listen on')
+
 tornado.options.define(
     'debug', type=bool,
     help='application debugging (see Tornado docs)')
+tornado.options.define(
+    'log_level', type=str, default=None,
+    help='logging threshold (default usually WARNING)')
+tornado.options.define(
+    'log_file_tweb', type=str, default=None,
+    help='log file to write to (default is stdout)')
 
 tornado.options.define(
     'tworld_port', type=int, default=4001,
@@ -76,16 +83,20 @@ opts = tornado.options.options
 if opts.python_path:
     sys.path.insert(0, opts.python_path)
 
-rootlogger = logging.getLogger('')
-rootlogger.setLevel(logging.DEBUG) ### or based on an options
-if (rootlogger.handlers):
-    roothandler = rootlogger.handlers[0]
+
+# Set up the logging configuration.
+logconf = {
+    'format': '[%(levelname).1s %(asctime)s: %(module)s:%(lineno)d] %(message)s',
+    'datefmt': '%b-%d %H:%M:%S',
+    }
+if opts.log_level:
+    logconf['level'] = opts.log_level
+if opts.log_file_tweb:
+    logconf['filename'] = opts.log_file_tweb
 else:
-    roothandler = logging.StreamHandler(sys.stdout)
-    rootlogger.addHandler(roothandler)
-rootform = logging.Formatter('[%(levelname).1s %(asctime)s: %(module)s:%(lineno)d] %(message)s', '%b-%d %H:%M:%S')
-roothandler.setFormatter(rootform)
-### log rotation, see volityd.py again...
+    logconf['stream'] = sys.stdout
+logging.basicConfig(**logconf)
+
 
 # Now that we have a python_path, we can import the tworld-specific modules.
 
