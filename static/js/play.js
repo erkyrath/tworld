@@ -350,14 +350,14 @@ function toolpane_fill_pane_prefs(seg) {
     el.append(fontsizeslider);
     seg.fontsizeslider = fontsizeslider;
 
-    var el = $('<li>').text('Line Spacing');
+    el = $('<li>').text('Line Spacing');
     listel.append(el);
     el.append($('<br>'));
     var lineheightslider = $('<div>');
     el.append(lineheightslider);
     seg.lineheightslider = lineheightslider;
 
-    var el = $('<li>');
+    el = $('<li>');
     listel.append(el);
     el.append($('<label>').text('Smooth Scrolling'));
     var smoothscrollbox = $('<input>', {'class':'CheckboxRight', 'type':'checkbox'});
@@ -513,19 +513,19 @@ function toolpane_fill_pane_portal(seg) {
     var worldel = $('<span>').text('-');
     el.append(worldel);
 
-    var el = $('<li>');
+    el = $('<li>');
     listel.append(el);
     el.append($('<div>', {'class':'ToolLabelRight'}).text('location')); /*### localize */
     var locel = $('<span>').text('-');
     el.append(locel);
 
-    var el = $('<li>');
+    el = $('<li>');
     listel.append(el);
     el.append($('<div>', {'class':'ToolLabelRight'}).text('instance')); /*### localize */
     var scopeel = $('<span>').text('-');
     el.append(scopeel);
 
-    var el = $('<li>');
+    el = $('<li>');
     listel.append(el);
     el.append($('<div>', {'class':'ToolLabelRight'}).text('creator')); /*### localize */
     var creatorel = $('<span>').text('-');
@@ -806,7 +806,7 @@ function focuspane_set_special(ls) {
                 var el = $('<ul>');
                 extrals.push(el);
                 for (var ix=0; ix<portlist.length; ix++) {
-                    portal = portlist[ix];
+                    var portal = portlist[ix];
                     var lel = $('<li>');
                     var ael = $('<a>', {href:'#'+portal.target});
                     ael.text(portal.world);
@@ -1007,7 +1007,7 @@ function cmd_updateplist(obj) {
        the list. If we wanted keen animation, that is. */
 
     if (obj.clear) {
-        seg.map = {}
+        seg.map = {};
     }
 
     if (obj.map) {
@@ -1225,7 +1225,7 @@ function parse_description(desc) {
     }
 
     if (objstack.length > 0) {
-        el = create_text_node('[Unclosed tags at end of text]');
+        var el = create_text_node('[Unclosed tags at end of text]');
         curpara.append(el);
         curparasize++;
     }
@@ -1525,16 +1525,18 @@ function evhan_websocket_close() {
 
 function evhan_websocket_message(ev) {
     console.log(('### message: ' + ev.data).slice(0,100));
+    var obj = null;
+    var cmd = null;
     try {
-        var obj = JSON.parse(ev.data);
-        var cmd = obj.cmd;
+        obj = JSON.parse(ev.data);
+        cmd = obj.cmd;
     }
     catch (ex) {
         console.log('badly-formatted message from websocket: ' + ev.data);
         return;
     }
 
-    func = command_table[cmd];
+    var func = command_table[cmd];
     if (!func) {
         console.log('command not understood: ' + cmd);
         return;
@@ -1551,7 +1553,7 @@ function websocket_send_json(obj) {
         return;
     }
 
-    val = JSON.stringify(obj);
+    var val = JSON.stringify(obj);
     websocket.send(val);
 }
 
