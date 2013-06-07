@@ -75,7 +75,7 @@ initial_config = {
     'firstportal': None,
     }
 
-curversion = 0
+curversion = None
 res = db.config.find_one({'key':'dbversion'})
 if res:
     curversion = res['val']
@@ -86,8 +86,9 @@ def upgrade_to_v2():
     for player in cursor:
         namekey = sluggify(player['name'])
         db.players.update({'_id':player['_id']}, {'$set':{'namekey':namekey}})
-    
-if curversion < DBVERSION:
+
+# if curversion is None, we're brand-new.
+if curversion is not None and curversion < DBVERSION:
     if not opts.upgradedb:
         print('Database schema (%d) is behind the current version (%d). Must use --upgradedb option!' % (curversion, DBVERSION,))
         sys.exit(1)
