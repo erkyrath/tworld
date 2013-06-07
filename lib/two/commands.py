@@ -267,7 +267,7 @@ def define_commands():
                 res = yield motor.Op(app.mongodb.locations.find_one,
                                      {'wid':newwid, 'key':lockey})
                 newlocid = res['_id']
-        app.log.info('### player portin to %s, %s, %s', newwid, newscid, newlocid)
+        app.log.debug('Player portin to %s, %s, %s', newwid, newscid, newlocid)
         
         instance = yield motor.Op(app.mongodb.instances.find_one,
                                   {'wid':newwid, 'scid':newscid})
