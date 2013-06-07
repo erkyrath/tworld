@@ -337,7 +337,8 @@ class Task(object):
         if not updateconns:
             return
 
-        self.log.info('### Must resolve updates: %s', updateconns)
+        # self.log.info('Must resolve updates: %s', updateconns)
+        
         # If two connections are on the same player, this won't be
         # as efficient as it might be -- we'll generate text twice.
         # But that's a rare case.
