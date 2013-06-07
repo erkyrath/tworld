@@ -36,6 +36,10 @@ tornado.options.define(
     'debug', type=bool,
     help='application debugging (see Tornado docs)')
 tornado.options.define(
+    'log_level', type=str, default=None,
+    help='logging threshold (default usually WARNING)')
+
+tornado.options.define(
     'tworld_port', type=int, default=4001,
     help='port number for communication between tweb and tworld')
 
@@ -51,7 +55,8 @@ if opts.python_path:
     sys.path.insert(0, opts.python_path)
 
 rootlogger = logging.getLogger('')
-rootlogger.setLevel(logging.DEBUG) ### or based on an options
+if opts.log_level:
+    rootlogger.setLevel(opts.log_level)
 if (rootlogger.handlers):
     roothandler = rootlogger.handlers[0]
 else:
