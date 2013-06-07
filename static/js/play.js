@@ -178,7 +178,7 @@ function open_websocket() {
         websocket = new WebSocket(url);
     }
     catch (ex) {
-        eventpane_add('Unable to open websocket: ' + ex);
+        eventpane_add('Unable to open websocket: ' + ex, 'EventError');
         display_error('The connection to the server could not be created. Possibly your browser does not support WebSockets.');
         return;
     }
@@ -1499,6 +1499,11 @@ function handle_updown_doneresize(ev, ui) {
 
 
 function evhan_websocket_open() {
+    if (!everconnected) {
+        /* Good time for a welcome message. */
+        eventpane_add('Click on the links above to explore. Type in this pane to chat with nearby players.', 'EventMessage'); /*###localize */
+    }
+
     connected = true;
     everconnected = true;
 }
