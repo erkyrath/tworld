@@ -91,6 +91,10 @@ def define_commands():
             app.log.info('Player %s has reconnected (uid %s)', conn.email, conn.uid)
             # But don't queue a portin command, because people are no more
             # likely to be in the void than usual.
+        
+        # Broadcast a message to the returned players.
+        val = 'Server broadcast: Server has restarted!'
+        stream.write(wcproto.message(0, {'cmd':'messageall', 'text':val}))
 
     @command('disconnect', isserver=True, noneedmongo=True)
     def cmd_disconnect(app, task, cmd, stream):
