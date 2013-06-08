@@ -430,6 +430,7 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
         Proceed using a callback, because the open() method cannot be
         made into a coroutine.
         """
+        self.application.twlog.debug('### received a websocket connection...')
         self.twconnid = None
         self.twconn = None
         self.find_current_session(callback=self.open_cont)
@@ -457,6 +458,7 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
         try:
             self.twconn = self.application.twconntable.add(self, uid, email, self.twsession)
         except Exception as ex:
+            self.application.twlog.error('Unable to add connection: %s', ex)
             self.write_tw_error('Unable to add connection: %s' % (ex,))
             self.close()
             return
