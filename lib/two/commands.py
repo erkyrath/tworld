@@ -333,7 +333,13 @@ def define_commands():
 
     @command('meta_help')
     def cmd_meta_help(app, task, cmd, conn):
-        raise MessageException('No slash commands are currently implemented.')
+        conn.write({'cmd':'message', 'text':'Seltani quick help:'})
+        conn.write({'cmd':'message', 'text':'Type to speak out loud (to nearby players). A message that begins with a colon (":dance") will appear as a pose ("Belford dances").'})
+        conn.write({'cmd':'message', 'text':'Other commands:'})
+        conn.write({'cmd':'message', 'text':'/refresh: Reload the current location. (Or you can use your browser\'s refresh button.)'})
+        conn.write({'cmd':'message', 'text':'/panic: Jump to your selected panic location.'})
+        conn.write({'cmd':'message', 'text':'/panicstart: Jump back to the start world.'})
+        return
 
     @command('meta_refresh')
     def cmd_meta_refresh(app, task, cmd, conn):
