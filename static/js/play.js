@@ -1290,12 +1290,18 @@ function submit_line_input(val) {
 
     if (val) {
         var start = val.charAt(0);
-        if (start == ':')
+        if (start == ':') {
             websocket_send_json({ cmd:'pose', text:jQuery.trim(val.slice(1)) });
-        else if (start == '/')
+        }
+        else if (start == '/') {
+            /* Echo slash commands, because that's less confusing. */
+            /* ### Should use a separate span for the >, so the style matches. */
+            eventpane_add('> ' + val, 'EventEchoInput');
             websocket_send_json({ cmd:'meta', text:jQuery.trim(val.slice(1)) });
-        else
+        }
+        else {
             websocket_send_json({ cmd:'say', text:val });
+        }
     }
 }
 

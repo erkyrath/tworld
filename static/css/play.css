@@ -172,6 +172,12 @@
   font-style: italic;
 }
 
+.EventEchoInput {
+  font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
+  font-size: 1em;
+  font-weight: bold;
+}
+
 .Input {
   position: relative;
   margin: 0px 20px 20px 20px;

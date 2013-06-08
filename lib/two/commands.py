@@ -337,8 +337,7 @@ def define_commands():
         conn.write({'cmd':'message', 'text':'Type to speak out loud (to nearby players). A message that begins with a colon (":dance") will appear as a pose ("Belford dances").'})
         conn.write({'cmd':'message', 'text':'Other commands:'})
         conn.write({'cmd':'message', 'text':'/refresh: Reload the current location. (Or you can use your browser\'s refresh button.)'})
-        conn.write({'cmd':'message', 'text':'/panic: Jump to your selected panic location.'})
-        conn.write({'cmd':'message', 'text':'/panicstart: Jump back to the start world.'})
+        conn.write({'cmd':'message', 'text':'/panic: Jump to your selected panic location. \xA0 /panicstart: Jump back to the start world.'})
         return
 
     @command('meta_refresh')
