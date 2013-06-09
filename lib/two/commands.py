@@ -616,6 +616,8 @@ def define_commands():
         yield motor.Op(app.mongodb.portals.update,
                        {'_id':portal['_id']},
                        {'$set': {'preferred':True}})
+        desc = yield two.execute.portal_description(app, portal, conn.uid, location=True)
+        raise MessageException('Panic portal set to %s, %s.' % (desc['world'], desc['location'])) ###localize
         
     @command('selfdesc', doeswrite=True)
     def cmd_selfdesc(app, task, cmd, conn):
