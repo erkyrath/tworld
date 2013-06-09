@@ -560,6 +560,10 @@ def define_commands():
         for stream in app.webconns.all():
             stream.write(wcproto.message(0, {'cmd':'messageall', 'text':val}))
 
+    @command('meta_shutdown', restrict='admin')
+    def cmd_meta_shutdown(app, task, cmd, conn):
+        app.queue_command({'cmd':'shutdownprocess'})
+        
     @command('portstart', doeswrite=True)
     def cmd_portstart(app, task, cmd, conn):
         # Fling the player back to the start world. (Not necessarily the

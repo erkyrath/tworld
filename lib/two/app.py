@@ -126,7 +126,9 @@ class Tworld(object):
             raise KeyboardInterrupt()
         self.log.warning('%s! Queueing shutdown!', signame)
         self.caughtinterrupt = True
-        self.queue_command({'cmd':'shutdownprocess'})
+        # Gotta use a special method from inside a signal handler.
+        self.ioloop.add_callback_from_signal(
+            self.queue_command, {'cmd':'shutdownprocess'})
 
     def autoreload_handler(self):
         self.log.warning('Queueing autoreload shutdown!')
