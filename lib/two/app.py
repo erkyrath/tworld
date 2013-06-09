@@ -84,20 +84,25 @@ class Tworld(object):
         process, rather than just exiting.
         """
         self.shuttingdown = True
-        self.mongomgr.close()
-        self.webconns.close()
+        def shutdown_cont():
+            if reason == 'autoreload':
+                def shutdown_final():
+                    self.log.info('Autoreloading for real.')
+                    twcommon.autoreload.autoreload()
+            else:
+                def shutdown_final():
+                    self.log.info('Shutting down for real.')
+                    sys.exit(0)
+            self.mongomgr.close()
+            self.webconns.close()
+            self.log.info('Waiting 1 second for sockets to close...')
+            self.ioloop.add_timeout(datetime.timedelta(seconds=1.0),
+                                    shutdown_final)
+            return
         self.log.info('Waiting 1 second for sockets to drain...')
-        if reason == 'autoreload':
-            def finalshutdown():
-                self.log.info('Autoreloading for real.')
-                twcommon.autoreload.autoreload()
-        else:
-            def finalshutdown():
-                self.log.info('Shutting down for real.')
-                sys.exit(0)
         self.ioloop.add_timeout(datetime.timedelta(seconds=1.0),
-                                finalshutdown)
-
+                                shutdown_cont)
+        
     def interrupt_handler(self, signum, stackframe):
         """This is called when Python catches a SIGINT (ctrl-C) signal.
         (It replaces the usual behavior of raising KeyboardInterrupt.)
