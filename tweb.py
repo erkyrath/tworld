@@ -13,7 +13,9 @@ passes those along to the tworld server, and relays back the responses.
 """
 
 import sys
+import datetime
 import logging
+import signal
 
 import tornado.web
 import tornado.gen
@@ -173,10 +175,44 @@ class TwebApplication(tornado.web.Application):
         self.twlog.info('Launching timers')
         self.twservermgr.init_timers()
 
+        # Catch SIGINT (ctrl-C) and SIGHUP with our own signal handler.
+        # The handler will try to close sockets cleanly and allow messages
+        # to drain out.
+        # (Not SIGKILL; we leave that as a shut-down-right-now option.)
+        self.caughtinterrupt = False
+        signal.signal(signal.SIGINT, self.interrupt_handler)
+        signal.signal(signal.SIGHUP, self.interrupt_handler)
+
         # The session expiration monitor. Runs once per minute.
         res = tornado.ioloop.PeriodicCallback(self.twsessionmgr.monitor_sessions, 60000)
         res.start()
 
+    def interrupt_handler(self, signum, stackframe):
+        """Signal handler for SIGINT and SIGHUP. We set a flag to prevent
+        further requests, and set a timer for final shutdown.
+        """
+        if signum == signal.SIGINT:
+            signame = 'Interrupt'
+        elif signum == signal.SIGHUP:
+            signame = 'Hangup'
+        else:
+            signame = 'Signal %s' % (signum,)
+        if self.caughtinterrupt:
+            self.twlog.error('%s! Shutting down immediately!', signame)
+            raise KeyboardInterrupt()
+        self.twlog.warning('%s! Queueing shutdown!', signame)
+        self.caughtinterrupt = True
+        ioloop = tornado.ioloop.IOLoop.instance()
+        def func():
+            self.twlog.info('Waiting 1 second for requests to drain...')
+            ioloop.add_timeout(datetime.timedelta(seconds=1.0),
+                               self.final_shutdown)
+        ioloop.add_callback_from_signal(func)
+
+    def final_shutdown(self):
+        self.twservermgr.mongo_disconnect()
+        self.twlog.info('Shutting down for real.')
+        sys.exit(0)
 
 application = TwebApplication(
     handlers,

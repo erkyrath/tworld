@@ -48,6 +48,9 @@ class MyHandlerMixin:
         prepare() method, but that can't be async in Tornado 3.0. Maybe in
         3.1.)
         """
+        if self.application.caughtinterrupt:
+            # Server is shutting down; don't accept any significant requests.
+            raise MessageException('Server is shutting down!')
         res = yield self.application.twsessionmgr.find_session(self)
         if (res):
             (self.twsessionstatus, self.twsession) = res

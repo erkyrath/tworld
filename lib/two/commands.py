@@ -62,6 +62,7 @@ def define_commands():
     def cmd_shutdownprocess(app, task, cmd, stream):
         """Shut down the process. We do this from a command, so that we
         can say for sure that no other command is in flight.
+        This will be the last command to execute.
         """
         restartreason = getattr(cmd, 'restarting', False)
         if restartreason:

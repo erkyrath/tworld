@@ -63,6 +63,19 @@ class ServerMgr(object):
             val = wcproto.message(connid, msg, alreadyjson=True)
         self.tworld.write(val)
 
+    def mongo_disconnect(self):
+        """Close the connection to mongodb. (The monitor will start it
+        right back up again, or try to.)
+        """
+        if self.mongo:
+            try:
+                self.mongo.disconnect()
+            except Exception as ex:
+                self.log.error('Error disconnecting mongo: %s', ex)
+        self.mongoavailable = False
+        self.mongo = None
+        self.app.mongodb = None
+
     @tornado.gen.coroutine
     def monitor_mongo_status(self):
         """Check the status of the MongoDB connection. If the server has
@@ -81,6 +94,9 @@ class ServerMgr(object):
         if (self.mongotimerbusy):
             self.log.warning('monitor_mongo_status: already in flight; did a previous call jam?')
             return
+        if (self.app.caughtinterrupt):
+            self.log.warning('monitor_mongo_status: shutting down, never mind')
+            return
         self.mongotimerbusy = True
         
         if (self.mongoavailable):
@@ -93,9 +109,7 @@ class ServerMgr(object):
                 self.log.error('Mongo client not alive: %s', ex)
                 self.mongoavailable = False
             if (not self.mongoavailable):
-                self.mongo.disconnect()
-                self.mongo = None
-                self.app.mongodb = None
+                self.mongo_disconnect()
             
         if (not self.mongoavailable):
             try:
@@ -111,7 +125,6 @@ class ServerMgr(object):
                 self.log.error('Mongo client not open: %s', ex)
         
         self.mongotimerbusy = False
-
 
     def monitor_tworld_status(self):
         """Check the status of the Tworld connection. If the socket is
