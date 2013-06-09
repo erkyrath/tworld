@@ -54,8 +54,12 @@ class Tworld(object):
             return
         self.mongomgr.init_timers()
 
-        # Catch SIGINT (ctrl-C) with our own signal handler.
+        # Catch SIGINT (ctrl-C) and SIGHUP with our own signal handler.
+        # The handler will try to close sockets cleanly and allow messages
+        # to drain out.
+        # (Not SIGKILL; we leave that as a shut-down-right-now option.)
         signal.signal(signal.SIGINT, self.interrupt_handler)
+        signal.signal(signal.SIGHUP, self.interrupt_handler)
 
         # This periodic command kicks disconnected players to the void.
         # (Every three minutes, plus an uneven fraction of a second.)
@@ -97,16 +101,23 @@ class Tworld(object):
     def interrupt_handler(self, signum, stackframe):
         """This is called when Python catches a SIGINT (ctrl-C) signal.
         (It replaces the usual behavior of raising KeyboardInterrupt.)
+        It's also called on SIGHUP. (But not SIGKILL.)
 
         We don't want to interrupt a command (in the command queue). So
         we queue up a special command which will shut down the process.
         But in case that doesn't fly -- say, if the queue is jammed up --
         we shut down immediately on the second interrupt.
         """
+        if signum == signal.SIGINT:
+            signame = 'Interrupt'
+        elif signum == signal.SIGHUP:
+            signame = 'Hangup'
+        else:
+            signame = 'Signal %s' % (signum,)
         if self.caughtinterrupt:
-            self.log.error('Interrupt! Shutting down immediately!')
+            self.log.error('%s! Shutting down immediately!', signame)
             raise KeyboardInterrupt()
-        self.log.warning('Interrupt! Queueing shutdown!')
+        self.log.warning('%s! Queueing shutdown!', signame)
         self.caughtinterrupt = True
         self.queue_command({'cmd':'shutdownprocess'})
 
