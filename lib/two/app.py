@@ -74,9 +74,11 @@ class Tworld(object):
         be called as part of its own command queue event (shutdownprocess).
 
         We set the shuttingdown flag, which means the command queue is
-        frozen. Then we close all the sockets. Then we wait a second, to
-        allow the sockets to finish closing. (IOStream doesn't seem to
-        have an async close, seriously, wtf.) Then we exit the process.
+        frozen. Then we wait a second, so that any outgoing messages can
+        drain out of the write buffers. Then we close all the sockets.
+        Then we wait a little more, to allow the sockets to finish closing.
+        (IOStream doesn't seem to have an async close, seriously, wtf.) Then
+        we exit the process.
 
         Reason 'autoreload' is a special case, triggered by the
         tornado.autoreload module. (Actually our patched version in
@@ -95,8 +97,8 @@ class Tworld(object):
                     sys.exit(0)
             self.mongomgr.close()
             self.webconns.close()
-            self.log.info('Waiting 1 second for sockets to close...')
-            self.ioloop.add_timeout(datetime.timedelta(seconds=1.0),
+            self.log.info('Waiting 0.5 second for sockets to close...')
+            self.ioloop.add_timeout(datetime.timedelta(seconds=0.5),
                                     shutdown_final)
             return
         self.log.info('Waiting 1 second for sockets to drain...')
