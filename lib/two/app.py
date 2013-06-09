@@ -91,6 +91,7 @@ class Tworld(object):
                 def shutdown_final():
                     self.log.info('Autoreloading for real.')
                     twcommon.autoreload.autoreload()
+                    sys.exit(0)   # Should not reach here
             else:
                 def shutdown_final():
                     self.log.info('Shutting down for real.')

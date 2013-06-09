@@ -102,6 +102,7 @@ logging.basicConfig(**logconf)
 
 # Now that we have a python_path, we can import the tworld-specific modules.
 
+import twcommon.autoreload
 import tweblib.session
 import tweblib.handlers
 import tweblib.connections
@@ -209,10 +210,24 @@ class TwebApplication(tornado.web.Application):
                                self.final_shutdown)
         ioloop.add_callback_from_signal(func)
 
+    def autoreload_handler(self):
+        self.twlog.warning('Queueing autoreload shutdown!')
+        self.caughtinterrupt = True
+        ioloop = tornado.ioloop.IOLoop.instance()
+        self.twlog.info('Waiting 1 second for requests to drain...')
+        ioloop.add_timeout(datetime.timedelta(seconds=1.0),
+                           self.final_autoreload)
+
     def final_shutdown(self):
         self.twservermgr.mongo_disconnect()
         self.twlog.info('Shutting down for real.')
         sys.exit(0)
+        
+    def final_autoreload(self):
+        self.twservermgr.mongo_disconnect()
+        self.twlog.info('Autoreloading for real.')
+        twcommon.autoreload.autoreload()
+        sys.exit(0)   # Should not reach here
 
 application = TwebApplication(
     handlers,
@@ -221,6 +236,9 @@ application = TwebApplication(
         'tworld_app_banner': lambda handler:opts.app_banner,
         },
     **appoptions)
+
+if opts.debug:
+    twcommon.autoreload.sethandler(application.autoreload_handler)
 
 application.init_tworld()
 application.listen(opts.port)
