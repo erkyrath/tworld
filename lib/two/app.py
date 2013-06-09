@@ -46,7 +46,12 @@ class Tworld(object):
         
     def init_timers(self):
         self.ioloop = tornado.ioloop.IOLoop.current()
-        self.webconns.listen()
+        try:
+            self.webconns.listen()
+        except Exception as ex:
+            self.log.error('Unable to listen on socket: %s', ex)
+            self.ioloop.stop()
+            return
         self.mongomgr.init_timers()
 
         # Catch SIGINT (ctrl-C) with our own signal handler.
