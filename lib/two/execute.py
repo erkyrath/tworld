@@ -10,6 +10,7 @@ import motor
 from twcommon.excepts import MessageException, ErrorMessageException
 from twcommon.misc import MAX_DESCLINE_LENGTH
 from two import interp
+import two.task
 
 LEVEL_EXECUTE = 5
 LEVEL_DISPSPECIAL = 4
@@ -29,13 +30,37 @@ class EvalPropContext(object):
         EvalPropContext.link_code_counter = EvalPropContext.link_code_counter + 1
         return str(EvalPropContext.link_code_counter) + hex(random.getrandbits(32))[2:]
     
-    def __init__(self, task, wid, iid, locid=None, uid=None, level=LEVEL_MESSAGE):
+    def __init__(self, task,
+                 parent=None, loctx=None,
+                 uid=None, wid=None, iid=None, locid=None,
+                 level=LEVEL_MESSAGE):
         self.task = task
         self.app = self.task.app
-        self.wid = wid
-        self.iid = iid
-        self.locid = locid
-        self.uid = uid
+        
+        if parent is not None:
+            assert loctx is None
+            assert uid is None
+            assert wid is None
+            self.uid = parent.uid
+            self.wid = parent.wid
+            self.iid = parent.iid
+            self.locid = parent.iid
+        elif loctx is not None:
+            assert parent is None
+            assert uid is None
+            assert wid is None
+            self.uid = loctx.uid
+            self.wid = loctx.wid
+            self.iid = loctx.iid
+            self.locid = loctx.iid
+        else:
+            assert parent is None
+            assert loctx is None
+            self.wid = wid
+            self.iid = iid
+            self.locid = locid
+            self.uid = uid
+            
         self.level = level
         self.accum = None
         self.linktargets = None
@@ -223,7 +248,7 @@ class EvalPropContext(object):
                     self.linktargets[copykey] = ('copyportal', portid)
                     portalobj['copyable'] = copykey
                 # Look up the destination portaldesc in a separate context.
-                altloctx = task.LocContext(None, wid=portal['wid'], locid=portal['locid'])
+                altloctx = two.task.LocContext(None, wid=portal['wid'], locid=portal['locid'])
                 ctx = EvalPropContext(self.task, loctx=altloctx, level=LEVEL_FLAT)
                 desttext = yield ctx.eval('portaldesc')
                 self.updateacdepends(ctx)
@@ -760,7 +785,7 @@ def generate_update(task, conn, dirty):
     wid = instance['wid']
     scid = instance['scid']
     locid = playstate['locid']
-    loctx = task.LocContext(uid, wid, scid, iid, locid)
+    loctx = two.task.LocContext(uid, wid, scid, iid, locid)
 
     if dirty & DIRTY_WORLD:
         scope = yield motor.Op(app.mongodb.scopes.find_one,
