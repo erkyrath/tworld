@@ -45,13 +45,13 @@ class EvalPropContext(object):
             self.uid = parent.uid
             self.wid = parent.wid
             self.iid = parent.iid
-            self.locid = parent.iid
+            self.locid = parent.locid
         elif loctx is not None:
             self.loctx = loctx
             self.uid = loctx.uid
             self.wid = loctx.wid
             self.iid = loctx.iid
-            self.locid = loctx.iid
+            self.locid = loctx.locid
             
         self.level = level
         self.accum = None
