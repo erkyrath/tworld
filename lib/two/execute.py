@@ -32,34 +32,25 @@ class EvalPropContext(object):
     
     def __init__(self, task,
                  parent=None, loctx=None,
-                 uid=None, wid=None, iid=None, locid=None,
                  level=LEVEL_MESSAGE):
         self.task = task
         self.app = self.task.app
+
+        assert (parent or loctx)
+        assert not (parent and loctx)
         
         if parent is not None:
-            assert loctx is None
-            assert uid is None
-            assert wid is None
+            self.loctx = parent.loctx
             self.uid = parent.uid
             self.wid = parent.wid
             self.iid = parent.iid
             self.locid = parent.iid
         elif loctx is not None:
-            assert parent is None
-            assert uid is None
-            assert wid is None
+            self.loctx = loctx
             self.uid = loctx.uid
             self.wid = loctx.wid
             self.iid = loctx.iid
             self.locid = loctx.iid
-        else:
-            assert parent is None
-            assert loctx is None
-            self.wid = wid
-            self.iid = iid
-            self.locid = locid
-            self.uid = uid
             
         self.level = level
         self.accum = None
@@ -152,7 +143,7 @@ class EvalPropContext(object):
         """
         if lookup:
             origkey = key
-            res = yield find_symbol(self.app, self.wid, self.iid, self.locid, key, dependencies=self.dependencies) ####
+            res = yield find_symbol(self.app, self.loctx, key, dependencies=self.dependencies)
         else:
             origkey = None
             if type(key) is dict:
@@ -383,7 +374,7 @@ class EvalPropContext(object):
                     # Can't get any more suppressed.
                     suppstack.append(0)
                     continue
-                ifval = yield find_symbol(self.app, self.wid, self.iid, self.locid, nod.expr, dependencies=self.dependencies) ####
+                ifval = yield find_symbol(self.app, self.loctx, nod.expr, dependencies=self.dependencies)
                 if ifval:
                     suppstack.append(0)
                 else:
@@ -404,7 +395,7 @@ class EvalPropContext(object):
                     # We had a successful "if" earlier, so no change.
                     continue
                 # We follow an unsuccessful "if". Maybe suppress.
-                ifval = yield find_symbol(self.app, self.wid, self.iid, self.locid, nod.expr, dependencies=self.dependencies) ####
+                ifval = yield find_symbol(self.app, self.loctx, nod.expr, dependencies=self.dependencies)
                 if ifval:
                     suppstack[-1] = 0
                 else:
@@ -707,7 +698,7 @@ def portal_description(app, portal, uid, uidiid=None, location=False, short=Fals
         return None
 
 @tornado.gen.coroutine
-def render_focus(app, loctx, conn, focusobj):
+def render_focus(task, loctx, conn, focusobj):
     """The part of generate_update() that deals with focus.
     Returns (focus, focusspecial).
     """
@@ -725,7 +716,7 @@ def render_focus(app, loctx, conn, focusobj):
         restype = focusobj[0]
         
         if restype == 'player':
-            player = yield motor.Op(app.mongodb.players.find_one,
+            player = yield motor.Op(task.app.mongodb.players.find_one,
                                     {'_id':focusobj[1]},
                                     {'name':1, 'desc':1})
             if not player:
@@ -895,7 +886,7 @@ def generate_update(task, conn, dirty):
         conn.focusdependencies.clear()
 
         focusobj = playstate.get('focus', None)
-        (focusdesc, focusspecial) = yield render_focus(app, loctx, conn, focusobj)
+        (focusdesc, focusspecial) = yield render_focus(task, loctx, conn, focusobj)
 
         msg['focus'] = focusdesc
         if focusspecial:

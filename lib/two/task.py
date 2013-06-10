@@ -130,7 +130,7 @@ class Task(object):
             return loctx
 
         self.log.debug('### Task.get_loctx')
-        playstate = yield motor.Op(app.mongodb.playstate.find_one,
+        playstate = yield motor.Op(self.app.mongodb.playstate.find_one,
                                    {'_id':uid},
                                    {'iid':1, 'locid':1, 'focus':1})
     
@@ -140,7 +140,7 @@ class Task(object):
             self.loctxmap[uid] = loctx
             return loctx
         
-        instance = yield motor.Op(app.mongodb.instances.find_one,
+        instance = yield motor.Op(self.app.mongodb.instances.find_one,
                               {'_id':iid})
         loctx = LocContext(uid, instance['wid'], instance['scid'],
                            iid, playstate['locid'])
