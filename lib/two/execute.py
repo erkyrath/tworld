@@ -29,8 +29,9 @@ class EvalPropContext(object):
         EvalPropContext.link_code_counter = EvalPropContext.link_code_counter + 1
         return str(EvalPropContext.link_code_counter) + hex(random.getrandbits(32))[2:]
     
-    def __init__(self, app, wid, iid, locid=None, uid=None, level=LEVEL_MESSAGE):
-        self.app = app
+    def __init__(self, task, wid, iid, locid=None, uid=None, level=LEVEL_MESSAGE):
+        self.task = task
+        self.app = self.task.app
         self.wid = wid
         self.iid = iid
         self.locid = locid
@@ -126,7 +127,7 @@ class EvalPropContext(object):
         """
         if lookup:
             origkey = key
-            res = yield find_symbol(self.app, self.wid, self.iid, self.locid, key, dependencies=self.dependencies)
+            res = yield find_symbol(self.app, self.wid, self.iid, self.locid, key, dependencies=self.dependencies) ####
         else:
             origkey = None
             if type(key) is dict:
@@ -152,7 +153,7 @@ class EvalPropContext(object):
                 val = res.get('text', None)
                 if val:
                     # Look up the extra text in a separate context.
-                    ctx = EvalPropContext(self.app, self.wid, self.iid, self.locid, self.uid, level=LEVEL_DISPLAY)
+                    ctx = EvalPropContext(task, parent=self, level=LEVEL_DISPLAY)
                     extratext = yield ctx.eval(val, lookup=False)
                     self.updateacdepends(ctx)
                 player = yield motor.Op(self.app.mongodb.players.find_one,
@@ -177,13 +178,13 @@ class EvalPropContext(object):
                 val = res.get('text', None)
                 if val:
                     # Look up the extra text in a separate context.
-                    ctx = EvalPropContext(self.app, self.wid, self.iid, self.locid, self.uid, level=LEVEL_DISPLAY)
+                    ctx = EvalPropContext(task, parent=self, level=LEVEL_DISPLAY)
                     extratext = yield ctx.eval(val, lookup=False)
                     self.updateacdepends(ctx)
                 # Look up the current symbol value.
                 editkey = 'editstr' + EvalPropContext.build_action_key()
                 self.linktargets[editkey] = ('editstr', res['key'])
-                ctx = EvalPropContext(self.app, self.wid, self.iid, self.locid, self.uid, level=LEVEL_FLAT)
+                ctx = EvalPropContext(task, parent=self, level=LEVEL_FLAT)
                 curvalue = yield ctx.eval(res['key'])
                 specres = ['editstr',
                            editkey,
@@ -207,7 +208,7 @@ class EvalPropContext(object):
                 val = res.get('text', None)
                 if val:
                     # Look up the extra text in a separate context.
-                    ctx = EvalPropContext(self.app, self.wid, self.iid, self.locid, self.uid, level=LEVEL_DISPLAY)
+                    ctx = EvalPropContext(task, parent=self, level=LEVEL_DISPLAY)
                     extratext = yield ctx.eval(val, lookup=False)
                     self.updateacdepends(ctx)
                 portal = yield motor.Op(self.app.mongodb.portals.find_one,
@@ -222,7 +223,8 @@ class EvalPropContext(object):
                     self.linktargets[copykey] = ('copyportal', portid)
                     portalobj['copyable'] = copykey
                 # Look up the destination portaldesc in a separate context.
-                ctx = EvalPropContext(self.app, portal['wid'], None, portal['locid'], level=LEVEL_FLAT)
+                altloctx = task.LocContext(None, wid=portal['wid'], locid=portal['locid'])
+                ctx = EvalPropContext(self.task, loctx=altloctx, level=LEVEL_FLAT)
                 desttext = yield ctx.eval('portaldesc')
                 self.updateacdepends(ctx)
                 if not desttext:
@@ -242,7 +244,7 @@ class EvalPropContext(object):
                 val = res.get('text', None)
                 if val:
                     # Look up the extra text in a separate context.
-                    ctx = EvalPropContext(self.app, self.wid, self.iid, self.locid, self.uid, level=LEVEL_DISPLAY)
+                    ctx = EvalPropContext(task, parent=self, level=LEVEL_DISPLAY)
                     extratext = yield ctx.eval(val, lookup=False)
                     self.updateacdepends(ctx)
                 portlist = yield motor.Op(self.app.mongodb.portlists.find_one,
@@ -356,7 +358,7 @@ class EvalPropContext(object):
                     # Can't get any more suppressed.
                     suppstack.append(0)
                     continue
-                ifval = yield find_symbol(self.app, self.wid, self.iid, self.locid, nod.expr, dependencies=self.dependencies)
+                ifval = yield find_symbol(self.app, self.wid, self.iid, self.locid, nod.expr, dependencies=self.dependencies) ####
                 if ifval:
                     suppstack.append(0)
                 else:
@@ -377,7 +379,7 @@ class EvalPropContext(object):
                     # We had a successful "if" earlier, so no change.
                     continue
                 # We follow an unsuccessful "if". Maybe suppress.
-                ifval = yield find_symbol(self.app, self.wid, self.iid, self.locid, nod.expr, dependencies=self.dependencies)
+                ifval = yield find_symbol(self.app, self.wid, self.iid, self.locid, nod.expr, dependencies=self.dependencies) ####
                 if ifval:
                     suppstack[-1] = 0
                 else:
@@ -680,7 +682,7 @@ def portal_description(app, portal, uid, uidiid=None, location=False, short=Fals
         return None
 
 @tornado.gen.coroutine
-def render_focus(app, wid, iid, locid, conn, focusobj):
+def render_focus(app, loctx, conn, focusobj):
     """The part of generate_update() that deals with focus.
     Returns (focus, focusspecial).
     """
@@ -688,6 +690,11 @@ def render_focus(app, wid, iid, locid, conn, focusobj):
         return (False, False)
 
     lookup = True
+
+    assert conn.uid == loctx.uid
+    wid = loctx.wid
+    iid = loctx.iid
+    locid = loctx.locid
     
     if type(focusobj) is list:
         restype = focusobj[0]
@@ -714,7 +721,7 @@ def render_focus(app, wid, iid, locid, conn, focusobj):
             focusdesc = '[Focus: %s]' % (focusobj,)
             return (focusdesc, False)
 
-    ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_DISPSPECIAL)
+    ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_DISPSPECIAL)
     focusdesc = yield ctx.eval(focusobj, lookup=lookup)
     if ctx.linktargets:
         conn.focusactions.update(ctx.linktargets)
@@ -753,6 +760,7 @@ def generate_update(task, conn, dirty):
     wid = instance['wid']
     scid = instance['scid']
     locid = playstate['locid']
+    loctx = task.LocContext(uid, wid, scid, iid, locid)
 
     if dirty & DIRTY_WORLD:
         scope = yield motor.Op(app.mongodb.scopes.find_one,
@@ -787,7 +795,7 @@ def generate_update(task, conn, dirty):
         conn.localeactions.clear()
         conn.localedependencies.clear()
         
-        ctx = EvalPropContext(task, wid=wid, iid=iid, locid=locid, uid=uid, level=LEVEL_DISPLAY)
+        ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_DISPLAY)
         localedesc = yield ctx.eval('desc')
         
         if ctx.linktargets:
@@ -862,7 +870,7 @@ def generate_update(task, conn, dirty):
         conn.focusdependencies.clear()
 
         focusobj = playstate.get('focus', None)
-        (focusdesc, focusspecial) = yield render_focus(app, wid, iid, locid, conn, focusobj)
+        (focusdesc, focusspecial) = yield render_focus(app, loctx, conn, focusobj)
 
         msg['focus'] = focusdesc
         if focusspecial:
@@ -1069,13 +1077,13 @@ def perform_action(task, cmd, conn, target):
         # Display an event.
         val = res.get('text', None)
         if val:
-            ctx = EvalPropContext(task, uid, loctx, level=LEVEL_MESSAGE)
+            ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_MESSAGE)
             newval = yield ctx.eval(val, lookup=False)
             task.write_event(uid, newval)
         val = res.get('otext', None)
         if val:
             others = yield task.find_locale_players(notself=True)
-            ctx = EvalPropContext(task, uid, loctx, level=LEVEL_MESSAGE)
+            ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_MESSAGE)
             newval = yield ctx.eval(val, lookup=False)
             task.write_event(others, newval)
         return
@@ -1084,13 +1092,13 @@ def perform_action(task, cmd, conn, target):
         # Display an event.
         val = res.get('text', None)
         if val:
-            ctx = EvalPropContext(task, uid, loctx, level=LEVEL_MESSAGE)
+            ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_MESSAGE)
             newval = yield ctx.eval(val, lookup=False)
             task.write_event(uid, newval)
         val = res.get('otext', None)
         if val:
             others = yield task.find_locale_players(notself=True)
-            ctx = EvalPropContext(task, uid, loctx, level=LEVEL_MESSAGE)
+            ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_MESSAGE)
             newval = yield ctx.eval(val, lookup=False)
             task.write_event(others, newval)
         app.queue_command({'cmd':'tovoid', 'uid':uid, 'portin':True})
@@ -1099,7 +1107,7 @@ def perform_action(task, cmd, conn, target):
     if restype == 'code':
         val = res.get('text', None)
         if val:
-            ctx = EvalPropContext(task, uid, loctx, level=LEVEL_EXECUTE)
+            ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
             # Pass in the whole {code} object
             newval = yield ctx.eval(res, lookup=False)
             if ctx.changeset:
@@ -1137,7 +1145,7 @@ def perform_action(task, cmd, conn, target):
         if msg is None:
             msg = '%s leaves.' % (playername,) ###localize
         else:
-            ctx = EvalPropContext(task, uid, loctx, level=LEVEL_MESSAGE)
+            ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_MESSAGE)
             msg = yield ctx.eval(msg, lookup=False)
         if msg:
             others = yield task.find_locale_players(notself=True)
@@ -1163,7 +1171,7 @@ def perform_action(task, cmd, conn, target):
         if msg is None:
             msg = '%s arrives.' % (playername,) ###localize
         else:
-            ctx = EvalPropContext(task, uid, loctx, level=LEVEL_MESSAGE)
+            ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_MESSAGE)
             msg = yield ctx.eval(msg, lookup=False)
         if msg:
             # others is already set
@@ -1171,7 +1179,7 @@ def perform_action(task, cmd, conn, target):
                 task.write_event(others, msg)
         msg = res.get('text', None)
         if msg:
-            ctx = EvalPropContext(task, uid, loctx, level=LEVEL_MESSAGE)
+            ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_MESSAGE)
             msg = yield ctx.eval(msg, lookup=False)
             task.write_event(uid, msg)
             
