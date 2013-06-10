@@ -40,6 +40,7 @@ class EvalPropContext(object):
         assert not (parent and loctx)
         
         if parent is not None:
+            assert self.task == parent.task
             self.loctx = parent.loctx
             self.uid = parent.uid
             self.wid = parent.wid
@@ -169,7 +170,7 @@ class EvalPropContext(object):
                 val = res.get('text', None)
                 if val:
                     # Look up the extra text in a separate context.
-                    ctx = EvalPropContext(task, parent=self, level=LEVEL_DISPLAY)
+                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_DISPLAY)
                     extratext = yield ctx.eval(val, lookup=False)
                     self.updateacdepends(ctx)
                 player = yield motor.Op(self.app.mongodb.players.find_one,
@@ -194,13 +195,13 @@ class EvalPropContext(object):
                 val = res.get('text', None)
                 if val:
                     # Look up the extra text in a separate context.
-                    ctx = EvalPropContext(task, parent=self, level=LEVEL_DISPLAY)
+                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_DISPLAY)
                     extratext = yield ctx.eval(val, lookup=False)
                     self.updateacdepends(ctx)
                 # Look up the current symbol value.
                 editkey = 'editstr' + EvalPropContext.build_action_key()
                 self.linktargets[editkey] = ('editstr', res['key'])
-                ctx = EvalPropContext(task, parent=self, level=LEVEL_FLAT)
+                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_FLAT)
                 curvalue = yield ctx.eval(res['key'])
                 specres = ['editstr',
                            editkey,
@@ -224,7 +225,7 @@ class EvalPropContext(object):
                 val = res.get('text', None)
                 if val:
                     # Look up the extra text in a separate context.
-                    ctx = EvalPropContext(task, parent=self, level=LEVEL_DISPLAY)
+                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_DISPLAY)
                     extratext = yield ctx.eval(val, lookup=False)
                     self.updateacdepends(ctx)
                 portal = yield motor.Op(self.app.mongodb.portals.find_one,
@@ -260,7 +261,7 @@ class EvalPropContext(object):
                 val = res.get('text', None)
                 if val:
                     # Look up the extra text in a separate context.
-                    ctx = EvalPropContext(task, parent=self, level=LEVEL_DISPLAY)
+                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_DISPLAY)
                     extratext = yield ctx.eval(val, lookup=False)
                     self.updateacdepends(ctx)
                 portlist = yield motor.Op(self.app.mongodb.portlists.find_one,
