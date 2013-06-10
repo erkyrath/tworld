@@ -456,7 +456,11 @@ def str_or_null(res):
     return str(res)
 
 @tornado.gen.coroutine
-def find_symbol(app, wid, iid, locid, key, dependencies=None):
+def find_symbol(app, loctx, key, dependencies=None):
+    wid = loctx.wid
+    iid = loctx.iid
+    locid = loctx.locid
+    
     if (locid is not None) and (iid is not None):
         if dependencies is not None:
             dependencies.add(('instanceprop', iid, locid, key))
@@ -719,15 +723,20 @@ def render_focus(app, wid, iid, locid, conn, focusobj):
     return (focusdesc, ctx.wasspecial)
 
 @tornado.gen.coroutine
-def generate_update(app, conn, dirty):
+def generate_update(task, conn, dirty):
     assert conn is not None, 'generate_update: conn is None'
     if not dirty:
         return
 
+    app = task.app
+    uid = conn.uid
+    # Don't go to task.loctx for the locale info; we need a few different
+    # bits of data. Plus, maybe the player moved.
+
     msg = { 'cmd': 'update' }
-    
+
     playstate = yield motor.Op(app.mongodb.playstate.find_one,
-                               {'_id':conn.uid},
+                               {'_id':uid},
                                {'iid':1, 'locid':1, 'focus':1})
     
     iid = playstate['iid']
@@ -778,7 +787,7 @@ def generate_update(app, conn, dirty):
         conn.localeactions.clear()
         conn.localedependencies.clear()
         
-        ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_DISPLAY)
+        ctx = EvalPropContext(task, wid=wid, iid=iid, locid=locid, uid=uid, level=LEVEL_DISPLAY)
         localedesc = yield ctx.eval('desc')
         
         if ctx.linktargets:
@@ -807,7 +816,7 @@ def generate_update(app, conn, dirty):
         people = []
         while (yield cursor.fetch_next):
             ostate = cursor.next_object()
-            if ostate['_id'] == conn.uid:
+            if ostate['_id'] == uid:
                 continue
             if not ostate.get('lastmoved', None):
                 # If no lastmoved field, set it to the beginning of time.
@@ -863,7 +872,7 @@ def generate_update(app, conn, dirty):
     
 
 @tornado.gen.coroutine
-def perform_action(app, task, cmd, conn, target):
+def perform_action(task, cmd, conn, target):
     """Carry out an action command. These are the commands which we have
     set up in the player's environment (localeactions, focusactions, etc);
     the player has just triggered one of them.
@@ -872,21 +881,13 @@ def perform_action(app, task, cmd, conn, target):
     the target argument from it. But in a few cases, we'll need additional
     fields from it.
     """
-    playstate = yield motor.Op(app.mongodb.playstate.find_one,
-                               {'_id':conn.uid},
-                               {'iid':1, 'locid':1, 'focus':1})
-    
-    iid = playstate['iid']
-    if not iid:
+    app = task.app
+    uid = conn.uid
+    loctx = yield task.get_loctx(uid)
+
+    if not loctx.iid:
         # In the void, there should be no actions.
         raise ErrorMessageException('You are between worlds.')
-        
-    instance = yield motor.Op(app.mongodb.instances.find_one,
-                              {'_id':iid})
-    wid = instance['wid']
-    scid = instance['scid']
-
-    locid = playstate['locid']
 
     if type(target) is tuple:
         restype = target[0]
@@ -894,17 +895,17 @@ def perform_action(app, task, cmd, conn, target):
         if restype == 'player':
             obj = ['player', target[1]]
             yield motor.Op(app.mongodb.playstate.update,
-                           {'_id':conn.uid},
+                           {'_id':uid},
                            {'$set':{'focus':obj}})
-            task.set_dirty(conn.uid, DIRTY_FOCUS)
+            task.set_dirty(uid, DIRTY_FOCUS)
             return
 
         if restype == 'focus':
             obj = list(target[1:])
             yield motor.Op(app.mongodb.playstate.update,
-                           {'_id':conn.uid},
+                           {'_id':uid},
                            {'$set':{'focus':obj}})
-            task.set_dirty(conn.uid, DIRTY_FOCUS)
+            task.set_dirty(uid, DIRTY_FOCUS)
             return
         
         if restype == 'editstr':
@@ -915,6 +916,8 @@ def perform_action(app, task, cmd, conn, target):
             val = str(val)
             if len(val) > MAX_DESCLINE_LENGTH:
                 val = val[0:MAX_DESCLINE_LENGTH]
+            iid = loctx.iid
+            locid = loctx.locid
             yield motor.Op(app.mongodb.instanceprop.update,
                            {'iid':iid, 'locid':locid, 'key':key},
                            {'iid':iid, 'locid':locid, 'key':key, 'val':val},
@@ -930,7 +933,7 @@ def perform_action(app, task, cmd, conn, target):
                 raise ErrorMessageException('Portal not found.')
 
             # Check that the portal is accessible.
-            yield portal_in_reach(app, portal, conn.uid, wid)
+            yield portal_in_reach(app, portal, uid, loctx.wid)
 
             world = yield motor.Op(app.mongodb.worlds.find_one,
                                    {'_id':portal['wid']})
@@ -944,11 +947,11 @@ def perform_action(app, task, cmd, conn, target):
                 raise ErrorMessageException('Destination location not found.')
             newlocid = location['_id']
             
-            newscid = yield portal_resolve_scope(app, portal, conn.uid, scid, world)
+            newscid = yield portal_resolve_scope(app, portal, uid, loctx.scid, world)
 
             
             player = yield motor.Op(app.mongodb.players.find_one,
-                                    {'_id':conn.uid},
+                                    {'_id':uid},
                                     {'plistid':1})
             plistid = player['plistid']
 
@@ -975,13 +978,13 @@ def perform_action(app, task, cmd, conn, target):
             newportid = yield motor.Op(app.mongodb.portals.insert, newportal)
             newportal['_id'] = newportid
 
-            portaldesc = yield portal_description(app, portal, conn.uid, uidiid=iid, location=True, short=True)
+            portaldesc = yield portal_description(app, portal, uid, uidiid=loctx.iid, location=True, short=True)
             if portaldesc:
                 strid = str(newportid)
                 portaldesc['portid'] = strid
                 portaldesc['listpos'] = newportal['listpos']
                 map = { strid: portaldesc }
-                subls = app.playconns.get_for_uid(conn.uid)
+                subls = app.playconns.get_for_uid(uid)
                 if subls:
                     for subconn in subls:
                         subconn.write({'cmd':'updateplist', 'map':map})
@@ -997,7 +1000,7 @@ def perform_action(app, task, cmd, conn, target):
                 raise ErrorMessageException('Portal not found.')
 
             # Check that the portal is accessible.
-            yield portal_in_reach(app, portal, conn.uid, wid)
+            yield portal_in_reach(app, portal, uid, loctx.wid)
 
             world = yield motor.Op(app.mongodb.worlds.find_one,
                                    {'_id':portal['wid']})
@@ -1011,7 +1014,7 @@ def perform_action(app, task, cmd, conn, target):
                 raise ErrorMessageException('Destination location not found.')
             newlocid = location['_id']
 
-            newscid = yield portal_resolve_scope(app, portal, conn.uid, scid, world)
+            newscid = yield portal_resolve_scope(app, portal, uid, loctx.scid, world)
 
             # Load up the instance, but only to check minaccess.
             instance = yield motor.Op(app.mongodb.instances.find_one,
@@ -1021,11 +1024,11 @@ def perform_action(app, task, cmd, conn, target):
             else:
                 minaccess = ACC_VISITOR
             if False: ### check minaccess against scope access!
-                task.write_event(conn.uid, 'You do not have access to this instance.') ###localize
+                task.write_event(uid, 'You do not have access to this instance.') ###localize
                 return
         
             res = yield motor.Op(app.mongodb.players.find_one,
-                                 {'_id':conn.uid},
+                                 {'_id':uid},
                                  {'name':1})
             playername = res['name']
         
@@ -1034,26 +1037,27 @@ def perform_action(app, task, cmd, conn, target):
                 # Don't need to dirty populace; everyone here has a
                 # dependency.
                 task.write_event(others, '%s disappears.' % (playername,)) ###localize
-            task.write_event(conn.uid, 'The world fades away.') ###localize
+            task.write_event(uid, 'The world fades away.') ###localize
 
             # Jump to the void, and schedule a portin event.
             portto = {'wid':newwid, 'scid':newscid, 'locid':newlocid}
             yield motor.Op(app.mongodb.playstate.update,
-                           {'_id':conn.uid},
+                           {'_id':uid},
                            {'$set':{'iid':None,
                                     'locid':None,
                                     'focus':None,
                                     'lastmoved': task.starttime,
                                     'portto':portto }})
-            task.set_dirty(conn.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_WORLD | DIRTY_POPULACE)
-            task.set_data_change( ('playstate', conn.uid, 'iid') )
-            task.set_data_change( ('playstate', conn.uid, 'locid') )
-            app.schedule_command({'cmd':'portin', 'uid':conn.uid}, 1.5)
+            task.set_dirty(uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_WORLD | DIRTY_POPULACE)
+            task.set_data_change( ('playstate', uid, 'iid') )
+            task.set_data_change( ('playstate', uid, 'locid') )
+            task.clear_loctx(uid)
+            app.schedule_command({'cmd':'portin', 'uid':uid}, 1.5)
             return
             
         raise ErrorMessageException('Action not understood: "%s"' % (target,))
     
-    res = yield find_symbol(app, wid, iid, locid, target)
+    res = yield find_symbol(app, loctx, target)
     if res is None:
         raise ErrorMessageException('Action not defined: "%s"' % (target,))
 
@@ -1065,13 +1069,13 @@ def perform_action(app, task, cmd, conn, target):
         # Display an event.
         val = res.get('text', None)
         if val:
-            ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_MESSAGE)
+            ctx = EvalPropContext(task, uid, loctx, level=LEVEL_MESSAGE)
             newval = yield ctx.eval(val, lookup=False)
-            task.write_event(conn.uid, newval)
+            task.write_event(uid, newval)
         val = res.get('otext', None)
         if val:
             others = yield task.find_locale_players(notself=True)
-            ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_MESSAGE)
+            ctx = EvalPropContext(task, uid, loctx, level=LEVEL_MESSAGE)
             newval = yield ctx.eval(val, lookup=False)
             task.write_event(others, newval)
         return
@@ -1080,22 +1084,22 @@ def perform_action(app, task, cmd, conn, target):
         # Display an event.
         val = res.get('text', None)
         if val:
-            ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_MESSAGE)
+            ctx = EvalPropContext(task, uid, loctx, level=LEVEL_MESSAGE)
             newval = yield ctx.eval(val, lookup=False)
-            task.write_event(conn.uid, newval)
+            task.write_event(uid, newval)
         val = res.get('otext', None)
         if val:
             others = yield task.find_locale_players(notself=True)
-            ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_MESSAGE)
+            ctx = EvalPropContext(task, uid, loctx, level=LEVEL_MESSAGE)
             newval = yield ctx.eval(val, lookup=False)
             task.write_event(others, newval)
-        app.queue_command({'cmd':'tovoid', 'uid':conn.uid, 'portin':True})
+        app.queue_command({'cmd':'tovoid', 'uid':uid, 'portin':True})
         return
 
     if restype == 'code':
         val = res.get('text', None)
         if val:
-            ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_EXECUTE)
+            ctx = EvalPropContext(task, uid, loctx, level=LEVEL_EXECUTE)
             # Pass in the whole {code} object
             newval = yield ctx.eval(res, lookup=False)
             if ctx.changeset:
@@ -1105,27 +1109,27 @@ def perform_action(app, task, cmd, conn, target):
     if restype in ('text', 'portal', 'portlist', 'selfdesc', 'editstr'):
         # Set focus to this symbol-name
         yield motor.Op(app.mongodb.playstate.update,
-                       {'_id':conn.uid},
+                       {'_id':uid},
                        {'$set':{'focus':target}})
-        task.set_dirty(conn.uid, DIRTY_FOCUS)
+        task.set_dirty(uid, DIRTY_FOCUS)
     elif restype == 'focus':
         # Set focus to the given symbol
         ### if already at focus, exit it? Or make no change?
         yield motor.Op(app.mongodb.playstate.update,
-                       {'_id':conn.uid},
+                       {'_id':uid},
                        {'$set':{'focus':res.get('key', None)}})
-        task.set_dirty(conn.uid, DIRTY_FOCUS)
+        task.set_dirty(uid, DIRTY_FOCUS)
     elif restype == 'move':
         # Set locale to the given symbol
         lockey = res.get('loc', None)
         location = yield motor.Op(app.mongodb.locations.find_one,
-                                  {'wid':wid, 'key':lockey},
+                                  {'wid':loctx.wid, 'key':lockey},
                                   {'_id':1})
         if not location:
             raise ErrorMessageException('No such location: %s' % (lockey,))
 
         player = yield motor.Op(app.mongodb.players.find_one,
-                                {'_id':conn.uid},
+                                {'_id':uid},
                                 {'name':1})
         playername = player['name']
             
@@ -1133,7 +1137,7 @@ def perform_action(app, task, cmd, conn, target):
         if msg is None:
             msg = '%s leaves.' % (playername,) ###localize
         else:
-            ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_MESSAGE)
+            ctx = EvalPropContext(task, uid, loctx, level=LEVEL_MESSAGE)
             msg = yield ctx.eval(msg, lookup=False)
         if msg:
             others = yield task.find_locale_players(notself=True)
@@ -1141,11 +1145,12 @@ def perform_action(app, task, cmd, conn, target):
                 task.write_event(others, msg)
                 
         yield motor.Op(app.mongodb.playstate.update,
-                       {'_id':conn.uid},
+                       {'_id':uid},
                        {'$set':{'locid':location['_id'], 'focus':None,
                                 'lastmoved': task.starttime }})
-        task.set_dirty(conn.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_POPULACE)
-        task.set_data_change( ('playstate', conn.uid, 'locid') )
+        task.set_dirty(uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_POPULACE)
+        task.set_data_change( ('playstate', uid, 'locid') )
+        task.clear_loctx(uid)
         
         # We set everybody in the destination room DIRTY_POPULACE.
         # (Players in the starting room have a dependency, which is already
@@ -1158,7 +1163,7 @@ def perform_action(app, task, cmd, conn, target):
         if msg is None:
             msg = '%s arrives.' % (playername,) ###localize
         else:
-            ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_MESSAGE)
+            ctx = EvalPropContext(task, uid, loctx, level=LEVEL_MESSAGE)
             msg = yield ctx.eval(msg, lookup=False)
         if msg:
             # others is already set
@@ -1166,9 +1171,9 @@ def perform_action(app, task, cmd, conn, target):
                 task.write_event(others, msg)
         msg = res.get('text', None)
         if msg:
-            ctx = EvalPropContext(app, wid, iid, locid, conn.uid, level=LEVEL_MESSAGE)
+            ctx = EvalPropContext(task, uid, loctx, level=LEVEL_MESSAGE)
             msg = yield ctx.eval(msg, lookup=False)
-            task.write_event(conn.uid, msg)
+            task.write_event(uid, msg)
             
     else:
         raise ErrorMessageException('Action invoked unsupported property type: %s' % (restype,))

@@ -15,6 +15,14 @@ DIRTY_FOCUS = 0x04
 DIRTY_POPULACE = 0x08
 DIRTY_ALL = 0x0F  # All of the above
 
+class LocContext(object):
+    def __init__(self, uid, wid=None, scid=None, iid=None, locid=None):
+        self.uid = uid
+        self.wid = wid
+        self.scid = scid
+        self.iid = iid
+        self.locid = locid
+
 class Task(object):
     def __init__(self, app, cmdobj, connid, twwcid, queuetime):
         self.app = app
@@ -31,6 +39,9 @@ class Task(object):
         # When we started working on the command:
         self.starttime = twcommon.misc.now()
 
+        # Maps uids to LocContexts.
+        self.loctxmap = {}
+
         # This will be a set of change keys.
         self.changeset = None
         # This will map connection IDs to a bitmask of dirty bits.
@@ -43,7 +54,9 @@ class Task(object):
         ref cycles, or if not, keeps my brain tidy.
         """
         self.app = None
+        self.log = None
         self.cmdobj = None
+        self.loctxmap = None
         self.updateconns = None
         self.changeset = None
 
@@ -105,6 +118,34 @@ class Task(object):
                         conn.write({'cmd':'event', 'text':text})
             else:
                 self.log.warning('write_event: unrecognized %s', obj)
+
+    def clear_loctx(self, uid):
+        if uid in self.loctxmap:
+            del self.loctxmap[uid]
+
+    @tornado.gen.coroutine
+    def get_loctx(self, uid):
+        loctx = self.loctxmap.get(uid, None)
+        if loctx:
+            return loctx
+
+        self.log.debug('### Task.get_loctx')
+        playstate = yield motor.Op(app.mongodb.playstate.find_one,
+                                   {'_id':uid},
+                                   {'iid':1, 'locid':1, 'focus':1})
+    
+        iid = playstate['iid']
+        if not iid:
+            loctx = LocContext(uid, None)
+            self.loctxmap[uid] = loctx
+            return loctx
+        
+        instance = yield motor.Op(app.mongodb.instances.find_one,
+                              {'_id':iid})
+        loctx = LocContext(uid, instance['wid'], instance['scid'],
+                           iid, playstate['locid'])
+        self.loctxmap[uid] = loctx
+        return loctx
             
     @tornado.gen.coroutine
     def find_locale_players(self, uid=None, notself=False):
@@ -345,7 +386,7 @@ class Task(object):
         for (connid, dirty) in updateconns.items():
             try:
                 conn = self.app.playconns.get(connid)
-                yield two.execute.generate_update(self.app, conn, dirty)
+                yield two.execute.generate_update(self, conn, dirty)
             except Exception as ex:
                 self.log.error('Error updating while resolving task: %s', self.cmdobj, exc_info=True)
         
