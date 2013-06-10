@@ -16,6 +16,12 @@ DIRTY_POPULACE = 0x08
 DIRTY_ALL = 0x0F  # All of the above
 
 class LocContext(object):
+    """
+    Pure-data class. Sometimes -- in fact, often -- you want to tote around
+    a bunch of location information in one object. This lets you do it.
+    All of the fields are optional except uid (and really, we may run into
+    some situation where uid is None also).
+    """
     def __init__(self, uid, wid=None, scid=None, iid=None, locid=None):
         self.uid = uid
         self.wid = wid
@@ -24,6 +30,15 @@ class LocContext(object):
         self.locid = locid
 
 class Task(object):
+    """
+    Context for the execution of one command in the command queue. This
+    is used for both player and server commands. (For server commands,
+    connid is zero. If the command came from within tworld, twwcid is
+    also zero.)
+
+    The basic life cycle is handle(), resolve(), close().
+    """
+    
     def __init__(self, app, cmdobj, connid, twwcid, queuetime):
         self.app = app
         self.log = app.log
@@ -51,7 +66,7 @@ class Task(object):
 
     def close(self):
         """Clean up any large member variables. This probably reduces
-        ref cycles, or if not, keeps my brain tidy.
+        ref cycles, or, if not, keeps my brain tidy.
         """
         self.app = None
         self.log = None
@@ -342,6 +357,14 @@ class Task(object):
 
     @tornado.gen.coroutine
     def resolve(self):
+        """
+        Resolve all side effects caused by data changes during this command.
+        
+        Some connections will have been marked dirty already, as the commands
+        executed. The data changeset will also implicitly set connections
+        dirty, based on their current dependencies. After working that all
+        out, we send an update to each connection that needs it.
+        """
         if not self.is_writable():
             return
         
