@@ -40,7 +40,7 @@ class Task(object):
         self.starttime = twcommon.misc.now()
 
         # Maps uids to LocContexts.
-        self.loctxmap = {}
+        #self.loctxmap = {}
 
         # This will be a set of change keys.
         self.changeset = None
@@ -56,7 +56,7 @@ class Task(object):
         self.app = None
         self.log = None
         self.cmdobj = None
-        self.loctxmap = None
+        #self.loctxmap = None
         self.updateconns = None
         self.changeset = None
 
@@ -120,14 +120,15 @@ class Task(object):
                 self.log.warning('write_event: unrecognized %s', obj)
 
     def clear_loctx(self, uid):
-        if uid in self.loctxmap:
-            del self.loctxmap[uid]
+        #if uid in self.loctxmap:
+        #    del self.loctxmap[uid]
+        pass
 
     @tornado.gen.coroutine
     def get_loctx(self, uid):
-        loctx = self.loctxmap.get(uid, None)
-        if loctx:
-            return loctx
+        #loctx = self.loctxmap.get(uid, None)
+        #if loctx:
+        #    return loctx
 
         self.log.debug('### Task.get_loctx')
         playstate = yield motor.Op(self.app.mongodb.playstate.find_one,
@@ -137,14 +138,14 @@ class Task(object):
         iid = playstate['iid']
         if not iid:
             loctx = LocContext(uid, None)
-            self.loctxmap[uid] = loctx
+            #self.loctxmap[uid] = loctx
             return loctx
         
         instance = yield motor.Op(self.app.mongodb.instances.find_one,
                               {'_id':iid})
         loctx = LocContext(uid, instance['wid'], instance['scid'],
                            iid, playstate['locid'])
-        self.loctxmap[uid] = loctx
+        #self.loctxmap[uid] = loctx
         return loctx
             
     @tornado.gen.coroutine
