@@ -355,7 +355,65 @@ class EvalPropContext(object):
                 # Pass in the whole {code} object
                 newval = yield self.evalkey(res, lookup=False, depth=depth+1)
                 return newval
-    
+
+            if restype == 'move':
+                # Set locale to the given symbol
+                lockey = res.get('loc', None)
+                location = yield motor.Op(self.app.mongodb.locations.find_one,
+                                          {'wid':self.loctx.wid, 'key':lockey},
+                                          {'_id':1})
+                if not location:
+                    raise ErrorMessageException('No such location: %s' % (lockey,))
+        
+                player = yield motor.Op(self.app.mongodb.players.find_one,
+                                        {'_id':uid},
+                                        {'name':1})
+                playername = player['name']
+                    
+                msg = res.get('oleave', None)
+                if msg is None:
+                    msg = '%s leaves.' % (playername,) ###localize
+                else:
+                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+                    msg = yield ctx.eval(msg, lookup=False)
+                if msg:
+                    others = yield self.task.find_locale_players(notself=True)
+                    if others:
+                        self.task.write_event(others, msg)
+                        
+                yield motor.Op(self.app.mongodb.playstate.update,
+                               {'_id':uid},
+                               {'$set':{'locid':location['_id'], 'focus':None,
+                                        'lastmoved': self.task.starttime }})
+                self.task.set_dirty(uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_POPULACE)
+                self.task.set_data_change( ('playstate', uid, 'locid') )
+                self.task.clear_loctx(uid)
+                
+                # We set everybody in the destination room DIRTY_POPULACE.
+                # (Players in the starting room have a dependency, which is already
+                # covered.)
+                others = yield self.task.find_locale_players(notself=True)
+                if others:
+                    self.task.set_dirty(others, DIRTY_POPULACE)
+                    
+                msg = res.get('oarrive', None)
+                if msg is None:
+                    msg = '%s arrives.' % (playername,) ###localize
+                else:
+                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+                    msg = yield ctx.eval(msg, lookup=False)
+                if msg:
+                    # others is already set
+                    if others:
+                        self.task.write_event(others, msg)
+                msg = res.get('text', None)
+                if msg:
+                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+                    msg = yield ctx.eval(msg, lookup=False)
+                    self.task.write_event(uid, msg)
+
+                return None
+
             raise ErrorMessageException('Code invoked unsupported property type: %s' % (restype,))
 
         ### simple assignment (for the moment)
