@@ -78,6 +78,8 @@ class EvalPropContext(object):
         the argument (string) is treated as an already-looked-up {text}
         value.
 
+        This is the top-level entry point to Doing Stuff in this context.
+        
         After the call, dependencies will contain the symbol (and any
         others checked when putting together the result).
 
@@ -307,7 +309,7 @@ class EvalPropContext(object):
         if objtype == 'text':
             try:
                 yield self.interpolate_text(res.get('text', ''), depth=depth)
-                return res ### why res? because is_text_object signals that the accum is set up.
+                return res #### why res? because is_text_object signals that the accum is set up. fix!
             except Exception as ex:
                 return '[Exception: %s]' % (ex,)
         elif objtype == 'code':
@@ -344,8 +346,16 @@ class EvalPropContext(object):
                                {'_id':uid},
                                {'$set':{'focus':symbol}})
                 self.task.set_dirty(uid, DIRTY_FOCUS)
-                return
+                return None
             
+            if restype == 'code':
+                val = res.get('text', None)
+                if not val:
+                    raise ErrorMessageException('Code object lacks text')
+                # Pass in the whole {code} object
+                newval = yield self.evalkey(res, lookup=False, depth=depth+1)
+                return newval
+    
             raise ErrorMessageException('Code invoked unsupported property type: %s' % (restype,))
 
         ### simple assignment (for the moment)
@@ -373,6 +383,8 @@ class EvalPropContext(object):
                        {'iid':iid, 'locid':locid, 'key':key, 'val':newval},
                        upsert=True)
         self.changeset.add( ('instanceprop', iid, locid, key) )
+
+        return None
 
     @tornado.gen.coroutine
     def interpolate_text(self, text, depth):
@@ -471,7 +483,7 @@ class EvalPropContext(object):
                 continue
             
             if nodkey == 'Interpolate':
-                subres = yield self.evalkey(nod.expr, depth+1)
+                subres = yield self.evalkey(nod.expr, depth=depth+1)
                 # {text} objects have already added their contents to
                 # the accum array.
                 if not is_text_object(subres):
