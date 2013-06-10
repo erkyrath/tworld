@@ -90,7 +90,7 @@ class EvalPropContext(object):
         DISPLAY: A string or, for {text} objects, a description.
         DISPSPECIAL: A string; for {text}, a description; for other {}
             objects, special client objects. (Used only for focus.)
-        EXECUTE: A string or, for {text} objects, a description. (But
+        EXECUTE: ####? A string or, for {text} objects, a description. (But
             the result may not be used at all.)
 
         (A description is an array of strings and tag-arrays, JSONable and
@@ -152,7 +152,10 @@ class EvalPropContext(object):
             if type(key) is dict:
                 res = key
             else:
-                res = { 'type':'text', 'text':key }
+                if self.level == LEVEL_EXECUTE:
+                    res = { 'type':'code', 'text':key }
+                else:
+                    res = { 'type':'text', 'text':key }
 
         objtype = None
         if type(res) is dict:
@@ -304,26 +307,49 @@ class EvalPropContext(object):
         if objtype == 'text':
             try:
                 yield self.interpolate_text(res.get('text', ''), depth=depth)
+                return res ### why res? because is_text_object signals that the accum is set up.
             except Exception as ex:
                 return '[Exception: %s]' % (ex,)
         elif objtype == 'code':
             try:
-                yield self.execute_code(res.get('text', ''), depth=depth)
+                newres = yield self.execute_code(res.get('text', ''), depth=depth)
+                return newres
             except Exception as ex:
                 raise ErrorMessageException(str(ex))
         else:
             return '[Unhandled object type: %s]' % (objtype,)
 
-        return res
-
     @tornado.gen.coroutine
     def execute_code(self, text, depth):
         """Execute a pile of (already-looked-up) script code.
         """
-        ### Currently hardwired to handle only the "symbol = value"
-        ### and '.symbol = value" cases.
         if self.level != LEVEL_EXECUTE:
             raise Exception('non-executable context')
+        self.task.log.debug('### executing code: %s', text)
+
+        if '=' not in text:
+            ### simple symbol (for the moment)
+            symbol = text ###
+            res = yield find_symbol(self.app, self.loctx, symbol, dependencies=self.dependencies)
+            if res is None:
+                raise ErrorMessageException('Action not defined: "%s"' % (symbol,))
+            if type(res) is not dict:
+                return res
+            restype = res.get('type', None)
+            uid = self.uid
+            
+            if restype in ('text', 'portal', 'portlist', 'selfdesc', 'editstr'):
+                # Set focus to this symbol-name
+                yield motor.Op(self.app.mongodb.playstate.update,
+                               {'_id':uid},
+                               {'$set':{'focus':symbol}})
+                self.task.set_dirty(uid, DIRTY_FOCUS)
+                return
+            
+            raise ErrorMessageException('Code invoked unsupported property type: %s' % (restype,))
+
+        ### simple assignment (for the moment)
+        
         key, dummy, val = text.partition('=')
         key = key.strip()
         val = val.strip()
@@ -1103,9 +1129,17 @@ def perform_action(task, cmd, conn, target):
         # End of special-dict targets.
         raise ErrorMessageException('Action not understood: "%s"' % (target,))
 
-    # Simple symbol targets. (We look these up, which means the *results*
-    # may be special.)
+    # The target is a string. This may be a simple symbol, or a chunk of
+    # code.
+
+    ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
+    newval = yield ctx.eval(target, lookup=False)
+    app.log.debug('### action "%s" returned %s', target, repr(newval))
+    if ctx.changeset:
+        task.add_data_changes(ctx.changeset)
     
+    return ####
+
     res = yield find_symbol(app, loctx, target)
     if res is None:
         raise ErrorMessageException('Action not defined: "%s"' % (target,))
