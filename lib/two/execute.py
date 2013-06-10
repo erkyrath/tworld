@@ -20,6 +20,16 @@ LEVEL_FLAT = 1
 LEVEL_RAW = 0
 
 class EvalPropContext(object):
+    """
+    EvalPropContext is a context for evaluating one symbol or piece of code,
+    during a task.
+
+    When setting up an EvalPropContext you must provide a LocContext, which
+    is the identity and location of the player who is the center of the
+    action. (Sorry about all the "context"s.) Or you can provide an existing
+    EvalPropContext to clone.
+    """
+    
     link_code_counter = 0
 
     @staticmethod
@@ -30,9 +40,7 @@ class EvalPropContext(object):
         EvalPropContext.link_code_counter = EvalPropContext.link_code_counter + 1
         return str(EvalPropContext.link_code_counter) + hex(random.getrandbits(32))[2:]
     
-    def __init__(self, task,
-                 parent=None, loctx=None,
-                 level=LEVEL_MESSAGE):
+    def __init__(self, task, parent=None, loctx=None, level=LEVEL_MESSAGE):
         self.task = task
         self.app = self.task.app
 
@@ -310,6 +318,8 @@ class EvalPropContext(object):
 
     @tornado.gen.coroutine
     def execute_code(self, text, depth):
+        """Execute a pile of (already-looked-up) script code.
+        """
         ### Currently hardwired to handle only the "symbol = value"
         ### and '.symbol = value" cases.
         if self.level != LEVEL_EXECUTE:
@@ -340,7 +350,8 @@ class EvalPropContext(object):
 
     @tornado.gen.coroutine
     def interpolate_text(self, text, depth):
-
+        """Evaluate a bunch of (already-looked-up) interpolation markup.
+        """
         nodls = interp.parse(text)
         
         # While trawling through nodls, we may encounter $if/$end
@@ -470,6 +481,15 @@ def str_or_null(res):
 
 @tornado.gen.coroutine
 def find_symbol(app, loctx, key, dependencies=None):
+    """Look up a symbol, using the universal laws of symbol-looking-up.
+    To wit:
+    - ### "_" and locals
+    - instance properties
+    - world properties
+    - realm-level instance properties
+    - realm-level world properties
+    - ### builtins
+    """
     wid = loctx.wid
     iid = loctx.iid
     locid = loctx.locid
@@ -742,13 +762,16 @@ def render_focus(task, loctx, conn, focusobj):
 
 @tornado.gen.coroutine
 def generate_update(task, conn, dirty):
+    """Construct an update message for a player client. This will involve
+    recomputing the locale text, focus text, or so on.
+    """
     assert conn is not None, 'generate_update: conn is None'
     if not dirty:
         return
 
     app = task.app
     uid = conn.uid
-    # Don't go to task.loctx for the locale info; we need a few different
+    # Don't go to task.get_loctx for the locale info; we need a few different
     # bits of data. Plus, maybe the player moved.
 
     msg = { 'cmd': 'update' }
@@ -909,6 +932,9 @@ def perform_action(task, cmd, conn, target):
         raise ErrorMessageException('You are between worlds.')
 
     if type(target) is tuple:
+        # Action targets that are dicts. These result from special structures
+        # in the world, not simple links in descriptions.
+        
         restype = target[0]
         
         if restype == 'player':
@@ -1073,8 +1099,12 @@ def perform_action(task, cmd, conn, target):
             task.clear_loctx(uid)
             app.schedule_command({'cmd':'portin', 'uid':uid}, 1.5)
             return
-            
+
+        # End of special-dict targets.
         raise ErrorMessageException('Action not understood: "%s"' % (target,))
+
+    # Simple symbol targets. (We look these up, which means the *results*
+    # may be special.)
     
     res = yield find_symbol(app, loctx, target)
     if res is None:
