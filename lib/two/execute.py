@@ -43,15 +43,9 @@ class EvalPropContext(object):
             assert self.task == parent.task
             self.loctx = parent.loctx
             self.uid = parent.uid
-            self.wid = parent.wid
-            self.iid = parent.iid
-            self.locid = parent.locid
         elif loctx is not None:
             self.loctx = loctx
             self.uid = loctx.uid
-            self.wid = loctx.wid
-            self.iid = loctx.iid
-            self.locid = loctx.locid
             
         self.level = level
         self.accum = None
@@ -230,8 +224,8 @@ class EvalPropContext(object):
                     self.updateacdepends(ctx)
                 portal = yield motor.Op(self.app.mongodb.portals.find_one,
                                         {'_id':portid})
-                yield portal_in_reach(self.app, portal, self.uid, self.wid)
-                portalobj = yield portal_description(self.app, portal, self.uid, uidiid=self.iid, location=True)
+                yield portal_in_reach(self.app, portal, self.uid, self.loctx.wid)
+                portalobj = yield portal_description(self.app, portal, self.uid, uidiid=self.loctx.iid, location=True)
                 portalobj['portid'] = str(portal['_id'])
                 ackey = 'port' + EvalPropContext.build_action_key()
                 self.linktargets[ackey] = ('portal', portid)
@@ -266,7 +260,7 @@ class EvalPropContext(object):
                     self.updateacdepends(ctx)
                 portlist = yield motor.Op(self.app.mongodb.portlists.find_one,
                                           {'_id':plistid})
-                if not portlist or portlist['wid'] != self.wid:
+                if not portlist or portlist['wid'] != self.loctx.wid:
                     raise ErrorMessageException('This portal list is not available.')
                 cursor = self.app.mongodb.portals.find({'plistid':plistid})
                 ls = []
@@ -277,7 +271,7 @@ class EvalPropContext(object):
                 ls.sort(key=lambda portal:portal.get('listpos', 0))
                 subls = []
                 for portal in ls:
-                    desc = yield portal_description(self.app, portal, self.uid, uidiid=self.iid)
+                    desc = yield portal_description(self.app, portal, self.uid, uidiid=self.loctx.iid)
                     if desc:
                         ackey = 'plist' + EvalPropContext.build_action_key()
                         self.linktargets[ackey] = ('focus', 'portal', portal['_id'], origkey, None)
@@ -325,8 +319,8 @@ class EvalPropContext(object):
         val = val.strip()
         newval = ast.literal_eval(val)
         
-        iid = self.iid
-        locid = self.locid
+        iid = self.loctx.iid
+        locid = self.loctx.locid
         if key.startswith('.'):
             key = key[1:]
             locid = None
