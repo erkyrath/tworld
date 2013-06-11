@@ -7,6 +7,7 @@ import bson
 from bson.objectid import ObjectId
 import motor
 
+import twcommon.misc
 from twcommon.excepts import MessageException, ErrorMessageException
 from twcommon.misc import MAX_DESCLINE_LENGTH
 from two import interp
@@ -18,6 +19,10 @@ LEVEL_DISPLAY = 3
 LEVEL_MESSAGE = 2
 LEVEL_FLAT = 1
 LEVEL_RAW = 0
+
+# Singleton object that signifies that the result of an evaluation is
+# the accum buffer of the EvalPropContext.
+Accumulated = twcommon.misc.SuiGeneris('Accumulated')
 
 class EvalPropContext(object):
     """
@@ -118,18 +123,18 @@ class EvalPropContext(object):
         if (self.level == LEVEL_FLAT):
             return str_or_null(res)
         if (self.level == LEVEL_MESSAGE):
-            if is_text_object(res):
+            if res is Accumulated:
                 # Skip all styles, links, etc. Just paste together strings.
                 return ''.join([ val for val in self.accum if type(val) is str ])
             return str(res)
         if (self.level == LEVEL_DISPLAY or self.level == LEVEL_EXECUTE):
-            if is_text_object(res):
+            if res is Accumulated:
                 return self.accum
             return str_or_null(res)
         if (self.level == LEVEL_DISPSPECIAL):
             if self.wasspecial:
                 return res
-            if is_text_object(res):
+            if res is Accumulated:
                 return self.accum
             return str_or_null(res)
         raise Exception('unrecognized eval level: %d' % (self.level,))
@@ -313,7 +318,7 @@ class EvalPropContext(object):
         if objtype == 'text':
             try:
                 yield self.interpolate_text(res.get('text', ''), depth=depth)
-                return res #### why res? because is_text_object signals that the accum is set up. fix!
+                return Accumulated
             except Exception as ex:
                 self.task.log.warning('Caught exception (interpolating): %s', ex)
                 return '[Exception: %s]' % (ex,)
@@ -583,7 +588,7 @@ class EvalPropContext(object):
                 subres = yield self.evalkey(nod.expr, depth=depth+1)
                 # {text} objects have already added their contents to
                 # the accum array.
-                if not is_text_object(subres):
+                if subres is not Accumulated:
                     # Anything not a {text} object gets interpolated as
                     # a string.
                     self.accum.append(str_or_null(subres))
@@ -605,9 +610,6 @@ class EvalPropContext(object):
         # End of nodls interaction.
         if len(suppstack) > 0:
             self.accum.append('[$if without matching $end]')
-
-def is_text_object(res):
-    return (type(res) is dict and res.get('type', None) == 'text')
 
 def str_or_null(res):
     if res is None:

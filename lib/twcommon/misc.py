@@ -4,6 +4,15 @@ import datetime
 # or editstr line.
 MAX_DESCLINE_LENGTH = 256
 
+class SuiGeneris(object):
+    """Factory for when you want an object distinguishable from all other
+    objects.
+    """
+    def __init__(self, name):
+        self.name = name
+    def __repr__(self):
+        return '<%s>' % (self.name,)
+
 def now():
     """Utility function: return "now" as an aware UTC datetime object.
     """
