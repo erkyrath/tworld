@@ -193,6 +193,7 @@ class EvalPropContext(object):
                 self.wasspecial = True
                 return specres
             except Exception as ex:
+                self.task.log.warning('Caught exception (selfdesc): %s', ex)
                 return '[Exception: %s]' % (ex,)
                 
         if depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'editstr':
@@ -217,6 +218,7 @@ class EvalPropContext(object):
                 self.wasspecial = True
                 return specres
             except Exception as ex:
+                self.task.log.warning('Caught exception (editstr): %s', ex)
                 return '[Exception: %s]' % (ex,)
                 
         if depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'portal':
@@ -258,6 +260,7 @@ class EvalPropContext(object):
                 self.wasspecial = True
                 return specres
             except Exception as ex:
+                self.task.log.warning('Caught exception (portal): %s', ex)
                 return '[Exception: %s]' % (ex,)
 
         if depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'portlist':
@@ -294,6 +297,7 @@ class EvalPropContext(object):
                 self.wasspecial = True
                 return specres
             except Exception as ex:
+                self.task.log.warning('Caught exception (portlist): %s', ex)
                 return '[Exception: %s]' % (ex,)
 
         if not(objtype in ('text', 'code')
@@ -311,12 +315,14 @@ class EvalPropContext(object):
                 yield self.interpolate_text(res.get('text', ''), depth=depth)
                 return res #### why res? because is_text_object signals that the accum is set up. fix!
             except Exception as ex:
+                self.task.log.warning('Caught exception (interpolating): %s', ex)
                 return '[Exception: %s]' % (ex,)
         elif objtype == 'code':
             try:
                 newres = yield self.execute_code(res.get('text', ''), depth=depth)
                 return newres
             except Exception as ex:
+                self.task.log.warning('Caught exception (executing): %s', ex)
                 raise ErrorMessageException(str(ex))
         else:
             return '[Unhandled object type: %s]' % (objtype,)
