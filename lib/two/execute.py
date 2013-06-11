@@ -12,6 +12,8 @@ from twcommon.excepts import MessageException, ErrorMessageException, SymbolErro
 from twcommon.misc import MAX_DESCLINE_LENGTH
 from two import interp
 import two.task
+import two.symbols
+
 
 LEVEL_EXECUTE = 5
 LEVEL_DISPSPECIAL = 4
@@ -156,7 +158,7 @@ class EvalPropContext(object):
         """
         if lookup:
             origkey = key
-            res = yield find_symbol(self.app, self.loctx, key, dependencies=self.dependencies)
+            res = yield two.symbols.find_symbol(self.app, self.loctx, key, dependencies=self.dependencies)
         else:
             origkey = None
             if type(key) is dict:
@@ -346,7 +348,7 @@ class EvalPropContext(object):
         if '=' not in text:
             ### simple symbol (for the moment)
             symbol = text ###
-            res = yield find_symbol(self.app, self.loctx, symbol, dependencies=self.dependencies)
+            res = yield two.symbols.find_symbol(self.app, self.loctx, symbol, dependencies=self.dependencies)
             if type(res) is not dict:
                 return res
             restype = res.get('type', None)
@@ -522,7 +524,7 @@ class EvalPropContext(object):
                     suppstack.append(0)
                     continue
                 try:
-                    ifval = yield find_symbol(self.app, self.loctx, nod.expr, dependencies=self.dependencies)
+                    ifval = yield two.symbols.find_symbol(self.app, self.loctx, nod.expr, dependencies=self.dependencies)
                 except SymbolError:
                     ifval = None                    
                 if ifval:
@@ -546,7 +548,7 @@ class EvalPropContext(object):
                     continue
                 # We follow an unsuccessful "if". Maybe suppress.
                 try:
-                    ifval = yield find_symbol(self.app, self.loctx, nod.expr, dependencies=self.dependencies)
+                    ifval = yield two.symbols.find_symbol(self.app, self.loctx, nod.expr, dependencies=self.dependencies)
                 except SymbolError:
                     ifval = None                    
                 if ifval:
@@ -625,60 +627,6 @@ def str_or_null(res):
     if res is None:
         return ''
     return str(res)
-
-@tornado.gen.coroutine
-def find_symbol(app, loctx, key, dependencies=None):
-    """Look up a symbol, using the universal laws of symbol-looking-up.
-    To wit:
-    - ### "_" and locals
-    - instance properties
-    - world properties
-    - realm-level instance properties
-    - realm-level world properties
-    - ### builtins
-    """
-    wid = loctx.wid
-    iid = loctx.iid
-    locid = loctx.locid
-    
-    if (locid is not None) and (iid is not None):
-        if dependencies is not None:
-            dependencies.add(('instanceprop', iid, locid, key))
-        res = yield motor.Op(app.mongodb.instanceprop.find_one,
-                             {'iid':iid, 'locid':locid, 'key':key},
-                             {'val':1})
-        if res:
-            return res['val']
-    
-    if locid is not None:
-        if dependencies is not None:
-            dependencies.add(('worldprop', wid, locid, key))
-        res = yield motor.Op(app.mongodb.worldprop.find_one,
-                             {'wid':wid, 'locid':locid, 'key':key},
-                             {'val':1})
-        if res:
-            return res['val']
-
-    if iid is not None:
-        if dependencies is not None:
-            dependencies.add(('instanceprop', iid, None, key))
-        res = yield motor.Op(app.mongodb.instanceprop.find_one,
-                             {'iid':iid, 'locid':None, 'key':key},
-                             {'val':1})
-        if res:
-            return res['val']
-
-    if True:
-        if dependencies is not None:
-            dependencies.add(('worldprop', wid, None, key))
-        res = yield motor.Op(app.mongodb.worldprop.find_one,
-                             {'wid':wid, 'locid':None, 'key':key},
-                             {'val':1})
-        if res:
-            return res['val']
-
-    raise SymbolError('SymbolError: name "%s" is not found' % (key,))
-
 
 @tornado.gen.coroutine
 def portal_in_reach(app, portal, uid, wid):
