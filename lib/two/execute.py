@@ -362,6 +362,21 @@ class EvalPropContext(object):
                 newval = yield self.evalkey(res, lookup=False, depth=depth+1)
                 return newval
 
+            if restype == 'event':
+                # Display an event.
+                val = res.get('text', None)
+                if val:
+                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+                    newval = yield ctx.eval(val, lookup=False)
+                    self.task.write_event(uid, newval)
+                val = res.get('otext', None)
+                if val:
+                    others = yield self.task.find_locale_players(notself=True)
+                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+                    newval = yield ctx.eval(val, lookup=False)
+                    self.task.write_event(others, newval)
+                return None
+
             if restype == 'move':
                 # Set locale to the given symbol
                 lockey = res.get('loc', None)
