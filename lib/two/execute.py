@@ -8,7 +8,7 @@ from bson.objectid import ObjectId
 import motor
 
 import twcommon.misc
-from twcommon.excepts import MessageException, ErrorMessageException
+from twcommon.excepts import MessageException, ErrorMessageException, SymbolError
 from twcommon.misc import MAX_DESCLINE_LENGTH
 from two import interp
 import two.task
@@ -344,8 +344,6 @@ class EvalPropContext(object):
             ### simple symbol (for the moment)
             symbol = text ###
             res = yield find_symbol(self.app, self.loctx, symbol, dependencies=self.dependencies)
-            if res is None:
-                raise ErrorMessageException('Action not defined: "%s"' % (symbol,))
             if type(res) is not dict:
                 return res
             restype = res.get('type', None)
@@ -520,7 +518,10 @@ class EvalPropContext(object):
                     # Can't get any more suppressed.
                     suppstack.append(0)
                     continue
-                ifval = yield find_symbol(self.app, self.loctx, nod.expr, dependencies=self.dependencies)
+                try:
+                    ifval = yield find_symbol(self.app, self.loctx, nod.expr, dependencies=self.dependencies)
+                except SymbolError:
+                    ifval = None                    
                 if ifval:
                     suppstack.append(0)
                 else:
@@ -541,7 +542,10 @@ class EvalPropContext(object):
                     # We had a successful "if" earlier, so no change.
                     continue
                 # We follow an unsuccessful "if". Maybe suppress.
-                ifval = yield find_symbol(self.app, self.loctx, nod.expr, dependencies=self.dependencies)
+                try:
+                    ifval = yield find_symbol(self.app, self.loctx, nod.expr, dependencies=self.dependencies)
+                except SymbolError:
+                    ifval = None                    
                 if ifval:
                     suppstack[-1] = 0
                 else:
@@ -585,13 +589,16 @@ class EvalPropContext(object):
                 continue
             
             if nodkey == 'Interpolate':
-                subres = yield self.evalkey(nod.expr, depth=depth+1)
+                try:
+                    subres = yield self.evalkey(nod.expr, depth=depth+1)
+                except SymbolError:
+                    continue
                 # {text} objects have already added their contents to
                 # the accum array.
                 if subres is not Accumulated:
                     # Anything not a {text} object gets interpolated as
                     # a string.
-                    self.accum.append(str_or_null(subres))
+                    self.accum.append(str(subres))
                 continue
             
             if nodkey == 'PlayerRef':
@@ -667,7 +674,7 @@ def find_symbol(app, loctx, key, dependencies=None):
         if res:
             return res['val']
 
-    return None
+    raise SymbolError('SymbolError: name "%s" is not found' % (key,))
 
 
 @tornado.gen.coroutine
