@@ -97,8 +97,7 @@ class EvalPropContext(object):
         DISPLAY: A string or, for {text} objects, a description.
         DISPSPECIAL: A string; for {text}, a description; for other {}
             objects, special client objects. (Used only for focus.)
-        EXECUTE: ####? A string or, for {text} objects, a description. (But
-            the result may not be used at all.)
+        EXECUTE: The returned type or, for {text} objects, a description.
 
         (A description is an array of strings and tag-arrays, JSONable and
         passable to the client.)
@@ -127,7 +126,7 @@ class EvalPropContext(object):
                 # Skip all styles, links, etc. Just paste together strings.
                 return ''.join([ val for val in self.accum if type(val) is str ])
             return str(res)
-        if (self.level == LEVEL_DISPLAY or self.level == LEVEL_EXECUTE):
+        if (self.level == LEVEL_DISPLAY):
             if res is Accumulated:
                 return self.accum
             return str_or_null(res)
@@ -137,6 +136,10 @@ class EvalPropContext(object):
             if res is Accumulated:
                 return self.accum
             return str_or_null(res)
+        if (self.level == LEVEL_EXECUTE):
+            if res is Accumulated:
+                return self.accum
+            return res
         raise Exception('unrecognized eval level: %d' % (self.level,))
         
     @tornado.gen.coroutine
@@ -1252,10 +1255,12 @@ def perform_action(task, cmd, conn, target):
 
     ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
     newval = yield ctx.eval(target, lookup=False)
-    app.log.debug('### action "%s" returned %s', target, repr(newval))
     if ctx.changeset:
         task.add_data_changes(ctx.changeset)
-    
+    if newval is not None:
+        ### Not sure I like this.
+        conn.write({'cmd':'event', 'text':str(newval)})
+        
     
 # Late imports, to avoid circularity
 from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_POPULACE, DIRTY_FOCUS
