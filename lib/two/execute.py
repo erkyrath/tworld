@@ -525,7 +525,7 @@ class EvalPropContext(object):
                     continue
                 try:
                     ifval = yield two.symbols.find_symbol(self.app, self.loctx, nod.expr, dependencies=self.dependencies)
-                except SymbolError:
+                except SymbolError: ### or AttributeError?
                     ifval = None                    
                 if ifval:
                     suppstack.append(0)
@@ -549,7 +549,7 @@ class EvalPropContext(object):
                 # We follow an unsuccessful "if". Maybe suppress.
                 try:
                     ifval = yield two.symbols.find_symbol(self.app, self.loctx, nod.expr, dependencies=self.dependencies)
-                except SymbolError:
+                except SymbolError: ### or AttributeError?
                     ifval = None                    
                 if ifval:
                     suppstack[-1] = 0
