@@ -13,6 +13,7 @@ import two.webconn
 import two.playconn
 import two.mongomgr
 import two.commands
+import two.symbols
 import two.task
 import twcommon.misc
 import twcommon.autoreload
@@ -23,6 +24,7 @@ class Tworld(object):
         self.opts = opts
         self.log = logging.getLogger('tworld')
 
+        self.global_symbol_table = two.symbols.define_globals()
         self.all_commands = two.commands.define_commands()
         
         # This will be self.mongomgr.mongo[mongo_database], when that's

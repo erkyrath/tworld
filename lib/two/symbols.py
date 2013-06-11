@@ -1,7 +1,94 @@
+import types
+import random
+
 import tornado.gen
 import motor
 
 from twcommon.excepts import SymbolError
+
+class QuietNamespace(types.SimpleNamespace):
+    """A subclass of SimpleNamespace which doesn't go hog-wild when you
+    print it. Contained values are abbreviated, and it tries to avoid
+    recursing into them.
+    """
+    def __repr__(self):
+        ls = []
+        for (key, val) in self.__dict__.items():
+            if type(val) is dict:
+                val = '{...}'
+            elif isinstance(val, types.SimpleNamespace):
+                val = 'namespace(...)'
+            else:
+                val = str(val)
+                if len(val) > 24:
+                    val = val[:24] + '...'
+            ls.append('%s=%s' % (key, val))
+        ls = ', '.join(ls)
+        return '<namespace(%s)>' % (ls,)
+
+class ScriptFunc:
+    # As functions are defined with the @scriptfunc decorator, they are
+    # stuffed into a dict in this master dict.
+    funcgroups = {}
+    
+    def __init__(self, name, func, yieldy=False):
+        self.name = name
+        self.yieldy = yieldy
+
+        if not yieldy:
+            self.func = func
+        else:
+            self.yieldfunc = tornado.gen.coroutine(func)
+        
+    def __repr__(self):
+        return '<ScriptFunc "%s">' % (self.name,)
+
+def scriptfunc(name, group=None, **kwargs):
+    """Decorator for scriptfunc functions.
+    """
+    def wrap(func):
+        func = ScriptFunc(name, func, **kwargs)
+        if group is not None:
+            if group not in ScriptFunc.funcgroups:
+                ScriptFunc.funcgroups[group] = {}
+            submap = ScriptFunc.funcgroups[group]
+            submap[name] = func
+        return func
+    return wrap
+
+def define_globals():
+    
+    @scriptfunc('print', group='_')
+    def global_print(*ls):
+        res = ' '.join(str(val) for val in ls)
+        ###?
+
+    @scriptfunc('str', group='_')
+    def global_str(object=''):
+        return str(object)
+
+    @scriptfunc('int', group='_')
+    def global_int(x=0, base=10):
+        return int(x, base=base)
+
+    @scriptfunc('bool', group='_')
+    def global_bool(x=False):
+        return bool(x)
+
+    @scriptfunc('choice', group='random')
+    def global_random_choice(seq):
+        return random.choice(seq)
+
+    
+    # Copy the collection of top-level functions.
+    globmap = dict(ScriptFunc.funcgroups['_'])
+    
+    # Add some stuff to it.
+    map = dict(ScriptFunc.funcgroups['random'])
+    globmap['random'] = QuietNamespace(**map)
+
+    # And that's our global namespace.
+    return QuietNamespace(**globmap)
 
 
 @tornado.gen.coroutine
@@ -15,6 +102,10 @@ def find_symbol(app, loctx, key, locals=None, dependencies=None):
     - realm-level world properties
     - ### builtins
     """
+    if key == '_':
+        # Special case
+        return app.global_symbol_table
+    
     if locals is not None:
         if key in locals:
             return locals[key]
