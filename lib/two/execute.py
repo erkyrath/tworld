@@ -353,6 +353,8 @@ class EvalPropContext(object):
                                {'$set':{'focus':symbol}})
                 self.task.set_dirty(uid, DIRTY_FOCUS)
                 return None
+
+            ### 'focus'?
             
             if restype == 'code':
                 val = res.get('text', None)
@@ -375,6 +377,22 @@ class EvalPropContext(object):
                     ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
                     newval = yield ctx.eval(val, lookup=False)
                     self.task.write_event(others, newval)
+                return None
+
+            if restype == 'panic':
+                # Display an event.
+                val = res.get('text', None)
+                if val:
+                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+                    newval = yield ctx.eval(val, lookup=False)
+                    self.task.write_event(uid, newval)
+                val = res.get('otext', None)
+                if val:
+                    others = yield self.task.find_locale_players(notself=True)
+                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+                    newval = yield ctx.eval(val, lookup=False)
+                    self.task.write_event(others, newval)
+                self.app.queue_command({'cmd':'tovoid', 'uid':uid, 'portin':True})
                 return None
 
             if restype == 'move':
