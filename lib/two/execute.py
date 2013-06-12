@@ -353,27 +353,27 @@ class EvalPropContext(object):
 
         res = None
         for nod in tree.body:
-            res = yield self.execstat_statement(nod, depth)
+            res = yield self.execcode_statement(nod, depth)
         ### final res?
 
     @tornado.gen.coroutine
-    def execstat_statement(self, nod, depth):
+    def execcode_statement(self, nod, depth):
         nodtyp = type(nod)
         ### This should be a faster lookup table
         if nodtyp is ast.Expr:
-            res = yield self.execstat_expr(nod.value, depth)
+            res = yield self.execcode_expr(nod.value, depth)
             return res
         if nodtyp is ast.Assign:
-            res = yield self.execstat_assign(nod, depth)
+            res = yield self.execcode_assign(nod, depth)
             return res
         raise NotImplementedError('Script statement type not implemented: %s' % (nodtyp.__name__,))
 
     @tornado.gen.coroutine
-    def execstat_expr(self, nod, depth):
+    def execcode_expr(self, nod, depth):
         nodtyp = type(nod)
         ### This should be a faster lookup table
         if nodtyp is ast.Name:
-            res = yield self.execexpr_name(nod, depth)
+            res = yield self.execcode_name(nod, depth)
             return res
         if nodtyp is ast.Str:
             return nod.s
@@ -382,7 +382,7 @@ class EvalPropContext(object):
         raise NotImplementedError('Script expression type not implemented: %s' % (nodtyp.__name__,))
         
     @tornado.gen.coroutine
-    def execexpr_name(self, nod, depth):
+    def execcode_name(self, nod, depth):
         symbol = nod.id
         res = yield two.symbols.find_symbol(self.app, self.loctx, symbol, dependencies=self.dependencies)
         if type(res) is not dict:
@@ -500,14 +500,14 @@ class EvalPropContext(object):
         raise ErrorMessageException('Code invoked unsupported property type: %s' % (restype,))
 
     @tornado.gen.coroutine
-    def execstat_assign(self, nod, depth):
+    def execcode_assign(self, nod, depth):
         if len(nod.targets) != 1:
             raise NotImplementedError('Script assignment has more than one target')
         target = nod.targets[0]
         if type(target) != ast.Name:
             raise NotImplementedError('Script assignment is not a simple symbol')
         key = target.id
-        val = yield self.execstat_expr(nod.value, depth)
+        val = yield self.execcode_expr(nod.value, depth)
         self.task.log.debug('### executing assignment: %s = %s', key, repr(val))
         
         if self.level != LEVEL_EXECUTE:
