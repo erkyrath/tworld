@@ -317,7 +317,10 @@ class EvalPropContext(object):
             return res
 
         # But at MESSAGE/DISPLAY/EXEC level, a {text} object is parsed out;
-        # a {code} object is executed.
+        # a {code} object is executed. Note that read-only code can be
+        # executed at lower levels; even local-var assignments would be
+        # okay. EXEC is only necessary for changing the world (db) state,
+        # or triggering panics/events/etc.
 
         assert self.accum is not None, 'EvalPropContext.accum should not be None here'
         if objtype == 'text':
@@ -341,151 +344,180 @@ class EvalPropContext(object):
     def execute_code(self, text, depth):
         """Execute a pile of (already-looked-up) script code.
         """
-        if self.level != LEVEL_EXECUTE:
-            raise Exception('non-executable context')
         self.task.log.debug('### executing code: %s', text)
 
-        if '=' not in text:
-            ### simple symbol (for the moment)
-            symbol = text ###
-            res = yield two.symbols.find_symbol(self.app, self.loctx, symbol, dependencies=self.dependencies)
-            if type(res) is not dict:
-                return res
-            restype = res.get('type', None)
-            uid = self.uid
-            
-            if restype in ('text', 'portal', 'portlist', 'selfdesc', 'editstr'):
-                # Set focus to this symbol-name
-                yield motor.Op(self.app.mongodb.playstate.update,
-                               {'_id':uid},
-                               {'$set':{'focus':symbol}})
-                self.task.set_dirty(uid, DIRTY_FOCUS)
-                return None
+        tree = ast.parse(text)
+        assert type(tree) is ast.Module
 
-            ### 'focus'?
-            
-            if restype == 'code':
-                val = res.get('text', None)
-                if not val:
-                    raise ErrorMessageException('Code object lacks text')
-                # Pass in the whole {code} object
-                newval = yield self.evalkey(res, lookup=False, depth=depth+1)
-                return newval
+        ### probably catch some run-exceptions here
 
-            if restype == 'event':
-                # Display an event.
-                val = res.get('text', None)
-                if val:
-                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
-                    newval = yield ctx.eval(val, lookup=False)
-                    self.task.write_event(uid, newval)
-                val = res.get('otext', None)
-                if val:
-                    others = yield self.task.find_locale_players(notself=True)
-                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
-                    newval = yield ctx.eval(val, lookup=False)
-                    self.task.write_event(others, newval)
-                return None
+        res = None
+        for nod in tree.body:
+            res = yield self.execstat_statement(nod, depth)
+        ### final res?
 
-            if restype == 'panic':
-                # Display an event.
-                val = res.get('text', None)
-                if val:
-                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
-                    newval = yield ctx.eval(val, lookup=False)
-                    self.task.write_event(uid, newval)
-                val = res.get('otext', None)
-                if val:
-                    others = yield self.task.find_locale_players(notself=True)
-                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
-                    newval = yield ctx.eval(val, lookup=False)
-                    self.task.write_event(others, newval)
-                self.app.queue_command({'cmd':'tovoid', 'uid':uid, 'portin':True})
-                return None
+    @tornado.gen.coroutine
+    def execstat_statement(self, nod, depth):
+        nodtyp = type(nod)
+        ### This should be a faster lookup table
+        if nodtyp is ast.Expr:
+            res = yield self.execstat_expr(nod.value, depth)
+            return res
+        if nodtyp is ast.Assign:
+            res = yield self.execstat_assign(nod, depth)
+            return res
+        raise NotImplementedError('Script statement type not implemented: %s' % (nodtyp.__name__,))
 
-            if restype == 'move':
-                # Set locale to the given symbol
-                lockey = res.get('loc', None)
-                location = yield motor.Op(self.app.mongodb.locations.find_one,
-                                          {'wid':self.loctx.wid, 'key':lockey},
-                                          {'_id':1})
-                if not location:
-                    raise ErrorMessageException('No such location: %s' % (lockey,))
+    @tornado.gen.coroutine
+    def execstat_expr(self, nod, depth):
+        nodtyp = type(nod)
+        ### This should be a faster lookup table
+        if nodtyp is ast.Name:
+            res = yield self.execexpr_name(nod, depth)
+            return res
+        if nodtyp is ast.Str:
+            return nod.s
+        if nodtyp is ast.Int:
+            return nod.n
+        raise NotImplementedError('Script expression type not implemented: %s' % (nodtyp.__name__,))
         
-                player = yield motor.Op(self.app.mongodb.players.find_one,
-                                        {'_id':uid},
-                                        {'name':1})
-                playername = player['name']
-                    
-                msg = res.get('oleave', None)
-                if msg is None:
-                    msg = '%s leaves.' % (playername,) ###localize
-                else:
-                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
-                    msg = yield ctx.eval(msg, lookup=False)
-                if msg:
-                    others = yield self.task.find_locale_players(notself=True)
-                    if others:
-                        self.task.write_event(others, msg)
-                        
-                yield motor.Op(self.app.mongodb.playstate.update,
-                               {'_id':uid},
-                               {'$set':{'locid':location['_id'], 'focus':None,
-                                        'lastmoved': self.task.starttime }})
-                self.task.set_dirty(uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_POPULACE)
-                self.task.set_data_change( ('playstate', uid, 'locid') )
-                self.task.clear_loctx(uid)
+    @tornado.gen.coroutine
+    def execexpr_name(self, nod, depth):
+        symbol = nod.id
+        res = yield two.symbols.find_symbol(self.app, self.loctx, symbol, dependencies=self.dependencies)
+        if type(res) is not dict:
+            return res
+        restype = res.get('type', None)
+        uid = self.uid
+        
+        if restype in ('text', 'portal', 'portlist', 'selfdesc', 'editstr'):
+            # Set focus to this symbol-name
+            yield motor.Op(self.app.mongodb.playstate.update,
+                           {'_id':uid},
+                           {'$set':{'focus':symbol}})
+            self.task.set_dirty(uid, DIRTY_FOCUS)
+            return None
+
+        ### 'focus'?
+        
+        if restype == 'code':
+            val = res.get('text', None)
+            if not val:
+                raise ErrorMessageException('Code object lacks text')
+            # Pass in the whole {code} object
+            newval = yield self.evalkey(res, lookup=False, depth=depth+1)
+            return newval
+
+        if restype == 'event':
+            # Display an event.
+            val = res.get('text', None)
+            if val:
+                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+                newval = yield ctx.eval(val, lookup=False)
+                self.task.write_event(uid, newval)
+            val = res.get('otext', None)
+            if val:
+                others = yield self.task.find_locale_players(notself=True)
+                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+                newval = yield ctx.eval(val, lookup=False)
+                self.task.write_event(others, newval)
+            return None
+
+        if restype == 'panic':
+            # Display an event.
+            val = res.get('text', None)
+            if val:
+                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+                newval = yield ctx.eval(val, lookup=False)
+                self.task.write_event(uid, newval)
+            val = res.get('otext', None)
+            if val:
+                others = yield self.task.find_locale_players(notself=True)
+                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+                newval = yield ctx.eval(val, lookup=False)
+                self.task.write_event(others, newval)
+            self.app.queue_command({'cmd':'tovoid', 'uid':uid, 'portin':True})
+            return None
+
+        if restype == 'move':
+            # Set locale to the given symbol
+            lockey = res.get('loc', None)
+            location = yield motor.Op(self.app.mongodb.locations.find_one,
+                                      {'wid':self.loctx.wid, 'key':lockey},
+                                      {'_id':1})
+            if not location:
+                raise ErrorMessageException('No such location: %s' % (lockey,))
+    
+            player = yield motor.Op(self.app.mongodb.players.find_one,
+                                    {'_id':uid},
+                                    {'name':1})
+            playername = player['name']
                 
-                # We set everybody in the destination room DIRTY_POPULACE.
-                # (Players in the starting room have a dependency, which is already
-                # covered.)
+            msg = res.get('oleave', None)
+            if msg is None:
+                msg = '%s leaves.' % (playername,) ###localize
+            else:
+                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+                msg = yield ctx.eval(msg, lookup=False)
+            if msg:
                 others = yield self.task.find_locale_players(notself=True)
                 if others:
-                    self.task.set_dirty(others, DIRTY_POPULACE)
+                    self.task.write_event(others, msg)
                     
-                msg = res.get('oarrive', None)
-                if msg is None:
-                    msg = '%s arrives.' % (playername,) ###localize
-                else:
-                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
-                    msg = yield ctx.eval(msg, lookup=False)
-                if msg:
-                    # others is already set
-                    if others:
-                        self.task.write_event(others, msg)
-                msg = res.get('text', None)
-                if msg:
-                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
-                    msg = yield ctx.eval(msg, lookup=False)
-                    self.task.write_event(uid, msg)
+            yield motor.Op(self.app.mongodb.playstate.update,
+                           {'_id':uid},
+                           {'$set':{'locid':location['_id'], 'focus':None,
+                                    'lastmoved': self.task.starttime }})
+            self.task.set_dirty(uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_POPULACE)
+            self.task.set_data_change( ('playstate', uid, 'locid') )
+            self.task.clear_loctx(uid)
+            
+            # We set everybody in the destination room DIRTY_POPULACE.
+            # (Players in the starting room have a dependency, which is already
+            # covered.)
+            others = yield self.task.find_locale_players(notself=True)
+            if others:
+                self.task.set_dirty(others, DIRTY_POPULACE)
+                
+            msg = res.get('oarrive', None)
+            if msg is None:
+                msg = '%s arrives.' % (playername,) ###localize
+            else:
+                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+                msg = yield ctx.eval(msg, lookup=False)
+            if msg:
+                # others is already set
+                if others:
+                    self.task.write_event(others, msg)
+            msg = res.get('text', None)
+            if msg:
+                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+                msg = yield ctx.eval(msg, lookup=False)
+                self.task.write_event(uid, msg)
 
-                return None
+            return None
 
-            raise ErrorMessageException('Code invoked unsupported property type: %s' % (restype,))
+        raise ErrorMessageException('Code invoked unsupported property type: %s' % (restype,))
 
-        ### simple assignment (for the moment)
+    @tornado.gen.coroutine
+    def execstat_assign(self, nod, depth):
+        if len(nod.targets) != 1:
+            raise NotImplementedError('Script assignment has more than one target')
+        target = nod.targets[0]
+        if type(target) != ast.Name:
+            raise NotImplementedError('Script assignment is not a simple symbol')
+        key = target.id
+        val = yield self.execstat_expr(nod.value, depth)
+        self.task.log.debug('### executing assignment: %s = %s', key, repr(val))
         
-        key, dummy, val = text.partition('=')
-        key = key.strip()
-        val = val.strip()
-        newval = ast.literal_eval(val)
+        if self.level != LEVEL_EXECUTE:
+            raise Exception('Assignment only permitted in action code')
         
         iid = self.loctx.iid
         locid = self.loctx.locid
-        if key.startswith('.'):
-            key = key[1:]
-            locid = None
-            
-        # We test-encode the new value to bson, so that we can be strict
-        # and catch errors.
-        dummy = bson.BSON.encode({'val':newval}, check_keys=True)
-        if not key.isidentifier():
-            ### Permits Unicode identifiers, but whatever
-            raise Exception('Symbol assignment to invalid key: %s' % (key,))
-
         yield motor.Op(self.app.mongodb.instanceprop.update,
                        {'iid':iid, 'locid':locid, 'key':key},
-                       {'iid':iid, 'locid':locid, 'key':key, 'val':newval},
+                       {'iid':iid, 'locid':locid, 'key':key, 'val':val},
                        upsert=True)
         self.changeset.add( ('instanceprop', iid, locid, key) )
 

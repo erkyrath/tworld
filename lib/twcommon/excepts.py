@@ -11,7 +11,27 @@ class ErrorMessageException(MessageException):
     """
     pass
 
+# The following are only used during script code execution, and could
+# be moved to two.* somewhere.
+
 class SymbolError(LookupError):
     """Failure to find a symbol, when executing script code.
     """
+    pass
+
+class ExecutionException(Exception):
+    """Internal code-flow exceptions in the script interpreter.
+    """
+    pass
+
+class ReturnException(ExecutionException):
+    pass
+
+class LoopBodyException(ExecutionException):
+    pass
+
+class BreakException(LoopBodyException):
+    pass
+
+class ContinueException(LoopBodyException):
     pass
