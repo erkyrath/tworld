@@ -332,7 +332,7 @@ class EvalPropContext(object):
                 return '[Exception: %s]' % (ex,)
         elif objtype == 'code':
             try:
-                newres = yield self.execute_code(res.get('text', ''), depth=depth)
+                newres = yield self.execute_code(res.get('text', ''), originlabel=key, depth=depth)
                 return newres
             except Exception as ex:
                 self.task.log.warning('Caught exception (executing): %s', ex)
@@ -341,12 +341,20 @@ class EvalPropContext(object):
             return '[Unhandled object type: %s]' % (objtype,)
 
     @tornado.gen.coroutine
-    def execute_code(self, text, depth):
+    def execute_code(self, text, depth, originlabel=None):
         """Execute a pile of (already-looked-up) script code.
         """
         self.task.log.debug('### executing code: %s', text)
 
-        tree = ast.parse(text)
+        ### This originlabel stuff is pretty much wrong. Also slow.
+        if originlabel:
+            if type(originlabel) is dict and 'text' in originlabel:
+                originlabel = originlabel['text']
+            originlabel = '"%.20s"' % (originlabel,)
+        else:
+            originlabel = '<script>'
+            
+        tree = ast.parse(text, filename=originlabel)
         assert type(tree) is ast.Module
 
         ### probably catch some run-exceptions here
@@ -354,7 +362,7 @@ class EvalPropContext(object):
         res = None
         for nod in tree.body:
             res = yield self.execcode_statement(nod, depth)
-        ### final res?
+        return res
 
     @tornado.gen.coroutine
     def execcode_statement(self, nod, depth):
