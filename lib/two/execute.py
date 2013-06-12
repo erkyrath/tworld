@@ -377,8 +377,8 @@ class EvalPropContext(object):
             return res
         if nodtyp is ast.Str:
             return nod.s
-        if nodtyp is ast.Int:
-            return nod.n
+        if nodtyp is ast.Num:
+            return nod.n  # covers floats and ints
         raise NotImplementedError('Script expression type not implemented: %s' % (nodtyp.__name__,))
         
     @tornado.gen.coroutine
