@@ -359,7 +359,6 @@ class EvalPropContext(object):
     def execute_code(self, text, depth, originlabel=None):
         """Execute a pile of (already-looked-up) script code.
         """
-        self.task.log.debug('### executing code: %s', text)
         self.task.tick()
 
         ### This originlabel stuff is pretty much wrong. Also slow.
@@ -386,7 +385,7 @@ class EvalPropContext(object):
         nodtyp = type(nod)
         ### This should be a faster lookup table
         if nodtyp is ast.Expr:
-            res = yield self.execcode_expr(nod.value, depth)
+            res = yield self.execcode_expr(nod.value, depth, baresymbol=True)
             return res
         if nodtyp is ast.Assign:
             res = yield self.execcode_assign(nod, depth)
@@ -394,12 +393,12 @@ class EvalPropContext(object):
         raise NotImplementedError('Script statement type not implemented: %s' % (nodtyp.__name__,))
 
     @tornado.gen.coroutine
-    def execcode_expr(self, nod, depth):
+    def execcode_expr(self, nod, depth, baresymbol=False):
         self.task.tick()
         nodtyp = type(nod)
         ### This should be a faster lookup table
         if nodtyp is ast.Name:
-            res = yield self.execcode_name(nod, depth)
+            res = yield self.execcode_name(nod, depth, baresymbol=baresymbol)
             return res
         if nodtyp is ast.Str:
             return nod.s
@@ -509,13 +508,34 @@ class EvalPropContext(object):
         return getattr(argument, nod.attr)
         
     @tornado.gen.coroutine
-    def execcode_name(self, nod, depth):
+    def execcode_name(self, nod, depth, baresymbol=False):
         symbol = nod.id
         res = yield two.symbols.find_symbol(self.app, self.loctx, symbol, dependencies=self.dependencies)
+        
+        if not baresymbol:
+            return res
         if type(res) is not dict:
             return res
+        
         restype = res.get('type', None)
         uid = self.uid
+
+        if self.level != LEVEL_EXECUTE:
+            # If we're not in an action, we invoke text/code snippets.
+            if restype == 'text':
+                val = res.get('text', None)
+                if not val:
+                    raise ErrorMessageException('Text object lacks text')
+                newval = yield self.evalobj(val, evaltype=EVALTYPE_TEXT, depth=depth+1)
+                return newval
+            if restype == 'code':
+                val = res.get('text', None)
+                if not val:
+                    raise ErrorMessageException('Code object lacks text')
+                newval = yield self.evalobj(val, evaltype=EVALTYPE_CODE, depth=depth+1)
+                return newval
+            # All other special objects are returned as-is.
+            return res
         
         if restype in ('text', 'portal', 'portlist', 'selfdesc', 'editstr'):
             # Set focus to this symbol-name

@@ -91,20 +91,27 @@ def define_globals():
     return QuietNamespace(**globmap)
 
 
+immutable_symbol_table = {
+    'True': True, 'False': False, 'None': None,
+    }
+
 @tornado.gen.coroutine
 def find_symbol(app, loctx, key, locals=None, dependencies=None):
     """Look up a symbol, using the universal laws of symbol-looking-up.
     To wit:
-    - ### "_" and locals
+    - "_" and other immutables
+    - locals
     - instance properties
     - world properties
     - realm-level instance properties
     - realm-level world properties
     - ### builtins
     """
+    # Special cases
     if key == '_':
-        # Special case
         return app.global_symbol_table
+    if key in immutable_symbol_table:
+        return immutable_symbol_table[key]
     
     if locals is not None:
         if key in locals:

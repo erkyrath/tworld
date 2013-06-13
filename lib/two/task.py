@@ -168,7 +168,6 @@ class Task(object):
         #if loctx:
         #    return loctx
 
-        self.log.debug('### Task.get_loctx')
         playstate = yield motor.Op(self.app.mongodb.playstate.find_one,
                                    {'_id':uid},
                                    {'iid':1, 'locid':1, 'focus':1})
