@@ -1,6 +1,7 @@
 import random
 import datetime
 import ast
+import operator
 
 import tornado.gen
 import bson
@@ -387,7 +388,46 @@ class EvalPropContext(object):
             return nod.s
         if nodtyp is ast.Num:
             return nod.n  # covers floats and ints
+        if nodtyp is ast.UnaryOp:
+            res = yield self.execcode_unaryop(nod, depth)
+            return res
+        if nodtyp is ast.BinOp:
+            res = yield self.execcode_binop(nod, depth)
+            return res
         raise NotImplementedError('Script expression type not implemented: %s' % (nodtyp.__name__,))
+
+    map_unaryop_operators = {
+        ast.Not: operator.not_,
+        ast.UAdd: operator.pos,
+        ast.USub: operator.neg,
+        }
+        
+    @tornado.gen.coroutine
+    def execcode_unaryop(self, nod, depth):
+        optyp = type(nod.op)
+        argval = yield self.execcode_expr(nod.operand, depth)
+        opfunc = self.map_unaryop_operators.get(optyp, None)
+        if not opfunc:
+            raise NotImplementedError('Script unaryop type not implemented: %s' % (optyp.__name__,))
+        return opfunc(argval)
+        
+    map_binop_operators = {
+        ast.Add: operator.add,
+        ast.Sub: operator.sub,
+        ast.Mult: operator.mul,
+        ast.Div: operator.truediv,
+        ast.Mod: ast.Div,
+        }
+        
+    @tornado.gen.coroutine
+    def execcode_binop(self, nod, depth):
+        optyp = type(nod.op)
+        leftval = yield self.execcode_expr(nod.left, depth)
+        rightval = yield self.execcode_expr(nod.right, depth)
+        opfunc = self.map_binop_operators.get(optyp, None)
+        if not opfunc:
+            raise NotImplementedError('Script binop type not implemented: %s' % (optyp.__name__,))
+        return opfunc(leftval, rightval)
         
     @tornado.gen.coroutine
     def execcode_name(self, nod, depth):
