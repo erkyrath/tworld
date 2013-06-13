@@ -123,7 +123,7 @@ class EvalPropContext(object):
         self.dependencies = set()
         self.wasspecial = False
         
-        res = yield self.evalkey(key, evaltype=evaltype)
+        res = yield self.evalobj(key, evaltype=evaltype)
 
         # At this point, if the value was a {text}, the accum will contain
         # the desired description.
@@ -154,7 +154,7 @@ class EvalPropContext(object):
         raise Exception('unrecognized eval level: %d' % (self.level,))
         
     @tornado.gen.coroutine
-    def evalkey(self, key, depth=0, evaltype=EVALTYPE_SYMBOL):
+    def evalobj(self, key, depth=0, evaltype=EVALTYPE_SYMBOL):
         """
         Look up a symbol, adding it to the accumulated content. If the
         result contains interpolated strings, this calls itself recursively.
@@ -163,7 +163,7 @@ class EvalPropContext(object):
         description array. (The latter only at MESSAGE/DISPLAY/DISPSPECIAL/
         EXECUTE level.)
 
-        The top-level call to evalkey() may set up the description accumulator
+        The top-level call to evalobj() may set up the description accumulator
         and linktargets. Lower-level calls use the existing ones.
         """
         self.task.tick()
@@ -181,7 +181,7 @@ class EvalPropContext(object):
             origkey = None
             res = key
         else:
-            raise Exception('evalkey: unknown evaltype %s' % (evaltype,))
+            raise Exception('evalobj: unknown evaltype %s' % (evaltype,))
 
         objtype = None
         if type(res) is dict:
@@ -531,7 +531,7 @@ class EvalPropContext(object):
             val = res.get('text', None)
             if not val:
                 raise ErrorMessageException('Code object lacks text')
-            newval = yield self.evalkey(val, evaltype=EVALTYPE_CODE, depth=depth+1)
+            newval = yield self.evalobj(val, evaltype=EVALTYPE_CODE, depth=depth+1)
             return newval
 
         if restype == 'event':
@@ -755,7 +755,7 @@ class EvalPropContext(object):
             
             if nodkey == 'Interpolate':
                 try:
-                    subres = yield self.evalkey(nod.expr, evaltype=EVALTYPE_CODE, depth=depth+1)
+                    subres = yield self.evalobj(nod.expr, evaltype=EVALTYPE_CODE, depth=depth+1)
                 except SymbolError:
                     continue
                 # {text} objects have already added their contents to
