@@ -405,6 +405,12 @@ class EvalPropContext(object):
         if nodtyp is ast.BoolOp:
             res = yield self.execcode_boolop(nod, depth)
             return res
+        if nodtyp is ast.Compare:
+            res = yield self.execcode_compare(nod, depth)
+            return res
+        if nodtyp is ast.Attribute:
+            res = yield self.execcode_attribute(nod, depth)
+            return res
         raise NotImplementedError('Script expression type not implemented: %s' % (nodtyp.__name__,))
 
     map_unaryop_operators = {
@@ -459,6 +465,39 @@ class EvalPropContext(object):
         if not opfunc:
             raise NotImplementedError('Script boolop type not implemented: %s' % (optyp.__name__,))
         return opfunc(leftval, rightval)
+
+    map_compare_operators = {
+        ast.Eq: operator.eq,
+        ast.NotEq: operator.ne,
+        ast.Lt: operator.le,
+        ast.LtE: operator.le,
+        ast.Gt: operator.gt,
+        ast.GtE: operator.ge,
+        # We don't use operator.contains, because its arguments are reversed
+        # for some forsaken reason.
+        ast.In: lambda x,y:(x in y),
+        ast.NotIn: lambda x,y:(x not in y),
+        }
+    
+    @tornado.gen.coroutine
+    def execcode_compare(self, nod, depth):
+        leftval = yield self.execcode_expr(nod.left, depth)
+        for (op, subnod) in zip(nod.ops, nod.comparators):
+            rightval = yield self.execcode_expr(subnod, depth)
+            optyp = type(op)
+            opfunc = self.map_compare_operators.get(optyp, None)
+            if not opfunc:
+                raise NotImplementedError('Script compare type not implemented: %s' % (optyp.__name__,))
+            res = opfunc(leftval, rightval)
+            if not res:
+                return res
+            leftval = rightval
+        return True
+        
+    @tornado.gen.coroutine
+    def execcode_attribute(self, nod, depth):
+        argument = yield self.execcode_expr(nod.value, depth)
+        return getattr(argument, nod.attr)
         
     @tornado.gen.coroutine
     def execcode_name(self, nod, depth):
@@ -1322,7 +1361,8 @@ def perform_action(task, cmd, conn, target):
             conn.write({'cmd':'event', 'text':str(newval)})
     except Exception as ex:
         task.log.warning('Action failed: %s', ex)
-        conn.write({'cmd':'error', 'text':str(ex)})
+        exmsg = '%s: %s' % (ex.__class__.__name__, ex,)
+        conn.write({'cmd':'error', 'text':exmsg})
     if ctx.changeset:
         task.add_data_changes(ctx.changeset)
         

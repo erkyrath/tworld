@@ -150,5 +150,5 @@ def find_symbol(app, loctx, key, locals=None, dependencies=None):
         if res:
             return res['val']
 
-    raise SymbolError('SymbolError: name "%s" is not found' % (key,))
+    raise SymbolError('Name "%s" is not found' % (key,))
 
