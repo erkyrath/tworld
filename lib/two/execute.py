@@ -16,6 +16,10 @@ from two import interp
 import two.task
 import two.symbols
 
+EVALTYPE_SYMBOL = 0
+EVALTYPE_RAW = 1
+EVALTYPE_CODE = 2
+EVALTYPE_TEXT = 3
 
 LEVEL_EXECUTE = 5
 LEVEL_DISPSPECIAL = 4
@@ -30,8 +34,8 @@ Accumulated = twcommon.misc.SuiGeneris('Accumulated')
 
 class EvalPropContext(object):
     """
-    EvalPropContext is a context for evaluating one symbol or piece of code,
-    during a task.
+    EvalPropContext is a context for evaluating one symbol, piece of code,
+    or piece of marked-up text, during a task.
 
     When setting up an EvalPropContext you must provide a LocContext, which
     is the identity and location of the player who is the center of the
@@ -80,11 +84,13 @@ class EvalPropContext(object):
             self.dependencies.update(ctx.dependencies)
 
     @tornado.gen.coroutine
-    def eval(self, key, lookup=True):
+    def eval(self, key, evaltype=EVALTYPE_SYMBOL):
         """
-        Look up and return a symbol, in this context. If lookup=False,
-        the argument (string) is treated as an already-looked-up {text}
-        value.
+        Look up and return a symbol, in this context. If EVALTYPE_TEXT,
+        the argument is treated as an already-looked-up {text} value
+        (a string with interpolations). If EVALTYPE_CODE, the argument
+        is treated as a snippet of {code}. If EVALTYPE_RAW, the argument
+        must be a dict object with a meaningful type field.
 
         This is the top-level entry point to Doing Stuff in this context.
         
@@ -117,7 +123,7 @@ class EvalPropContext(object):
         self.dependencies = set()
         self.wasspecial = False
         
-        res = yield self.evalkey(key, lookup=lookup)
+        res = yield self.evalkey(key, evaltype=evaltype)
 
         # At this point, if the value was a {text}, the accum will contain
         # the desired description.
@@ -148,31 +154,34 @@ class EvalPropContext(object):
         raise Exception('unrecognized eval level: %d' % (self.level,))
         
     @tornado.gen.coroutine
-    def evalkey(self, key, depth=0, lookup=True):
+    def evalkey(self, key, depth=0, evaltype=EVALTYPE_SYMBOL):
         """
         Look up a symbol, adding it to the accumulated content. If the
         result contains interpolated strings, this calls itself recursively.
 
-        Returns an object or description array. (The latter only at
-        MESSAGE/DISPLAY/DISPSPECIAL/EXEC level.)
+        Returns an object, or the special ref Accumulated to indicate a
+        description array. (The latter only at MESSAGE/DISPLAY/DISPSPECIAL/
+        EXECUTE level.)
 
         The top-level call to evalkey() may set up the description accumulator
         and linktargets. Lower-level calls use the existing ones.
         """
         self.task.tick()
         
-        if lookup:
+        if evaltype == EVALTYPE_SYMBOL:
             origkey = key
             res = yield two.symbols.find_symbol(self.app, self.loctx, key, dependencies=self.dependencies)
-        else:
+        elif evaltype == EVALTYPE_TEXT:
             origkey = None
-            if type(key) is dict:
-                res = key
-            else:
-                if self.level == LEVEL_EXECUTE:
-                    res = { 'type':'code', 'text':key }
-                else:
-                    res = { 'type':'text', 'text':key }
+            res = { 'type':'text', 'text':key }
+        elif evaltype == EVALTYPE_CODE:
+            origkey = None
+            res = { 'type':'code', 'text':key }
+        elif evaltype == EVALTYPE_RAW:
+            origkey = None
+            res = key
+        else:
+            raise Exception('evalkey: unknown evaltype %s' % (evaltype,))
 
         objtype = None
         if type(res) is dict:
@@ -193,7 +202,7 @@ class EvalPropContext(object):
                 if val:
                     # Look up the extra text in a separate context.
                     ctx = EvalPropContext(self.task, parent=self, level=LEVEL_DISPLAY)
-                    extratext = yield ctx.eval(val, lookup=False)
+                    extratext = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                     self.updateacdepends(ctx)
                 player = yield motor.Op(self.app.mongodb.players.find_one,
                                         {'_id':self.uid},
@@ -219,7 +228,7 @@ class EvalPropContext(object):
                 if val:
                     # Look up the extra text in a separate context.
                     ctx = EvalPropContext(self.task, parent=self, level=LEVEL_DISPLAY)
-                    extratext = yield ctx.eval(val, lookup=False)
+                    extratext = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                     self.updateacdepends(ctx)
                 # Look up the current symbol value.
                 editkey = 'editstr' + EvalPropContext.build_action_key()
@@ -250,7 +259,7 @@ class EvalPropContext(object):
                 if val:
                     # Look up the extra text in a separate context.
                     ctx = EvalPropContext(self.task, parent=self, level=LEVEL_DISPLAY)
-                    extratext = yield ctx.eval(val, lookup=False)
+                    extratext = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                     self.updateacdepends(ctx)
                 portal = yield motor.Op(self.app.mongodb.portals.find_one,
                                         {'_id':portid})
@@ -287,7 +296,7 @@ class EvalPropContext(object):
                 if val:
                     # Look up the extra text in a separate context.
                     ctx = EvalPropContext(self.task, parent=self, level=LEVEL_DISPLAY)
-                    extratext = yield ctx.eval(val, lookup=False)
+                    extratext = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                     self.updateacdepends(ctx)
                 portlist = yield motor.Op(self.app.mongodb.portlists.find_one,
                                           {'_id':plistid})
@@ -522,8 +531,7 @@ class EvalPropContext(object):
             val = res.get('text', None)
             if not val:
                 raise ErrorMessageException('Code object lacks text')
-            # Pass in the whole {code} object
-            newval = yield self.evalkey(res, lookup=False, depth=depth+1)
+            newval = yield self.evalkey(val, evaltype=EVALTYPE_CODE, depth=depth+1)
             return newval
 
         if restype == 'event':
@@ -531,13 +539,13 @@ class EvalPropContext(object):
             val = res.get('text', None)
             if val:
                 ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
-                newval = yield ctx.eval(val, lookup=False)
+                newval = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                 self.task.write_event(uid, newval)
             val = res.get('otext', None)
             if val:
                 others = yield self.task.find_locale_players(notself=True)
                 ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
-                newval = yield ctx.eval(val, lookup=False)
+                newval = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                 self.task.write_event(others, newval)
             return None
 
@@ -546,13 +554,13 @@ class EvalPropContext(object):
             val = res.get('text', None)
             if val:
                 ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
-                newval = yield ctx.eval(val, lookup=False)
+                newval = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                 self.task.write_event(uid, newval)
             val = res.get('otext', None)
             if val:
                 others = yield self.task.find_locale_players(notself=True)
                 ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
-                newval = yield ctx.eval(val, lookup=False)
+                newval = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                 self.task.write_event(others, newval)
             self.app.queue_command({'cmd':'tovoid', 'uid':uid, 'portin':True})
             return None
@@ -576,7 +584,7 @@ class EvalPropContext(object):
                 msg = '%s leaves.' % (playername,) ###localize
             else:
                 ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
-                msg = yield ctx.eval(msg, lookup=False)
+                msg = yield ctx.eval(msg, evaltype=EVALTYPE_TEXT)
             if msg:
                 others = yield self.task.find_locale_players(notself=True)
                 if others:
@@ -602,7 +610,7 @@ class EvalPropContext(object):
                 msg = '%s arrives.' % (playername,) ###localize
             else:
                 ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
-                msg = yield ctx.eval(msg, lookup=False)
+                msg = yield ctx.eval(msg, evaltype=EVALTYPE_TEXT)
             if msg:
                 # others is already set
                 if others:
@@ -610,7 +618,7 @@ class EvalPropContext(object):
             msg = res.get('text', None)
             if msg:
                 ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
-                msg = yield ctx.eval(msg, lookup=False)
+                msg = yield ctx.eval(msg, evaltype=EVALTYPE_TEXT)
                 self.task.write_event(uid, msg)
 
             return None
@@ -747,7 +755,7 @@ class EvalPropContext(object):
             
             if nodkey == 'Interpolate':
                 try:
-                    subres = yield self.evalkey(nod.expr, depth=depth+1)
+                    subres = yield self.evalkey(nod.expr, evaltype=EVALTYPE_CODE, depth=depth+1)
                 except SymbolError:
                     continue
                 # {text} objects have already added their contents to
@@ -967,7 +975,7 @@ def render_focus(task, loctx, conn, focusobj):
     if focusobj is None:
         return (False, False)
 
-    lookup = True
+    evaltype = EVALTYPE_SYMBOL
 
     assert conn.uid == loctx.uid
     wid = loctx.wid
@@ -989,7 +997,7 @@ def render_focus(task, loctx, conn, focusobj):
             return (focusdesc, False)
         
         if restype == 'portal':
-            lookup = False
+            evaltype = EVALTYPE_RAW
             arr = focusobj
             focusobj = {'type':'portal', 'portid':arr[1]}
             if len(arr) >= 3:
@@ -1000,7 +1008,7 @@ def render_focus(task, loctx, conn, focusobj):
             return (focusdesc, False)
 
     ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_DISPSPECIAL)
-    focusdesc = yield ctx.eval(focusobj, lookup=lookup)
+    focusdesc = yield ctx.eval(focusobj, evaltype=evaltype)
     if ctx.linktargets:
         conn.focusactions.update(ctx.linktargets)
     if ctx.dependencies:
@@ -1355,7 +1363,7 @@ def perform_action(task, cmd, conn, target):
 
     ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
     try:
-        newval = yield ctx.eval(target, lookup=False)
+        newval = yield ctx.eval(target, evaltype=EVALTYPE_CODE)
         if newval is not None:
             ### Not sure I like this.
             conn.write({'cmd':'event', 'text':str(newval)})
