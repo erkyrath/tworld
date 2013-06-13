@@ -187,15 +187,19 @@ class Tworld(object):
         # we still display the partial effects.
         if task.is_writable():
             try:
+                task.resetticks()
                 yield task.resolve()
             except Exception as ex:
                 self.log.error('Error resolving task: %s', cmdobj, exc_info=True)
 
+        task.resetticks()
         starttime = task.starttime
         endtime = twcommon.misc.now()
-        self.log.info('Finished command in %.3f ms (queued for %.3f ms)',
+        self.log.info('Finished command in %.3f ms (queued for %.3f ms); %d ticks max, %d ticks total',
                       (endtime-starttime).total_seconds() * 1000,
-                      (starttime-queuetime).total_seconds() * 1000)
+                      (starttime-queuetime).total_seconds() * 1000,
+                      task.maxcputicks,
+                      task.totalcputicks)
 
         self.commandbusy = False
         task.close()

@@ -38,6 +38,11 @@ class Task(object):
 
     The basic life cycle is handle(), resolve(), close().
     """
+
+    # Limit on how much work a task can do before we kill it.
+    # (The task is actually run is several phases; this is the limit
+    # per phase.)
+    CPU_TICK_LIMIT = 20
     
     def __init__(self, app, cmdobj, connid, twwcid, queuetime):
         self.app = app
@@ -53,6 +58,13 @@ class Task(object):
         self.queuetime = queuetime
         # When we started working on the command:
         self.starttime = twcommon.misc.now()
+
+        # Hard limit on how much script code we'll execute for this task.
+        self.cputicks = 0
+        # Total of cputicks over all the phases of the task.
+        self.totalcputicks = 0
+        # Maximum cputicks for a phase.
+        self.maxcputicks = 0
 
         # Maps uids to LocContexts.
         #self.loctxmap = {}
@@ -74,6 +86,16 @@ class Task(object):
         #self.loctxmap = None
         self.updateconns = None
         self.changeset = None
+
+    def tick(self, val=1):
+        self.cputicks = self.cputicks + 1
+        if (self.cputicks > self.CPU_TICK_LIMIT):
+            raise Exception('Script ran too long; aborting!')
+
+    def resetticks(self):
+        self.totalcputicks = self.totalcputicks + self.cputicks
+        self.maxcputicks = max(self.maxcputicks, self.cputicks)
+        self.cputicks = 0
 
     def is_writable(self):
         return (self.updateconns is not None)
@@ -364,6 +386,9 @@ class Task(object):
         executed. The data changeset will also implicitly set connections
         dirty, based on their current dependencies. After working that all
         out, we send an update to each connection that needs it.
+
+        We reset the tick count per connection, so that a crowded room doesn't
+        wipe out the task.
         """
         if not self.is_writable():
             return
@@ -409,6 +434,7 @@ class Task(object):
         # But that's a rare case.
         for (connid, dirty) in updateconns.items():
             try:
+                self.resetticks()
                 conn = self.app.playconns.get(connid)
                 yield two.execute.generate_update(self, conn, dirty)
             except Exception as ex:

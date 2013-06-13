@@ -68,7 +68,6 @@ class EvalPropContext(object):
         self.linktargets = None
         self.dependencies = None
         self.changeset = None
-        ### Will need CPU-limiting someday.
 
     def updateacdepends(self, ctx):
         """Merge in the actions and dependencies from a subcontext.        
@@ -109,6 +108,8 @@ class EvalPropContext(object):
         which are found in links in the description. Dependencies are
         also accumulated.
         """
+        self.task.tick()
+        
         # Initialize per-invocation fields.
         self.accum = None
         self.linktargets = None
@@ -157,6 +158,8 @@ class EvalPropContext(object):
         The top-level call to evalkey() may set up the description accumulator
         and linktargets. Lower-level calls use the existing ones.
         """
+        self.task.tick()
+        
         if lookup:
             origkey = key
             res = yield two.symbols.find_symbol(self.app, self.loctx, key, dependencies=self.dependencies)
@@ -346,6 +349,7 @@ class EvalPropContext(object):
         """Execute a pile of (already-looked-up) script code.
         """
         self.task.log.debug('### executing code: %s', text)
+        self.task.tick()
 
         ### This originlabel stuff is pretty much wrong. Also slow.
         if originlabel:
@@ -367,6 +371,7 @@ class EvalPropContext(object):
 
     @tornado.gen.coroutine
     def execcode_statement(self, nod, depth):
+        self.task.tick()
         nodtyp = type(nod)
         ### This should be a faster lookup table
         if nodtyp is ast.Expr:
@@ -379,6 +384,7 @@ class EvalPropContext(object):
 
     @tornado.gen.coroutine
     def execcode_expr(self, nod, depth):
+        self.task.tick()
         nodtyp = type(nod)
         ### This should be a faster lookup table
         if nodtyp is ast.Name:
@@ -598,6 +604,8 @@ class EvalPropContext(object):
     def interpolate_text(self, text, depth):
         """Evaluate a bunch of (already-looked-up) interpolation markup.
         """
+        self.task.tick()
+        
         nodls = interp.parse(text)
         
         # While trawling through nodls, we may encounter $if/$end
