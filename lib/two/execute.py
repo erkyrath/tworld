@@ -404,6 +404,12 @@ class EvalPropContext(object):
             return nod.s
         if nodtyp is ast.Num:
             return nod.n  # covers floats and ints
+        if nodtyp is ast.List:
+            res = yield self.execcode_list(nod, depth)
+            return res
+        if nodtyp is ast.Tuple:
+            res = yield self.execcode_tuple(nod, depth)
+            return res
         if nodtyp is ast.UnaryOp:
             res = yield self.execcode_unaryop(nod, depth)
             return res
@@ -420,6 +426,22 @@ class EvalPropContext(object):
             res = yield self.execcode_attribute(nod, depth)
             return res
         raise NotImplementedError('Script expression type not implemented: %s' % (nodtyp.__name__,))
+
+    @tornado.gen.coroutine
+    def execcode_list(self, nod, depth):
+        ls = []
+        for subnod in nod.elts:
+            val = yield self.execcode_expr(subnod, depth)
+            ls.append(val)
+        return ls
+
+    @tornado.gen.coroutine
+    def execcode_tuple(self, nod, depth):
+        ls = []
+        for subnod in nod.elts:
+            val = yield self.execcode_expr(subnod, depth)
+            ls.append(val)
+        return tuple(ls)
 
     map_unaryop_operators = {
         ast.Not: operator.not_,
