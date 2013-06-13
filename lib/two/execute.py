@@ -394,6 +394,9 @@ class EvalPropContext(object):
         if nodtyp is ast.BinOp:
             res = yield self.execcode_binop(nod, depth)
             return res
+        if nodtyp is ast.BoolOp:
+            res = yield self.execcode_boolop(nod, depth)
+            return res
         raise NotImplementedError('Script expression type not implemented: %s' % (nodtyp.__name__,))
 
     map_unaryop_operators = {
@@ -427,6 +430,26 @@ class EvalPropContext(object):
         opfunc = self.map_binop_operators.get(optyp, None)
         if not opfunc:
             raise NotImplementedError('Script binop type not implemented: %s' % (optyp.__name__,))
+        return opfunc(leftval, rightval)
+        
+    @tornado.gen.coroutine
+    def execcode_boolop(self, nod, depth):
+        optyp = type(nod.op)
+        assert len(nod.values) > 0
+        if optyp is ast.And:
+            for subnod in nod.values:
+                val = yield self.execcode_expr(subnod)
+                if not val:
+                    return val
+            return val
+        if optyp is ast.Or:
+            for subnod in nod.values:
+                val = yield self.execcode_expr(subnod)
+                if val:
+                    return val
+            return val
+        if not opfunc:
+            raise NotImplementedError('Script boolop type not implemented: %s' % (optyp.__name__,))
         return opfunc(leftval, rightval)
         
     @tornado.gen.coroutine
