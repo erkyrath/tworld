@@ -469,7 +469,7 @@ class EvalPropContext(object):
     map_compare_operators = {
         ast.Eq: operator.eq,
         ast.NotEq: operator.ne,
-        ast.Lt: operator.le,
+        ast.Lt: operator.lt,
         ast.LtE: operator.le,
         ast.Gt: operator.gt,
         ast.GtE: operator.ge,
