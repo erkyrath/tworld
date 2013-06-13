@@ -43,7 +43,7 @@ class Task(object):
     # Limit on how much work a task can do before we kill it.
     # (The task is actually run is several phases; this is the limit
     # per phase.)
-    CPU_TICK_LIMIT = 20
+    CPU_TICK_LIMIT = 500
     
     def __init__(self, app, cmdobj, connid, twwcid, queuetime):
         self.app = app
