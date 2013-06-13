@@ -19,6 +19,11 @@ class SymbolError(LookupError):
     """
     pass
 
+class ExecRunawayException(Exception):
+    """Raised when a script seems to run on for too long, or too deep.
+    """
+    pass
+
 class ExecutionException(Exception):
     """Internal code-flow exceptions in the script interpreter.
     """

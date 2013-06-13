@@ -9,7 +9,8 @@ from bson.objectid import ObjectId
 import motor
 
 import twcommon.misc
-from twcommon.excepts import MessageException, ErrorMessageException, SymbolError
+from twcommon.excepts import MessageException, ErrorMessageException
+from twcommon.excepts import SymbolError, ExecRunawayException
 from twcommon.misc import MAX_DESCLINE_LENGTH
 from two import interp
 import two.task
@@ -328,19 +329,20 @@ class EvalPropContext(object):
 
         assert self.accum is not None, 'EvalPropContext.accum should not be None here'
         if objtype == 'text':
+            # We prefer to catch interpolation errors as low as possible,
+            # so that they will appear inline in a logical spot.
             try:
                 yield self.interpolate_text(res.get('text', ''), depth=depth)
                 return Accumulated
+            except ExecRunawayException:
+                raise  # Let this through
             except Exception as ex:
                 self.task.log.warning('Caught exception (interpolating): %s', ex)
                 return '[Exception: %s]' % (ex,)
         elif objtype == 'code':
-            try:
-                newres = yield self.execute_code(res.get('text', ''), originlabel=key, depth=depth)
-                return newres
-            except Exception as ex:
-                self.task.log.warning('Caught exception (executing): %s', ex)
-                raise ErrorMessageException(str(ex))
+            # We let execution errors bubble up to the top level.
+            newres = yield self.execute_code(res.get('text', ''), originlabel=key, depth=depth)
+            return newres
         else:
             return '[Unhandled object type: %s]' % (objtype,)
 
@@ -1313,12 +1315,16 @@ def perform_action(task, cmd, conn, target):
     # code.
 
     ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
-    newval = yield ctx.eval(target, lookup=False)
+    try:
+        newval = yield ctx.eval(target, lookup=False)
+        if newval is not None:
+            ### Not sure I like this.
+            conn.write({'cmd':'event', 'text':str(newval)})
+    except Exception as ex:
+        task.log.warning('Action failed: %s', ex)
+        conn.write({'cmd':'error', 'text':str(ex)})
     if ctx.changeset:
         task.add_data_changes(ctx.changeset)
-    if newval is not None:
-        ### Not sure I like this.
-        conn.write({'cmd':'event', 'text':str(newval)})
         
     
 # Late imports, to avoid circularity

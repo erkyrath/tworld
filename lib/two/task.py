@@ -8,6 +8,7 @@ import two.execute
 from two.playconn import PlayerConnection
 import twcommon.misc
 from twcommon.excepts import MessageException, ErrorMessageException
+from twcommon.excepts import SymbolError, ExecRunawayException
 
 DIRTY_WORLD = 0x01  # Instance, really
 DIRTY_LOCALE = 0x02
@@ -90,7 +91,7 @@ class Task(object):
     def tick(self, val=1):
         self.cputicks = self.cputicks + 1
         if (self.cputicks > self.CPU_TICK_LIMIT):
-            raise Exception('Script ran too long; aborting!')
+            raise ExecRunawayException('Script ran too long; aborting!')
 
     def resetticks(self):
         self.totalcputicks = self.totalcputicks + self.cputicks
