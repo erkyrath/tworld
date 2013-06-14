@@ -453,7 +453,6 @@ def prop_to_string(val):
         return val
     if key == 'code':
         text = val['text']
-        return '*code %s' % (repr(text),) ####
         if '\n' not in text:
             return '*code %s' % (text,)
         else:
