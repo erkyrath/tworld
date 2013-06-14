@@ -91,13 +91,13 @@ def define_globals():
         youeval = False
         otherseval = False
         if you:
-            if is_typed_dict(you):
+            if is_typed_dict(you, 'text'):
                 you = you.get('text', None)
                 youeval = True
             else:
                 you = str(you)
         if others:
-            if is_typed_dict(others):
+            if is_typed_dict(others, 'text'):
                 others = others.get('text', None)
                 otherseval = True
             else:
@@ -196,4 +196,5 @@ def find_symbol(app, loctx, key, locals=None, dependencies=None):
 
 
 # late import
+from twcommon.misc import is_typed_dict
 from two.execute import EvalPropContext

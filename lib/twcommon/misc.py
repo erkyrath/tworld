@@ -21,4 +21,4 @@ def now():
 def is_typed_dict(obj, typ):
     """Returns true if obj is a dict and has a field 'type'=typ.
     """
-    return (typ(obj) is dict and typ.get('type', None) == typ)
+    return (type(obj) is dict and obj.get('type', None) == typ)
