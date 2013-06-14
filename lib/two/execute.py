@@ -234,7 +234,7 @@ class EvalPropContext(object):
                 self.wasspecial = True
                 return specres
             except Exception as ex:
-                self.task.log.warning('Caught exception (selfdesc): %s', ex)
+                self.task.log.warning('Caught exception (selfdesc): %s', ex, exc_info=self.app.debugstacktraces)
                 return '[Exception: %s]' % (ex,)
                 
         if depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'editstr':
@@ -259,7 +259,7 @@ class EvalPropContext(object):
                 self.wasspecial = True
                 return specres
             except Exception as ex:
-                self.task.log.warning('Caught exception (editstr): %s', ex)
+                self.task.log.warning('Caught exception (editstr): %s', ex, exc_info=self.app.debugstacktraces)
                 return '[Exception: %s]' % (ex,)
                 
         if depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'portal':
@@ -301,7 +301,7 @@ class EvalPropContext(object):
                 self.wasspecial = True
                 return specres
             except Exception as ex:
-                self.task.log.warning('Caught exception (portal): %s', ex)
+                self.task.log.warning('Caught exception (portal): %s', ex, exc_info=self.app.debugstacktraces)
                 return '[Exception: %s]' % (ex,)
 
         if depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'portlist':
@@ -338,7 +338,7 @@ class EvalPropContext(object):
                 self.wasspecial = True
                 return specres
             except Exception as ex:
-                self.task.log.warning('Caught exception (portlist): %s', ex)
+                self.task.log.warning('Caught exception (portlist): %s', ex, exc_info=self.app.debugstacktraces)
                 return '[Exception: %s]' % (ex,)
 
         if not(objtype in ('text', 'code')
@@ -363,7 +363,7 @@ class EvalPropContext(object):
             except ExecRunawayException:
                 raise  # Let this through
             except Exception as ex:
-                self.task.log.warning('Caught exception (interpolating): %s', ex)
+                self.task.log.warning('Caught exception (interpolating): %s', ex, exc_info=self.app.debugstacktraces)
                 return '[Exception: %s]' % (ex,)
         elif objtype == 'code':
             # We let execution errors bubble up to the top level.
@@ -1071,7 +1071,7 @@ def portal_description(app, portal, uid, uidiid=None, location=False, short=Fals
         return res
     
     except Exception as ex:
-        app.log.warning('portal_description failed: %s', ex)
+        app.log.warning('portal_description failed: %s', ex, exc_info=app.debugstacktraces)
         return None
 
 @tornado.gen.coroutine
