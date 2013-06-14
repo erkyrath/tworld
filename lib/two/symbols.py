@@ -105,7 +105,7 @@ def find_symbol(app, loctx, key, locals=None, dependencies=None):
     - world properties
     - realm-level instance properties
     - realm-level world properties
-    - ### builtins
+    - builtins
     """
     # Special cases
     if key == '_':
@@ -156,6 +156,9 @@ def find_symbol(app, loctx, key, locals=None, dependencies=None):
                              {'val':1})
         if res:
             return res['val']
+
+    if hasattr(app.global_symbol_table, key):
+        return getattr(app.global_symbol_table, key)
 
     raise SymbolError('Name "%s" is not found' % (key,))
 
