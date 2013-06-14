@@ -727,8 +727,10 @@ class EvalPropContext(object):
                     continue
                 try:
                     ifval = yield self.evalobj(nod.expr, evaltype=EVALTYPE_CODE, depth=depth+1)
-                except SymbolError: ### or AttributeError?
-                    ifval = None                    
+                except LookupError: # includes SymbolError
+                    ifval = None
+                except AttributeError:
+                    ifval = None
                 if ifval:
                     suppstack.append(0)
                 else:
@@ -751,8 +753,10 @@ class EvalPropContext(object):
                 # We follow an unsuccessful "if". Maybe suppress.
                 try:
                     ifval = yield self.evalobj(nod.expr, evaltype=EVALTYPE_CODE, depth=depth+1)
-                except SymbolError: ### or AttributeError?
-                    ifval = None                    
+                except LookupError: # includes SymbolError
+                    ifval = None
+                except AttributeError:
+                    ifval = None
                 if ifval:
                     suppstack[-1] = 0
                 else:
