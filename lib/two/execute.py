@@ -49,6 +49,8 @@ class EvalPropContext(object):
 
     @staticmethod
     def get_current_context():
+        if not EvalPropContext.context_stack:
+            raise Exception('get_current_context: no current context!')
         return EvalPropContext.context_stack[-1]
 
     # Used as a long-running counter in build_action_key.
@@ -79,6 +81,7 @@ class EvalPropContext(object):
             
         self.level = level
         self.initdepth = depth
+        self.depthatcall = None
         self.accum = None
         self.linktargets = None
         self.dependencies = None
@@ -216,7 +219,7 @@ class EvalPropContext(object):
                 val = res.get('text', None)
                 if val:
                     # Look up the extra text in a separate context.
-                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_DISPLAY)
+                    ctx = EvalPropContext(self.task, parent=self, depth=1, level=LEVEL_DISPLAY)
                     extratext = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                     self.updateacdepends(ctx)
                 player = yield motor.Op(self.app.mongodb.players.find_one,
@@ -242,13 +245,13 @@ class EvalPropContext(object):
                 val = res.get('text', None)
                 if val:
                     # Look up the extra text in a separate context.
-                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_DISPLAY)
+                    ctx = EvalPropContext(self.task, parent=self, depth=1, level=LEVEL_DISPLAY)
                     extratext = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                     self.updateacdepends(ctx)
                 # Look up the current symbol value.
                 editkey = 'editstr' + EvalPropContext.build_action_key()
                 self.linktargets[editkey] = ('editstr', res['key'])
-                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_FLAT)
+                ctx = EvalPropContext(self.task, parent=self, depth=1, level=LEVEL_FLAT)
                 curvalue = yield ctx.eval(res['key'])
                 specres = ['editstr',
                            editkey,
@@ -273,7 +276,7 @@ class EvalPropContext(object):
                 val = res.get('text', None)
                 if val:
                     # Look up the extra text in a separate context.
-                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_DISPLAY)
+                    ctx = EvalPropContext(self.task, parent=self, depth=1, level=LEVEL_DISPLAY)
                     extratext = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                     self.updateacdepends(ctx)
                 portal = yield motor.Op(self.app.mongodb.portals.find_one,
@@ -289,7 +292,7 @@ class EvalPropContext(object):
                     portalobj['copyable'] = copykey
                 # Look up the destination portaldesc in a separate context.
                 altloctx = two.task.LocContext(None, wid=portal['wid'], locid=portal['locid'])
-                ctx = EvalPropContext(self.task, loctx=altloctx, level=LEVEL_FLAT)
+                ctx = EvalPropContext(self.task, loctx=altloctx, depth=1, level=LEVEL_FLAT)
                 desttext = yield ctx.eval('portaldesc')
                 self.updateacdepends(ctx)
                 if not desttext:
@@ -310,7 +313,7 @@ class EvalPropContext(object):
                 val = res.get('text', None)
                 if val:
                     # Look up the extra text in a separate context.
-                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_DISPLAY)
+                    ctx = EvalPropContext(self.task, parent=self, depth=1, level=LEVEL_DISPLAY)
                     extratext = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                     self.updateacdepends(ctx)
                 portlist = yield motor.Op(self.app.mongodb.portlists.find_one,
@@ -566,6 +569,8 @@ class EvalPropContext(object):
             # Python semantics say we should reject duplicate kwargs here
             kwargs.extend(starargs)
         if isinstance(funcval, two.symbols.ScriptFunc):
+            # A terrible hack to get the depth value into a ScriptFunc.
+            self.depthatcall = depth
             if not funcval.yieldy:
                 return funcval.func(*args, **kwargs)
             else:
@@ -626,13 +631,13 @@ class EvalPropContext(object):
             # Display an event.
             val = res.get('text', None)
             if val:
-                ctx = EvalPropContext(self.task, parent=self, depth=depth, level=LEVEL_MESSAGE)
+                ctx = EvalPropContext(self.task, parent=self, depth=depth+1, level=LEVEL_MESSAGE)
                 newval = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                 self.task.write_event(uid, newval)
             val = res.get('otext', None)
             if val:
                 others = yield self.task.find_locale_players(notself=True)
-                ctx = EvalPropContext(self.task, parent=self, depth=depth, level=LEVEL_MESSAGE)
+                ctx = EvalPropContext(self.task, parent=self, depth=depth+1, level=LEVEL_MESSAGE)
                 newval = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                 self.task.write_event(others, newval)
             return None
@@ -641,13 +646,13 @@ class EvalPropContext(object):
             # Display an event.
             val = res.get('text', None)
             if val:
-                ctx = EvalPropContext(self.task, parent=self, depth=depth, level=LEVEL_MESSAGE)
+                ctx = EvalPropContext(self.task, parent=self, depth=depth+1, level=LEVEL_MESSAGE)
                 newval = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                 self.task.write_event(uid, newval)
             val = res.get('otext', None)
             if val:
                 others = yield self.task.find_locale_players(notself=True)
-                ctx = EvalPropContext(self.task, parent=self, depth=depth, level=LEVEL_MESSAGE)
+                ctx = EvalPropContext(self.task, parent=self, depth=depth+1, level=LEVEL_MESSAGE)
                 newval = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                 self.task.write_event(others, newval)
             self.app.queue_command({'cmd':'tovoid', 'uid':uid, 'portin':True})
@@ -671,7 +676,7 @@ class EvalPropContext(object):
             if msg is None:
                 msg = '%s leaves.' % (playername,) ###localize
             else:
-                ctx = EvalPropContext(self.task, parent=self, depth=depth, level=LEVEL_MESSAGE)
+                ctx = EvalPropContext(self.task, parent=self, depth=depth+1, level=LEVEL_MESSAGE)
                 msg = yield ctx.eval(msg, evaltype=EVALTYPE_TEXT)
             if msg:
                 others = yield self.task.find_locale_players(notself=True)
@@ -697,7 +702,7 @@ class EvalPropContext(object):
             if msg is None:
                 msg = '%s arrives.' % (playername,) ###localize
             else:
-                ctx = EvalPropContext(self.task, parent=self, depth=depth, level=LEVEL_MESSAGE)
+                ctx = EvalPropContext(self.task, parent=self, depth=depth+1, level=LEVEL_MESSAGE)
                 msg = yield ctx.eval(msg, evaltype=EVALTYPE_TEXT)
             if msg:
                 # others is already set
@@ -705,7 +710,7 @@ class EvalPropContext(object):
                     self.task.write_event(others, msg)
             msg = res.get('text', None)
             if msg:
-                ctx = EvalPropContext(self.task, parent=self, depth=depth, level=LEVEL_MESSAGE)
+                ctx = EvalPropContext(self.task, parent=self, depth=depth+1, level=LEVEL_MESSAGE)
                 msg = yield ctx.eval(msg, evaltype=EVALTYPE_TEXT)
                 self.task.write_event(uid, msg)
 
