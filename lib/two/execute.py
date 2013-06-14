@@ -1475,7 +1475,7 @@ def perform_action(task, cmd, conn, target):
             ### Not sure I like this.
             conn.write({'cmd':'event', 'text':str(newval)})
     except Exception as ex:
-        task.log.warning('Action failed: %s', ex)
+        task.log.warning('Action failed: %s', ex, exc_info=app.debugstacktraces)
         exmsg = '%s: %s' % (ex.__class__.__name__, ex,)
         conn.write({'cmd':'error', 'text':exmsg})
     if ctx.changeset:

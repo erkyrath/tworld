@@ -43,6 +43,7 @@ class Tworld(object):
         # Miscellaneous.
         self.caughtinterrupt = False
         self.shuttingdown = False
+        self.debugstacktraces = opts.show_stack_traces
 
         # When the IOLoop starts, we'll set up periodic tasks.
         tornado.ioloop.IOLoop.instance().add_callback(self.init_timers)

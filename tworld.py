@@ -36,6 +36,9 @@ tornado.options.define(
     'debug', type=bool,
     help='application debugging (see Tornado docs)')
 tornado.options.define(
+    'show_stack_traces', type=bool,
+    help='show stack traces for errors that are probably a player\'s fault')
+tornado.options.define(
     'log_level', type=str, default=None,
     help='logging threshold (default usually WARNING)')
 tornado.options.define(

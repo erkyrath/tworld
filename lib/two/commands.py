@@ -568,6 +568,11 @@ def define_commands():
     def cmd_meta_shutdown(app, task, cmd, conn):
         app.queue_command({'cmd':'shutdownprocess'})
         
+    @command('meta_debugstacktraces', restrict='admin')
+    def cmd_meta_debugstacktraces(app, task, cmd, conn):
+        app.debugstacktraces = not app.debugstacktraces
+        raise MessageException('debugstacktraces now %s' % (app.debugstacktraces,))
+        
     @command('portstart', doeswrite=True)
     def cmd_portstart(app, task, cmd, conn):
         # Fling the player back to the start world. (Not necessarily the
