@@ -337,7 +337,11 @@ def append_to_prop(dic, key, ln, indent=0):
         if '_baseindent' not in val:
             val['_baseindent'] = indent
         indentstr = '  ' * (indent - val['_baseindent'])
-        val['text'] += ('\n' + indentstr + ln)
+        if not val['text'].strip():
+            val['text'] = ''
+        else:
+            indentstr = '\n' + indentstr
+        val['text'] += (indentstr + ln)
     elif type(val) is dict and 'text' in val:
         # Covers {text}, {event}
         val['text'] += ('\n\n' + ln)
