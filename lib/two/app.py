@@ -15,6 +15,7 @@ import two.mongomgr
 import two.commands
 import two.symbols
 import two.task
+from two.execute import EvalPropContext
 import twcommon.misc
 import twcommon.autoreload
 from twcommon import wcproto
@@ -176,6 +177,8 @@ class Tworld(object):
         task = two.task.Task(self, cmdobj, connid, twwcid, queuetime)
         self.commandbusy = True
 
+        EvalPropContext.context_stack.clear()
+
         # Handle the command.
         try:
             yield task.handle()
@@ -192,6 +195,9 @@ class Tworld(object):
             except Exception as ex:
                 self.log.error('Error resolving task: %s', cmdobj, exc_info=True)
 
+        if EvalPropContext.context_stack:
+            self.log.error('EvalPropContext.context_stack has %d entries remaining at end of task!', len(EvalPropContext.context_stack))
+            
         task.resetticks()
         starttime = task.starttime
         endtime = twcommon.misc.now()

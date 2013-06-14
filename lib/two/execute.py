@@ -42,7 +42,16 @@ class EvalPropContext(object):
     action. (Sorry about all the "context"s.) Or you can provide an existing
     EvalPropContext to clone.
     """
-    
+
+    # We'll push contexts on here as we nest them. (It is occasionally
+    # necessary to find the "current" context without a handy reference.)
+    context_stack = []
+
+    @staticmethod
+    def get_current_context():
+        return EvalPropContext.context_stack[-1]
+
+    # Used as a long-running counter in build_action_key.
     link_code_counter = 0
 
     @staticmethod
@@ -123,8 +132,13 @@ class EvalPropContext(object):
         self.linktargets = None
         self.dependencies = set()
         self.wasspecial = False
-        
-        res = yield self.evalobj(key, evaltype=evaltype, depth=self.initdepth)
+
+        try:
+            EvalPropContext.context_stack.append(self)
+            res = yield self.evalobj(key, evaltype=evaltype, depth=self.initdepth)
+        finally:
+            assert (EvalPropContext.context_stack[-1] is self), 'EvalPropContext.context_stack did not nest properly!'
+            EvalPropContext.context_stack.pop()
 
         # At this point, if the value was a {text}, the accum will contain
         # the desired description.
