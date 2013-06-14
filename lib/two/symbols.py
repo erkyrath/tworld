@@ -132,7 +132,10 @@ def define_globals():
     
     @scriptfunc('player', group='_propmap')
     def global_player():
-        return '###'
+        ctx = EvalPropContext.get_current_context()
+        if not ctx.uid:
+            raise Exception('No current player')
+        return two.execute.PlayerProxy(ctx.uid)
 
     @scriptfunc('choice', group='random')
     def global_random_choice(seq):
@@ -231,4 +234,5 @@ def find_symbol(app, loctx, key, locals=None, dependencies=None):
 
 # late import
 from twcommon.misc import is_typed_dict
+import two.execute
 from two.execute import EvalPropContext

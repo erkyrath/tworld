@@ -921,6 +921,25 @@ def str_or_null(res):
         return ''
     return str(res)
 
+
+class PlayerProxy(object):
+    def __init__(self, uid):
+        """Represents a player, in the script environment. The uid argument
+        must be an ObjectId.
+        """
+        self.uid = uid
+    def __repr__(self):
+        return '<PlayerProxy %s>' % (self.uid,)
+    def __eq__(self, other):
+        if isinstance(other, PlayerProxy):
+            return (self.uid == other.uid)
+        if isinstance(other, ObjectId):
+            return (self.uid == other)
+        return False
+    def __ne__(self, obj):
+        return not self.__eq__(obj)
+        
+
 @tornado.gen.coroutine
 def portal_in_reach(app, portal, uid, wid):
     """Make sure that a portal (object) is reachable by the player (uid)
