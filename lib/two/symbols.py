@@ -75,6 +75,36 @@ def define_globals():
     def global_bool(x=False):
         return bool(x)
 
+    @scriptfunc('text', group='_')
+    def global_text(object=''):
+        return { 'type':'text', 'text':str(object) }
+
+    @scriptfunc('event', group='_', yieldy=True)
+    def global_event(you, others=None):
+        """Send an event message to the current player, like {event}.
+        The argument(s) must be string or {text}. The optional second
+        argument goes to other players in the same location.
+        """
+        ctx = EvalPropContext.get_current_context()
+        depth = ctx.depthatcall
+        
+        youeval = False
+        otherseval = False
+        if you:
+            if is_typed_dict(you):
+                you = you.get('text', None)
+                youeval = True
+            else:
+                you = str(you)
+        if others:
+            if is_typed_dict(others):
+                others = others.get('text', None)
+                otherseval = True
+            else:
+                others = str(others)
+                
+        yield ctx.perform_event(you, youeval, others, otherseval, depth=depth)
+    
     @scriptfunc('choice', group='random')
     def global_random_choice(seq):
         return random.choice(seq)
@@ -91,6 +121,8 @@ def define_globals():
     return QuietNamespace(**globmap)
 
 
+# These symbols are actually keywords (in Python 3), but they come out of
+# ast.parse() as Name nodes. They can never change.
 immutable_symbol_table = {
     'True': True, 'False': False, 'None': None,
     }
@@ -162,3 +194,6 @@ def find_symbol(app, loctx, key, locals=None, dependencies=None):
 
     raise SymbolError('Name "%s" is not found' % (key,))
 
+
+# late import
+from two.execute import EvalPropContext

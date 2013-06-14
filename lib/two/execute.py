@@ -14,7 +14,6 @@ from twcommon.excepts import SymbolError, ExecRunawayException
 from twcommon.misc import MAX_DESCLINE_LENGTH
 from two import interp
 import two.task
-import two.symbols
 
 EVALTYPE_SYMBOL = 0
 EVALTYPE_RAW = 1
@@ -80,8 +79,8 @@ class EvalPropContext(object):
             self.uid = loctx.uid
             
         self.level = level
-        self.initdepth = depth
         self.depthatcall = None
+        #### Do something with depth argument, which really should be totaldepthsofar or some such
         self.accum = None
         self.linktargets = None
         self.dependencies = None
@@ -138,7 +137,7 @@ class EvalPropContext(object):
 
         try:
             EvalPropContext.context_stack.append(self)
-            res = yield self.evalobj(key, evaltype=evaltype, depth=self.initdepth)
+            res = yield self.evalobj(key, evaltype=evaltype)
         finally:
             assert (EvalPropContext.context_stack[-1] is self), 'EvalPropContext.context_stack did not nest properly!'
             EvalPropContext.context_stack.pop()
@@ -629,17 +628,7 @@ class EvalPropContext(object):
 
         if restype == 'event':
             # Display an event.
-            val = res.get('text', None)
-            if val:
-                ctx = EvalPropContext(self.task, parent=self, depth=depth+1, level=LEVEL_MESSAGE)
-                newval = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
-                self.task.write_event(uid, newval)
-            val = res.get('otext', None)
-            if val:
-                others = yield self.task.find_locale_players(notself=True)
-                ctx = EvalPropContext(self.task, parent=self, depth=depth+1, level=LEVEL_MESSAGE)
-                newval = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
-                self.task.write_event(others, newval)
+            yield self.perform_event(res.get('text', None), True, res.get('otext', None), True, depth=depth)
             return None
 
         if restype == 'panic':
@@ -879,6 +868,25 @@ class EvalPropContext(object):
         # End of nodls interaction.
         if len(suppstack) > 0:
             self.accum.append('[$if without matching $end]')
+
+    @tornado.gen.coroutine
+    def perform_event(self, text, texteval, otext, otexteval, depth):
+        if text:
+            if texteval:
+                ctx = EvalPropContext(self.task, parent=self, depth=depth+1, level=LEVEL_MESSAGE)
+                val = yield ctx.eval(text, evaltype=EVALTYPE_TEXT)
+            else:
+                val = text
+            self.task.write_event(self.uid, val)
+        if otext:
+            others = yield self.task.find_locale_players(notself=True)
+            if otexteval:
+                ctx = EvalPropContext(self.task, parent=self, depth=depth+1, level=LEVEL_MESSAGE)
+                val = yield ctx.eval(otext, evaltype=EVALTYPE_TEXT)
+            else:
+                val = otext
+            self.task.write_event(others, val)
+
 
 def str_or_null(res):
     if res is None:
@@ -1475,3 +1483,4 @@ def perform_action(task, cmd, conn, target):
 # Late imports, to avoid circularity
 from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_POPULACE, DIRTY_FOCUS
 from twcommon.access import ACC_VISITOR
+import two.symbols
