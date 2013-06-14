@@ -728,15 +728,21 @@ class EvalPropContext(object):
     def execcode_assign(self, nod, depth):
         if len(nod.targets) != 1:
             raise NotImplementedError('Script assignment has more than one target')
+        ### Make more complicated, for various l-values. But still opt-in.
         target = nod.targets[0]
         if type(target) != ast.Name:
             raise NotImplementedError('Script assignment is not a simple symbol')
         key = target.id
         val = yield self.execcode_expr(nod.value, depth)
         self.task.log.debug('### executing assignment: %s = %s', key, repr(val))
+
+        if key == '_':
+            # Assignment to _ is silently dropped, to sort-of support
+            # Python idiom.
+            return None
         
         if self.level != LEVEL_EXECUTE:
-            raise Exception('Assignment only permitted in action code')
+            raise Exception('Properties may only be set in action code')
         
         iid = self.loctx.iid
         locid = self.loctx.locid
