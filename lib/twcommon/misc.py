@@ -17,3 +17,8 @@ def now():
     """Utility function: return "now" as an aware UTC datetime object.
     """
     return datetime.datetime.now(datetime.timezone.utc)
+
+def is_typed_dict(obj, typ):
+    """Returns true if obj is a dict and has a field 'type'=typ.
+    """
+    return (typ(obj) is dict and typ.get('type', None) == typ)

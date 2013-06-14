@@ -53,7 +53,7 @@ class EvalPropContext(object):
         EvalPropContext.link_code_counter = EvalPropContext.link_code_counter + 1
         return str(EvalPropContext.link_code_counter) + hex(random.getrandbits(32))[2:]
     
-    def __init__(self, task, parent=None, loctx=None, level=LEVEL_MESSAGE):
+    def __init__(self, task, parent=None, loctx=None, depth=0, level=LEVEL_MESSAGE):
         self.task = task
         self.app = self.task.app
 
@@ -69,6 +69,7 @@ class EvalPropContext(object):
             self.uid = loctx.uid
             
         self.level = level
+        self.initdepth = depth
         self.accum = None
         self.linktargets = None
         self.dependencies = None
@@ -123,7 +124,7 @@ class EvalPropContext(object):
         self.dependencies = set()
         self.wasspecial = False
         
-        res = yield self.evalobj(key, evaltype=evaltype)
+        res = yield self.evalobj(key, evaltype=evaltype, depth=self.initdepth)
 
         # At this point, if the value was a {text}, the accum will contain
         # the desired description.
@@ -548,6 +549,7 @@ class EvalPropContext(object):
             kwargs[subnod.arg] = val
         if nod.kwargs:
             starargs = yield self.execcode_expr(nod.kwargs, depth)
+            # Python semantics say we should reject duplicate kwargs here
             kwargs.extend(starargs)
         if isinstance(funcval, two.symbols.ScriptFunc):
             if not funcval.yieldy:
@@ -610,13 +612,13 @@ class EvalPropContext(object):
             # Display an event.
             val = res.get('text', None)
             if val:
-                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+                ctx = EvalPropContext(self.task, parent=self, depth=depth, level=LEVEL_MESSAGE)
                 newval = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                 self.task.write_event(uid, newval)
             val = res.get('otext', None)
             if val:
                 others = yield self.task.find_locale_players(notself=True)
-                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+                ctx = EvalPropContext(self.task, parent=self, depth=depth, level=LEVEL_MESSAGE)
                 newval = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                 self.task.write_event(others, newval)
             return None
@@ -625,13 +627,13 @@ class EvalPropContext(object):
             # Display an event.
             val = res.get('text', None)
             if val:
-                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+                ctx = EvalPropContext(self.task, parent=self, depth=depth, level=LEVEL_MESSAGE)
                 newval = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                 self.task.write_event(uid, newval)
             val = res.get('otext', None)
             if val:
                 others = yield self.task.find_locale_players(notself=True)
-                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+                ctx = EvalPropContext(self.task, parent=self, depth=depth, level=LEVEL_MESSAGE)
                 newval = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                 self.task.write_event(others, newval)
             self.app.queue_command({'cmd':'tovoid', 'uid':uid, 'portin':True})
@@ -655,7 +657,7 @@ class EvalPropContext(object):
             if msg is None:
                 msg = '%s leaves.' % (playername,) ###localize
             else:
-                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+                ctx = EvalPropContext(self.task, parent=self, depth=depth, level=LEVEL_MESSAGE)
                 msg = yield ctx.eval(msg, evaltype=EVALTYPE_TEXT)
             if msg:
                 others = yield self.task.find_locale_players(notself=True)
@@ -681,7 +683,7 @@ class EvalPropContext(object):
             if msg is None:
                 msg = '%s arrives.' % (playername,) ###localize
             else:
-                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+                ctx = EvalPropContext(self.task, parent=self, depth=depth, level=LEVEL_MESSAGE)
                 msg = yield ctx.eval(msg, evaltype=EVALTYPE_TEXT)
             if msg:
                 # others is already set
@@ -689,7 +691,7 @@ class EvalPropContext(object):
                     self.task.write_event(others, msg)
             msg = res.get('text', None)
             if msg:
-                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+                ctx = EvalPropContext(self.task, parent=self, depth=depth, level=LEVEL_MESSAGE)
                 msg = yield ctx.eval(msg, evaltype=EVALTYPE_TEXT)
                 self.task.write_event(uid, msg)
 
