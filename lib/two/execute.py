@@ -407,6 +407,9 @@ class EvalPropContext(object):
         if nodtyp is ast.Assign:
             res = yield self.execcode_assign(nod, depth)
             return res
+        if nodtyp is ast.If:
+            res = yield self.execcode_if(nod, depth)
+            return None
         if nodtyp is ast.Pass:
             return None
         raise NotImplementedError('Script statement type not implemented: %s' % (nodtyp.__name__,))
@@ -571,7 +574,7 @@ class EvalPropContext(object):
             kwargs.extend(starargs)
         if isinstance(funcval, two.symbols.ScriptFunc):
             # A terrible hack to get the depth value into a ScriptFunc.
-            self.depthatcall = depth
+            self.depthatcall = depth ### +1?
             if not funcval.yieldy:
                 return funcval.func(*args, **kwargs)
             else:
@@ -709,6 +712,18 @@ class EvalPropContext(object):
 
         raise ErrorMessageException('Code invoked unsupported property type: %s' % (restype,))
 
+    @tornado.gen.coroutine
+    def execcode_if(self, nod, depth):
+        testval = yield self.execcode_expr(nod.test, depth)
+        if testval:
+            body = nod.body
+        else:
+            body = nod.orelse
+        res = None
+        for nod in body:
+            res = yield self.execcode_statement(nod, depth)
+        return res
+        
     @tornado.gen.coroutine
     def execcode_assign(self, nod, depth):
         if len(nod.targets) != 1:
