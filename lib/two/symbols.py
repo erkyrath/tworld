@@ -1,4 +1,5 @@
 import types
+import itertools
 import random
 
 import tornado.gen
@@ -10,18 +11,26 @@ class ScriptNamespace(object):
     """A container for user-accessible items in a script. This is basically
     a script-safe equivalent of a module.
 
+    Also supports generators as fields -- gettable properties, more or less.
+    An entry in propmap is called and the result returned as the property
+    value.    
+
     Note that to fetch an attribute, you call nmsp.get(key). But in script
     code, you'd say "nmsp.foo" or "nmsp['foo']".
     
     Safe to print (as a str). Contained values are abbreviated, and it
     tries to avoid recursing into them.
     """
-    def __init__(self, map):
+    def __init__(self, map, propmap=None):
         self.map = dict(map)
+        if propmap:
+            self.propmap = dict(propmap)
+        else:
+            self.propmap = {}
         
     def __repr__(self):
         ls = []
-        for (key, val) in self.map.items():
+        for (key, val) in itertools.chain(self.map.items(), self.propmap.items()):
             if type(val) is dict:
                 val = '{...}'
             elif isinstance(val, types.SimpleNamespace):
@@ -35,10 +44,12 @@ class ScriptNamespace(object):
         return '<ScriptNamespace(%s)>' % (ls,)
 
     def get(self, key):
+        if key in self.propmap:
+            return self.propmap[key]()
         return self.map[key]
 
     def has(self, key):
-        return key in self.map
+        return (key in self.map) or (key in self.propmap)
 
 class ScriptFunc:
     # As functions are defined with the @scriptfunc decorator, they are
@@ -119,6 +130,10 @@ def define_globals():
                 
         yield ctx.perform_event(you, youeval, others, otherseval, depth=depth)
     
+    @scriptfunc('player', group='_propmap')
+    def global_player():
+        return '###'
+
     @scriptfunc('choice', group='random')
     def global_random_choice(seq):
         return random.choice(seq)
@@ -131,8 +146,13 @@ def define_globals():
     map = dict(ScriptFunc.funcgroups['random'])
     globmap['random'] = ScriptNamespace(map)
 
+    # And a few entries that are generated each time they're fetched.
+    propmap = dict([
+            (key, func.func) for (key, func) in ScriptFunc.funcgroups['_propmap'].items()
+            ])
+
     # And that's our global namespace.
-    return ScriptNamespace(globmap)
+    return ScriptNamespace(globmap, propmap)
 
 
 # These symbols are actually keywords (in Python 3), but they come out of
