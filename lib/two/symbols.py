@@ -6,14 +6,22 @@ import motor
 
 from twcommon.excepts import SymbolError
 
-class QuietNamespace(types.SimpleNamespace):
-    """A subclass of SimpleNamespace which doesn't go hog-wild when you
-    print it. Contained values are abbreviated, and it tries to avoid
-    recursing into them.
+class ScriptNamespace(object):
+    """A container for user-accessible items in a script. This is basically
+    a script-safe equivalent of a module.
+
+    Note that to fetch an attribute, you call nmsp.get(key). But in script
+    code, you'd say "nmsp.foo" or "nmsp['foo']".
+    
+    Safe to print (as a str). Contained values are abbreviated, and it
+    tries to avoid recursing into them.
     """
+    def __init__(self, map):
+        self.map = dict(map)
+        
     def __repr__(self):
         ls = []
-        for (key, val) in self.__dict__.items():
+        for (key, val) in self.map.items():
             if type(val) is dict:
                 val = '{...}'
             elif isinstance(val, types.SimpleNamespace):
@@ -24,7 +32,13 @@ class QuietNamespace(types.SimpleNamespace):
                     val = val[:24] + '...'
             ls.append('%s=%s' % (key, val))
         ls = ', '.join(ls)
-        return '<namespace(%s)>' % (ls,)
+        return '<ScriptNamespace(%s)>' % (ls,)
+
+    def get(self, key):
+        return self.map[key]
+
+    def has(self, key):
+        return key in self.map
 
 class ScriptFunc:
     # As functions are defined with the @scriptfunc decorator, they are
@@ -115,10 +129,10 @@ def define_globals():
     
     # Add some stuff to it.
     map = dict(ScriptFunc.funcgroups['random'])
-    globmap['random'] = QuietNamespace(**map)
+    globmap['random'] = ScriptNamespace(map)
 
     # And that's our global namespace.
-    return QuietNamespace(**globmap)
+    return ScriptNamespace(globmap)
 
 
 # These symbols are actually keywords (in Python 3), but they come out of
@@ -189,8 +203,8 @@ def find_symbol(app, loctx, key, locals=None, dependencies=None):
         if res:
             return res['val']
 
-    if hasattr(app.global_symbol_table, key):
-        return getattr(app.global_symbol_table, key)
+    if app.global_symbol_table.has(key):
+        return app.global_symbol_table.get(key)
 
     raise SymbolError('Name "%s" is not found' % (key,))
 

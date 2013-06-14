@@ -24,6 +24,12 @@ class ExecRunawayException(Exception):
     """
     pass
 
+class ExecSandboxException(Exception):
+    """Raised when a script tries to access Python functionality that
+    we don't permit.
+    """
+    pass
+
 class ExecutionException(Exception):
     """Internal code-flow exceptions in the script interpreter.
     """

@@ -10,7 +10,7 @@ import motor
 
 import twcommon.misc
 from twcommon.excepts import MessageException, ErrorMessageException
-from twcommon.excepts import SymbolError, ExecRunawayException
+from twcommon.excepts import SymbolError, ExecRunawayException, ExecSandboxException
 from twcommon.misc import MAX_DESCLINE_LENGTH
 from two import interp
 import two.task
@@ -552,7 +552,11 @@ class EvalPropContext(object):
     @tornado.gen.coroutine
     def execcode_attribute(self, nod, depth):
         argument = yield self.execcode_expr(nod.value, depth)
-        return getattr(argument, nod.attr)
+        # The real getattr() is way too powerful to offer up.
+        key = nod.attr
+        if isinstance(argument, two.symbols.ScriptNamespace):
+            return argument.get(key)
+        raise ExecSandboxException('%s.%s: getattr not allowed' % (type(argument), key))
         
     @tornado.gen.coroutine
     def execcode_call(self, nod, depth):
@@ -729,6 +733,7 @@ class EvalPropContext(object):
         if len(nod.targets) != 1:
             raise NotImplementedError('Script assignment has more than one target')
         ### Make more complicated, for various l-values. But still opt-in.
+        ### No screwing up a QuietNamespace! Or ScriptFuncs!
         target = nod.targets[0]
         if type(target) != ast.Name:
             raise NotImplementedError('Script assignment is not a simple symbol')
