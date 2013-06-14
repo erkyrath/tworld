@@ -90,18 +90,27 @@ def define_globals():
 
     @scriptfunc('str', group='_')
     def global_str(object=''):
+        """The str constructor.
+        """
         return str(object)
 
     @scriptfunc('int', group='_')
     def global_int(x=0, base=10):
+        """The int constructor.
+        """
         return int(x, base=base)
 
     @scriptfunc('bool', group='_')
     def global_bool(x=False):
+        """The bool constructor.
+        """
         return bool(x)
 
     @scriptfunc('text', group='_')
     def global_text(object=''):
+        """Wrap a string as a {text} object, so that its markup will get
+        interpreted.
+        """
         return { 'type':'text', 'text':str(object) }
 
     @scriptfunc('event', group='_', yieldy=True)
@@ -129,9 +138,52 @@ def define_globals():
                 others = str(others)
                 
         yield ctx.perform_event(you, youeval, others, otherseval, depth=depth)
+
+    @scriptfunc('location', group='_', yieldy=True)
+    def global_location(obj=None):
+        """Create a LocationProxy.
+        - No argument: the current player's location
+        - String argument: the location with the given key
+        - Player argument: the location of the given player (if in the current world!)
+        """
+        if obj is None:
+            ctx = EvalPropContext.get_current_context()
+            if not ctx.uid:
+                raise Exception('No current player')
+            if not ctx.loctx.locid:
+                return None
+            return two.execute.LocationProxy(ctx.loctx.locid)
+        
+        if isinstance(obj, two.execute.PlayerProxy):
+            ctx = EvalPropContext.get_current_context()
+            res = yield motor.Op(ctx.app.mongodb.playstate.find_one,
+                                 {'_id':obj.uid},
+                                 {'iid':1, 'locid':1})
+            if not res:
+                raise Exception('No such player')
+            if res['iid'] != ctx.loctx.iid:
+                return None
+            return two.execute.LocationProxy(res['locid'])
+        
+        ctx = EvalPropContext.get_current_context()
+        if not ctx.loctx.wid:
+            raise Exception('No current world')
+        res = yield motor.Op(ctx.app.mongodb.locations.find_one,
+                             {'wid':ctx.loctx.wid, 'key':obj},
+                             {'_id':1})
+        if not res:
+            raise Exception('No such location: %s' % (obj,))
+        return two.execute.LocationProxy(res['_id'])
+
+    ### Maybe also "locations" as a magic object with lockeys as (yieldy)
+    ### attributes.
     
     @scriptfunc('player', group='_propmap')
     def global_player():
+        """Create a PlayerProxy for the current player.
+        This goes in the propmap group, meaning that the user will invoke
+        it as a property object: "_.player", no parens.
+        """
         ctx = EvalPropContext.get_current_context()
         if not ctx.uid:
             raise Exception('No current player')
@@ -139,6 +191,8 @@ def define_globals():
 
     @scriptfunc('choice', group='random')
     def global_random_choice(seq):
+        """Choose a random member of a list.
+        """
         return random.choice(seq)
 
     
