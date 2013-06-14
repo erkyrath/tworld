@@ -407,6 +407,8 @@ class EvalPropContext(object):
         if nodtyp is ast.Assign:
             res = yield self.execcode_assign(nod, depth)
             return res
+        if nodtyp is ast.Pass:
+            return None
         raise NotImplementedError('Script statement type not implemented: %s' % (nodtyp.__name__,))
 
     @tornado.gen.coroutine
