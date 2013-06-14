@@ -103,23 +103,33 @@ class World(object):
 
     def check_symbols_used(self):
         self.symbolsused = set()
-        all_interp_props = []
+        all_interptext_props = []
+        all_code_props = []
         for (key, propval) in self.props.items():
             if is_interp_text(propval):
-                all_interp_props.append( (propval['text'], None) )
+                all_interptext_props.append( (propval['text'], None) )
+            if is_code(propval):
+                all_code_props.append( (key, propval['text'], None) )
             if is_move(propval):
                 if propval['loc'] not in self.locations:
                     print('Warning: move prop "%s" in %s goes to undefined loc: %s' % (key, None, propval['loc']))
         for (lockey, loc) in self.locations.items():
             for (key, propval) in loc.props.items():
                 if is_interp_text(propval):
-                    all_interp_props.append( (propval['text'], lockey) )
+                    all_interptext_props.append( (propval['text'], lockey) )
+                if is_code(propval):
+                    all_code_props.append( (key, propval['text'], lockey) )
                 if is_move(propval):
                     if propval['loc'] not in self.locations:
                         print('Warning: move prop "%s" in %s goes to undefined loc: %s' %(key, lockey, propval['loc']))
             
+        for (key, text, lockey) in all_code_props:
+            try:
+                ast.parse(text, filename='%s.%s' % (lockey, key,))
+            except Exception as ex:
+                print('Warning: code prop "%s" in %s does not parse: %s' % (key, lockey, ex))
 
-        for (text, lockey) in all_interp_props:
+        for (text, lockey) in all_interptext_props:
             for nod in two.interp.parse(text):
                 if isinstance(nod, two.interp.Link):
                     self.symbolsused.add( (nod.target, lockey) )
@@ -161,11 +171,11 @@ def parse_world(filename):
         if not ln:
             break
         ln = ln.rstrip()
-        isindent = False
+        isindent = 0
         val = ln.lstrip()
         if len(val) < len(ln):
+            isindent = len(ln) - len(val)
             ln = val
-            isindent = True
             
         if not ln or ln.startswith('#'):
             continue
@@ -193,11 +203,11 @@ def parse_world(filename):
             if not curloc:
                 if curprop not in world.proplist:
                     world.proplist.append(curprop)
-                append_to_prop(world.props, curprop, ln)
+                append_to_prop(world.props, curprop, ln, indent=isindent)
             else:
                 if curprop not in curloc.proplist:
                     curloc.proplist.append(curprop)
-                append_to_prop(curloc.props, curprop, ln)
+                append_to_prop(curloc.props, curprop, ln, indent=isindent)
             continue
 
         key, dummy, val = ln.partition(':')
@@ -257,7 +267,7 @@ def parse_prop(prop):
             World.portlist_define_order += 1
             return {'type':'portlist', '_templist':[], '_temporder':order}
         
-        if not val:
+        if not val and key != 'code':
             error('%s must be followed by a value' % (key,))
             return None
         
@@ -300,7 +310,7 @@ def parse_prop(prop):
         
     return {'type':'text', 'text':prop}
 
-def append_to_prop(dic, key, ln):
+def append_to_prop(dic, key, ln, indent=0):
     val = dic.get(key, None)
     if not val:
         val = {'type':'text', 'text':ln}
@@ -323,8 +333,13 @@ def append_to_prop(dic, key, ln):
             val['_templist'].append(subls)
         else:
             val[subkey] = subval
+    elif type(val) is dict and val.get('type', None) == 'code':
+        if '_baseindent' not in val:
+            val['_baseindent'] = indent
+        indentstr = '  ' * (indent - val['_baseindent'])
+        val['text'] += ('\n' + indentstr + ln)
     elif type(val) is dict and 'text' in val:
-        # Covers {text}, {event}, {code}
+        # Covers {text}, {event}
         val['text'] += ('\n\n' + ln)
     elif type(val) is dict and val.get('type', None) == 'portal':
         val['text'] = ln
@@ -437,12 +452,22 @@ def prop_to_string(val):
             return val.replace('\n\n', '\n\t')
         return val
     if key == 'code':
-        return '*code %s' % (val['text'],)
+        text = val['text']
+        return '*code %s' % (repr(text),) ####
+        if '\n' not in text:
+            return '*code %s' % (text,)
+        else:
+            ls = [ '  '+val for val in text.split('\n') ]
+            text = '\n'.join(ls)
+            return '*code\n%s' % (text,)
     return repr(val)
 
 def is_interp_text(res):
     ### events also?
     return (type(res) is dict and res.get('type', None) == 'text')
+
+def is_code(res):
+    return (type(res) is dict and res.get('type', None) == 'code')
 
 def is_move(res):
     return (type(res) is dict and res.get('type', None) == 'move')
