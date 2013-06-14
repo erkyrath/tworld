@@ -425,6 +425,9 @@ class EvalPropContext(object):
         if nodtyp is ast.Attribute:
             res = yield self.execcode_attribute(nod, depth)
             return res
+        if nodtyp is ast.Call:
+            res = yield self.execcode_call(nod, depth)
+            return res
         raise NotImplementedError('Script expression type not implemented: %s' % (nodtyp.__name__,))
 
     @tornado.gen.coroutine
@@ -528,6 +531,33 @@ class EvalPropContext(object):
     def execcode_attribute(self, nod, depth):
         argument = yield self.execcode_expr(nod.value, depth)
         return getattr(argument, nod.attr)
+        
+    @tornado.gen.coroutine
+    def execcode_call(self, nod, depth):
+        funcval = yield self.execcode_expr(nod.func, depth)
+        args = []
+        for subnod in nod.args:
+            val = yield self.execcode_expr(subnod, depth)
+            args.append(val)
+        if nod.starargs:
+            starargs = yield self.execcode_expr(nod.starargs, depth)
+            args.extend(starargs)
+        kwargs = {}
+        for subnod in nod.keywords:
+            val = yield self.execcode_expr(subnod.value, depth)
+            kwargs[subnod.arg] = val
+        if nod.kwargs:
+            starargs = yield self.execcode_expr(nod.kwargs, depth)
+            kwargs.extend(starargs)
+        if isinstance(funcval, two.symbols.ScriptFunc):
+            if not funcval.yieldy:
+                return funcval.func(*args, **kwargs)
+            else:
+                res = yield funcval.yieldfunc(*args, **kwargs)
+                return res
+        ### Special case for {code} dicts...
+        # This will raise TypeError if funcval is not callable.
+        funcval(*args, **kwargs)
         
     @tornado.gen.coroutine
     def execcode_name(self, nod, depth, baresymbol=False):
