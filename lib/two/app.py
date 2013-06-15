@@ -15,7 +15,7 @@ import two.mongomgr
 import two.commands
 import two.symbols
 import two.task
-from two.execute import EvalPropContext
+from two.evalctx import EvalPropContext
 import twcommon.misc
 import twcommon.autoreload
 from twcommon import wcproto

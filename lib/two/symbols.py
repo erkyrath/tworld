@@ -286,7 +286,7 @@ def find_symbol(app, loctx, key, locals=None, dependencies=None):
     raise SymbolError('Name "%s" is not found' % (key,))
 
 
-# late import
+# Late imports, to avoid circularity
 from twcommon.misc import is_typed_dict
 import two.execute
-from two.execute import EvalPropContext
+from two.evalctx import EvalPropContext
