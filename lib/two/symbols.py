@@ -200,6 +200,7 @@ def define_globals():
     globmap = dict(ScriptFunc.funcgroups['_'])
     
     # Add some stuff to it.
+    globmap['realm'] = two.execute.RealmProxy()
     map = dict(ScriptFunc.funcgroups['random'])
     globmap['random'] = ScriptNamespace(map)
 

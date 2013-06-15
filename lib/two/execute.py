@@ -8,11 +8,30 @@ from twcommon.excepts import MessageException, ErrorMessageException
 from twcommon.misc import MAX_DESCLINE_LENGTH
 import two.task
 
-class PlayerProxy(object):
+class PropertyProxyMixin:
+    """Mix-in base class for an object which offers access to a bunch of
+    database entries, indexed by key.
+
+    Note that to fetch an attribute, you call proxy.getprop(app, loctx, key).
+    But in script code, you'd just say "proxy.foo" or "proxy['foo']". The
+    location information, which is necessary to make sense of the key,
+    comes from the script's context.
+    """
+    @tornado.gen.coroutine
+    def getprop(self, app, loctx, key):
+        raise NotImplementedError('getprop not implemented')
+    @tornado.gen.coroutine
+    def delprop(self, app, loctx, key):
+        raise NotImplementedError('delprop not implemented')
+    @tornado.gen.coroutine
+    def setprop(self, app, loctx, key, val):
+        raise NotImplementedError('setprop not implemented')
+
+class PlayerProxy(PropertyProxyMixin, object):
+    """Represents a player, in the script environment. The uid argument
+    must be an ObjectId.
+    """
     def __init__(self, uid):
-        """Represents a player, in the script environment. The uid argument
-        must be an ObjectId.
-        """
         self.uid = uid
     def __repr__(self):
         return '<PlayerProxy %s>' % (self.uid,)
@@ -25,11 +44,11 @@ class PlayerProxy(object):
     def __ne__(self, obj):
         return not self.__eq__(obj)
         
-class LocationProxy(object):
+class LocationProxy(PropertyProxyMixin, object):
+    """Represents a location, in the script environment. The uid argument
+    must be an ObjectId.
+    """
     def __init__(self, uid):
-        """Represents a location, in the script environment. The uid argument
-        must be an ObjectId.
-        """
         self.uid = uid
     def __repr__(self):
         return '<LocationProxy %s>' % (self.uid,)
@@ -42,6 +61,13 @@ class LocationProxy(object):
     def __ne__(self, obj):
         return not self.__eq__(obj)
         
+class RealmProxy(PropertyProxyMixin, object):
+    """Represents the realm-level properties, in the script environment.
+    There's only one of these, in the global namespace.
+    """
+    def __repr__(self):
+        return '<RealmProxy>'
+    
 
 @tornado.gen.coroutine
 def portal_in_reach(app, portal, uid, wid):
