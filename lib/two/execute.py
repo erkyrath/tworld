@@ -12,19 +12,19 @@ class PropertyProxyMixin:
     """Mix-in base class for an object which offers access to a bunch of
     database entries, indexed by key.
 
-    Note that to fetch an attribute, you call proxy.getprop(app, loctx, key).
+    Note that to fetch an attribute, you call proxy.getprop(ctx, loctx, key).
     But in script code, you'd just say "proxy.foo" or "proxy['foo']". The
     location information, which is necessary to make sense of the key,
     comes from the script's context.
     """
     @tornado.gen.coroutine
-    def getprop(self, app, loctx, key):
+    def getprop(self, ctx, loctx, key):
         raise NotImplementedError('getprop not implemented')
     @tornado.gen.coroutine
-    def delprop(self, app, loctx, key):
+    def delprop(self, ctx, loctx, key):
         raise NotImplementedError('delprop not implemented')
     @tornado.gen.coroutine
-    def setprop(self, app, loctx, key, val):
+    def setprop(self, ctx, loctx, key, val):
         raise NotImplementedError('setprop not implemented')
 
 class PlayerProxy(PropertyProxyMixin, object):
@@ -68,6 +68,56 @@ class RealmProxy(PropertyProxyMixin, object):
     def __repr__(self):
         return '<RealmProxy>'
     
+    @tornado.gen.coroutine
+    def getprop(self, ctx, loctx, key):
+        """Get a realm-level property. This checks both the instance
+        and world tables.
+        """
+        wid = loctx.wid
+        iid = loctx.iid
+        dependencies = ctx.dependencies
+        
+        if iid is not None:
+            if dependencies is not None:
+                dependencies.add(('instanceprop', iid, None, key))
+            res = yield motor.Op(ctx.app.mongodb.instanceprop.find_one,
+                                 {'iid':iid, 'locid':None, 'key':key},
+                                 {'val':1})
+            if res:
+                return res['val']
+    
+        if True:
+            if dependencies is not None:
+                dependencies.add(('worldprop', wid, None, key))
+            res = yield motor.Op(ctx.app.mongodb.worldprop.find_one,
+                                 {'wid':wid, 'locid':None, 'key':key},
+                                 {'val':1})
+            if res:
+                return res['val']
+
+        raise AttributeError('Realm property "%s" is not found' % (key,))
+        
+    @tornado.gen.coroutine
+    def delprop(self, ctx, loctx, key):
+        """Delete a realm-level instance property, if present.
+        """
+        iid = loctx.iid
+        locid = None
+        yield motor.Op(ctx.app.mongodb.instanceprop.remove,
+                       {'iid':iid, 'locid':locid, 'key':key})
+        self.changeset.add( ('instanceprop', iid, locid, key) )
+
+    @tornado.gen.coroutine
+    def setprop(self, ctx, loctx, key, val):
+        """Set a realm-level instance property.
+        """
+        iid = loctx.iid
+        locid = None
+        yield motor.Op(self.app.mongodb.instanceprop.update,
+                       {'iid':iid, 'locid':locid, 'key':key},
+                       {'iid':iid, 'locid':locid, 'key':key, 'val':val},
+                       upsert=True)
+        self.changeset.add( ('instanceprop', iid, locid, key) )
 
 @tornado.gen.coroutine
 def portal_in_reach(app, portal, uid, wid):

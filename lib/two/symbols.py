@@ -230,6 +230,8 @@ def find_symbol(app, loctx, key, locals=None, dependencies=None):
     - realm-level instance properties
     - realm-level world properties
     - builtins
+    ### We could change the first argument to ctx and take the dependencies
+    ### from there, though.
     """
     # Special cases
     if key == '_':
