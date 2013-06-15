@@ -17,6 +17,7 @@ import sys
 import os
 import datetime
 import ast
+import keyword
 
 import bson
 from bson.objectid import ObjectId
@@ -106,6 +107,8 @@ class World(object):
         all_interptext_props = []
         all_code_props = []
         for (key, propval) in self.props.items():
+            if keyword.iskeyword(key):
+                print('Warning: prop "%s" in %s is a keyword' % (key, None))
             if is_interp_text(propval):
                 all_interptext_props.append( (propval['text'], None) )
             if is_code(propval):
@@ -115,6 +118,8 @@ class World(object):
                     print('Warning: move prop "%s" in %s goes to undefined loc: %s' % (key, None, propval['loc']))
         for (lockey, loc) in self.locations.items():
             for (key, propval) in loc.props.items():
+                if keyword.iskeyword(key):
+                    print('Warning: prop "%s" in %s is a keyword' % (key, lockey))
                 if is_interp_text(propval):
                     all_interptext_props.append( (propval['text'], lockey) )
                 if is_code(propval):
