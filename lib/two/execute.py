@@ -45,18 +45,18 @@ class PlayerProxy(PropertyProxyMixin, object):
         return not self.__eq__(obj)
         
 class LocationProxy(PropertyProxyMixin, object):
-    """Represents a location, in the script environment. The uid argument
+    """Represents a location, in the script environment. The locid argument
     must be an ObjectId.
     """
-    def __init__(self, uid):
-        self.uid = uid
+    def __init__(self, locid):
+        self.locid = locid
     def __repr__(self):
-        return '<LocationProxy %s>' % (self.uid,)
+        return '<LocationProxy %s>' % (self.locid,)
     def __eq__(self, other):
         if isinstance(other, LocationProxy):
-            return (self.uid == other.uid)
+            return (self.locid == other.locid)
         if isinstance(other, ObjectId):
-            return (self.uid == other)
+            return (self.locid == other)
         return False
     def __ne__(self, obj):
         return not self.__eq__(obj)
