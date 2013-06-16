@@ -129,6 +129,12 @@ db.worldprop.create_index([('wid', pymongo.ASCENDING), ('locid', pymongo.ASCENDI
 # Compound index
 db.instanceprop.create_index([('iid', pymongo.ASCENDING), ('locid', pymongo.ASCENDING), ('key', pymongo.ASCENDING)], unique=True)
 
+# Compound index
+db.wplayerprop.create_index([('wid', pymongo.ASCENDING), ('uid', pymongo.ASCENDING), ('key', pymongo.ASCENDING)], unique=True)
+
+# Compound index
+db.iplayerprop.create_index([('iid', pymongo.ASCENDING), ('uid', pymongo.ASCENDING), ('key', pymongo.ASCENDING)], unique=True)
+
 # Sparse indexes
 db.portals.create_index('inwid', sparse=True)
 db.portals.create_index('plistid', sparse=True)
