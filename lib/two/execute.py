@@ -19,13 +19,13 @@ class PropertyProxyMixin:
     """
     @tornado.gen.coroutine
     def getprop(self, ctx, loctx, key):
-        raise NotImplementedError('getprop not implemented')
+        raise NotImplementedError('%s: getprop not implemented' % (self,))
     @tornado.gen.coroutine
     def delprop(self, ctx, loctx, key):
-        raise NotImplementedError('delprop not implemented')
+        raise NotImplementedError('%s: delprop not implemented' % (self,))
     @tornado.gen.coroutine
     def setprop(self, ctx, loctx, key, val):
-        raise NotImplementedError('setprop not implemented')
+        raise NotImplementedError('%s: setprop not implemented' % (self,))
 
 class PlayerProxy(PropertyProxyMixin, object):
     """Represents a player, in the script environment. The uid argument
