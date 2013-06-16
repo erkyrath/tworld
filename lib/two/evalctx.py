@@ -528,13 +528,13 @@ class EvalPropContext(object):
         assert len(nod.values) > 0
         if optyp is ast.And:
             for subnod in nod.values:
-                val = yield self.execcode_expr(subnod)
+                val = yield self.execcode_expr(subnod, depth)
                 if not val:
                     return val
             return val
         if optyp is ast.Or:
             for subnod in nod.values:
-                val = yield self.execcode_expr(subnod)
+                val = yield self.execcode_expr(subnod, depth)
                 if val:
                     return val
             return val
