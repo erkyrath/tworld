@@ -44,7 +44,63 @@ class PlayerProxy(PropertyProxyMixin, object):
         return False
     def __ne__(self, obj):
         return not self.__eq__(obj)
+
+    @tornado.gen.coroutine
+    def getprop(self, ctx, loctx, key):
+        """Get a player property. This checks both the instance and world
+        tables.
+        """
+        wid = loctx.wid
+        iid = loctx.iid
+        uid = self.uid
+        dependencies = ctx.dependencies
         
+        if iid is not None:
+            if dependencies is not None:
+                dependencies.add(('iplayerprop', iid, uid, key))
+            res = yield motor.Op(ctx.app.mongodb.iplayerprop.find_one,
+                                 {'iid':iid, 'uid':uid, 'key':key},
+                                 {'val':1})
+            if res:
+                return res['val']
+    
+        if True:
+            if dependencies is not None:
+                dependencies.add(('wplayerprop', wid, uid, key))
+            res = yield motor.Op(ctx.app.mongodb.wplayerprop.find_one,
+                                 {'wid':wid, 'uid':uid, 'key':key},
+                                 {'val':1})
+            if res:
+                return res['val']
+
+        raise AttributeError('Player property "%s" is not found' % (key,))
+        
+    @tornado.gen.coroutine
+    def delprop(self, ctx, loctx, key):
+        """Delete a player instance property, if present.
+        """
+        if ctx.level != LEVEL_EXECUTE:
+            raise Exception('Properties may only be deleted in action code')
+        iid = loctx.iid
+        uid = self.uid
+        yield motor.Op(ctx.app.mongodb.iplayerprop.remove,
+                       {'iid':iid, 'uid':uid, 'key':key})
+        ctx.changeset.add( ('iplayerprop', iid, uid, key) )
+
+    @tornado.gen.coroutine
+    def setprop(self, ctx, loctx, key, val):
+        """Set a player instance property.
+        """
+        if ctx.level != LEVEL_EXECUTE:
+            raise Exception('Properties may only be set in action code')
+        iid = loctx.iid
+        uid = self.uid
+        yield motor.Op(ctx.app.mongodb.iplayerprop.update,
+                       {'iid':iid, 'uid':uid, 'key':key},
+                       {'iid':iid, 'uid':uid, 'key':key, 'val':val},
+                       upsert=True)
+        ctx.changeset.add( ('iplayerprop', iid, uid, key) )
+
 class LocationProxy(PropertyProxyMixin, object):
     """Represents a location, in the script environment. The locid argument
     must be an ObjectId.
@@ -89,7 +145,7 @@ class LocationProxy(PropertyProxyMixin, object):
             if res:
                 return res['val']
 
-        raise AttributeError('Realm property "%s" is not found' % (key,))
+        raise AttributeError('Property "%s" is not found' % (key,))
         
     @tornado.gen.coroutine
     def delprop(self, ctx, loctx, key):
