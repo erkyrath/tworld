@@ -160,7 +160,7 @@ def define_globals():
                                  {'_id':obj.uid},
                                  {'iid':1, 'locid':1})
             if not res:
-                raise Exception('No such player')
+                raise KeyError('No such player')
             if res['iid'] != ctx.loctx.iid:
                 return None
             return two.execute.LocationProxy(res['locid'])
@@ -172,7 +172,7 @@ def define_globals():
                              {'wid':ctx.loctx.wid, 'key':obj},
                              {'_id':1})
         if not res:
-            raise Exception('No such location: %s' % (obj,))
+            raise KeyError('No such location: %s' % (obj,))
         return two.execute.LocationProxy(res['_id'])
 
     ### Maybe also "locations" as a magic object with lockeys as (yieldy)

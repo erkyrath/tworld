@@ -60,6 +60,61 @@ class LocationProxy(PropertyProxyMixin, object):
         return False
     def __ne__(self, obj):
         return not self.__eq__(obj)
+    
+    @tornado.gen.coroutine
+    def getprop(self, ctx, loctx, key):
+        """Get a property. This checks both the instance and world tables.
+        """
+        wid = loctx.wid
+        iid = loctx.iid
+        locid = self.locid
+        dependencies = ctx.dependencies
+        
+        if iid is not None:
+            if dependencies is not None:
+                dependencies.add(('instanceprop', iid, locid, key))
+            res = yield motor.Op(ctx.app.mongodb.instanceprop.find_one,
+                                 {'iid':iid, 'locid':locid, 'key':key},
+                                 {'val':1})
+            if res:
+                return res['val']
+    
+        if True:
+            if dependencies is not None:
+                dependencies.add(('worldprop', wid, locid, key))
+            res = yield motor.Op(ctx.app.mongodb.worldprop.find_one,
+                                 {'wid':wid, 'locid':locid, 'key':key},
+                                 {'val':1})
+            if res:
+                return res['val']
+
+        raise AttributeError('Realm property "%s" is not found' % (key,))
+        
+    @tornado.gen.coroutine
+    def delprop(self, ctx, loctx, key):
+        """Delete an instance property, if present.
+        """
+        if ctx.level != LEVEL_EXECUTE:
+            raise Exception('Properties may only be deleted in action code')
+        iid = loctx.iid
+        locid = self.locid
+        yield motor.Op(ctx.app.mongodb.instanceprop.remove,
+                       {'iid':iid, 'locid':locid, 'key':key})
+        ctx.changeset.add( ('instanceprop', iid, locid, key) )
+
+    @tornado.gen.coroutine
+    def setprop(self, ctx, loctx, key, val):
+        """Set an instance property.
+        """
+        if ctx.level != LEVEL_EXECUTE:
+            raise Exception('Properties may only be set in action code')
+        iid = loctx.iid
+        locid = self.locid
+        yield motor.Op(ctx.app.mongodb.instanceprop.update,
+                       {'iid':iid, 'locid':locid, 'key':key},
+                       {'iid':iid, 'locid':locid, 'key':key, 'val':val},
+                       upsert=True)
+        ctx.changeset.add( ('instanceprop', iid, locid, key) )
         
 class RealmProxy(PropertyProxyMixin, object):
     """Represents the realm-level properties, in the script environment.
@@ -75,22 +130,23 @@ class RealmProxy(PropertyProxyMixin, object):
         """
         wid = loctx.wid
         iid = loctx.iid
+        locid = None
         dependencies = ctx.dependencies
         
         if iid is not None:
             if dependencies is not None:
-                dependencies.add(('instanceprop', iid, None, key))
+                dependencies.add(('instanceprop', iid, locid, key))
             res = yield motor.Op(ctx.app.mongodb.instanceprop.find_one,
-                                 {'iid':iid, 'locid':None, 'key':key},
+                                 {'iid':iid, 'locid':locid, 'key':key},
                                  {'val':1})
             if res:
                 return res['val']
     
         if True:
             if dependencies is not None:
-                dependencies.add(('worldprop', wid, None, key))
+                dependencies.add(('worldprop', wid, locid, key))
             res = yield motor.Op(ctx.app.mongodb.worldprop.find_one,
-                                 {'wid':wid, 'locid':None, 'key':key},
+                                 {'wid':wid, 'locid':locid, 'key':key},
                                  {'val':1})
             if res:
                 return res['val']
