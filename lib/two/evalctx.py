@@ -428,7 +428,7 @@ class EvalPropContext(object):
             key = nod.attr
             if isinstance(argument, two.execute.PropertyProxyMixin):
                 return two.execute.BoundPropertyProxy(argument, key)
-            raise ExecSandboxException('%s.%s: setattr not allowed' % (type(argument), key))
+            raise ExecSandboxException('%s.%s: setattr not allowed' % (type(argument).__name__, key))
         raise NotImplementedError('Script store-expression type not implemented: %s' % (nodtyp.__name__,))
         
         
@@ -577,7 +577,7 @@ class EvalPropContext(object):
         if isinstance(argument, two.execute.PropertyProxyMixin):
             res = yield argument.getprop(self, self.loctx, key)
             return res
-        raise ExecSandboxException('%s.%s: getattr not allowed' % (type(argument), key))
+        raise ExecSandboxException('%s.%s: getattr not allowed' % (type(argument).__name__, key))
         
     @tornado.gen.coroutine
     def execcode_call(self, nod, depth):
