@@ -541,6 +541,8 @@ def perform_action(task, cmd, conn, target):
         
         if restype == 'editstr':
             key = target[1]
+            text = target[2]
+            otext = target[3]
             val = getattr(cmd, 'val', None)
             if val is None:
                 raise ErrorMessageException('No value given for editstr.')
@@ -554,6 +556,15 @@ def perform_action(task, cmd, conn, target):
                            {'iid':iid, 'locid':locid, 'key':key, 'val':val},
                            upsert=True)
             task.set_data_change( ('instanceprop', iid, locid, key) )
+            if text is not None:
+                ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_MESSAGE)
+                val = yield ctx.eval(text, evaltype=EVALTYPE_TEXT)
+                task.write_event(uid, val)
+            if otext is not None:
+                others = yield task.find_locale_players(notself=True)
+                ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_MESSAGE)
+                val = yield ctx.eval(otext, evaltype=EVALTYPE_TEXT)
+                task.write_event(others, val)
             return
             
         if restype == 'copyportal':

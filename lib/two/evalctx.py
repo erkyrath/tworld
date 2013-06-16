@@ -239,7 +239,7 @@ class EvalPropContext(object):
             assert self.accum is not None, 'EvalPropContext.accum should not be None here'
             try:
                 extratext = None
-                val = res.get('text', None)
+                val = res.get('label', None)
                 if val:
                     # Look up the extra text in a separate context.
                     ctx = EvalPropContext(self.task, parent=self, depth=1, level=LEVEL_DISPLAY)
@@ -247,7 +247,7 @@ class EvalPropContext(object):
                     self.updateacdepends(ctx)
                 # Look up the current symbol value.
                 editkey = 'editstr' + EvalPropContext.build_action_key()
-                self.linktargets[editkey] = ('editstr', res['key'])
+                self.linktargets[editkey] = ('editstr', res['key'], res.get('text', None), res.get('otext', None))
                 ctx = EvalPropContext(self.task, parent=self, depth=1, level=LEVEL_FLAT)
                 curvalue = yield ctx.eval(res['key'])
                 specres = ['editstr',
