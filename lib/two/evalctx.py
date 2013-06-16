@@ -428,6 +428,7 @@ class EvalPropContext(object):
             key = nod.attr
             if isinstance(argument, two.execute.PropertyProxyMixin):
                 return two.execute.BoundPropertyProxy(argument, key)
+            raise ExecSandboxException('%s.%s: setattr not allowed' % (type(argument), key))
         raise NotImplementedError('Script store-expression type not implemented: %s' % (nodtyp.__name__,))
         
         
