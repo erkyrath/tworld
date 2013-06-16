@@ -101,24 +101,98 @@ class RealmProxy(PropertyProxyMixin, object):
     def delprop(self, ctx, loctx, key):
         """Delete a realm-level instance property, if present.
         """
+        if ctx.level != LEVEL_EXECUTE:
+            raise Exception('Properties may only be deleted in action code')
         iid = loctx.iid
         locid = None
         yield motor.Op(ctx.app.mongodb.instanceprop.remove,
                        {'iid':iid, 'locid':locid, 'key':key})
-        self.changeset.add( ('instanceprop', iid, locid, key) )
+        ctx.changeset.add( ('instanceprop', iid, locid, key) )
 
     @tornado.gen.coroutine
     def setprop(self, ctx, loctx, key, val):
         """Set a realm-level instance property.
         """
+        if ctx.level != LEVEL_EXECUTE:
+            raise Exception('Properties may only be set in action code')
         iid = loctx.iid
         locid = None
-        yield motor.Op(self.app.mongodb.instanceprop.update,
+        yield motor.Op(ctx.app.mongodb.instanceprop.update,
                        {'iid':iid, 'locid':locid, 'key':key},
                        {'iid':iid, 'locid':locid, 'key':key, 'val':val},
                        upsert=True)
-        self.changeset.add( ('instanceprop', iid, locid, key) )
+        ctx.changeset.add( ('instanceprop', iid, locid, key) )
 
+
+class BoundPropertyProxy(object):
+    """Wrapper to convert a PropertyProxyMixin to a load/delete/store
+    object for a particular key.
+
+    In other words, if you have a LocationProxy for a location, and you
+    want a proxy to set, get, or delete loc.prop, you construct
+    BoundPropertyProxy(loc, 'prop').
+    """
+    def __init__(self, proxy, key):
+        self.proxy = proxy
+        self.key = key
+    @tornado.gen.coroutine
+    def load(self, ctx, loctx, val):
+        res = yield self.proxy.getprop(ctx, loctx, self.key, val)
+        return res
+    @tornado.gen.coroutine
+    def delete(self, ctx, loctx):
+        yield self.proxy.delprop(ctx, loctx, self.key)
+    @tornado.gen.coroutine
+    def store(self, ctx, loctx, val):
+        yield self.proxy.setprop(ctx, loctx, self.key, val)
+
+class BoundNameProxy(object):
+    """A load/delete/store object for a particular symbol.
+
+    That is, BoundNameProxy('name') has methods to set, get, or delete
+    the "name" symbol (in a given location context). This respects all
+    the wacky rules: '_' is always the global context, 'name' may be
+    found at the realm level or in the world definition, etc.
+    """
+    
+    def __init__(self, key):
+        self.key = key
+        
+    @tornado.gen.coroutine
+    def load(self, ctx, loctx, val):
+        ### locals?
+        res = yield two.symbols.find_symbol(ctx.app, loctx, self.key, dependencies=ctx.dependencies)
+        return res
+    
+    @tornado.gen.coroutine
+    def delete(self, ctx, loctx):
+        if ctx.level != LEVEL_EXECUTE:
+            raise Exception('Properties may only be deleted in action code')
+        iid = loctx.iid
+        locid = loctx.locid
+        yield motor.Op(ctx.app.mongodb.instanceprop.remove,
+                       {'iid':iid, 'locid':locid, 'key':self.key})
+        ctx.changeset.add( ('instanceprop', iid, locid, self.key) )
+    
+    @tornado.gen.coroutine
+    def store(self, ctx, loctx, val):
+        if self.key == '_':
+            # Assignment to _ is silently dropped, to sort-of support
+            # Python idiom.
+            return
+        ### locals?
+        if ctx.level != LEVEL_EXECUTE:
+            raise Exception('Properties may only be set in action code')
+        iid = loctx.iid
+        locid = loctx.locid
+        yield motor.Op(ctx.app.mongodb.instanceprop.update,
+                       {'iid':iid, 'locid':locid, 'key':self.key},
+                       {'iid':iid, 'locid':locid, 'key':self.key, 'val':val},
+                       upsert=True)
+        ctx.changeset.add( ('instanceprop', iid, locid, self.key) )
+
+
+    
 @tornado.gen.coroutine
 def portal_in_reach(app, portal, uid, wid):
     """Make sure that a portal (object) is reachable by the player (uid)

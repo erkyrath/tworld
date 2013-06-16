@@ -413,6 +413,25 @@ class EvalPropContext(object):
         raise NotImplementedError('Script statement type not implemented: %s' % (nodtyp.__name__,))
 
     @tornado.gen.coroutine
+    def execcode_expr_store(self, nod, depth):
+        """Does not evaluate a complete expression. Instead, returns a
+        wrapper object with store() and delete() methods.
+        (The ast node lets us know whether store or delete is coming up,
+        but the way our proxies work, we don't much care.)
+        """
+        assert type(nod.ctx) is not ast.Load, 'target of assignment has Load context'
+        nodtyp = type(nod)
+        if nodtyp is ast.Name:
+            return two.execute.BoundNameProxy(nod.id)
+        if nodtyp is ast.Attribute:
+            argument = yield self.execcode_expr(nod.value, depth)
+            key = nod.attr
+            if isinstance(argument, two.execute.PropertyProxyMixin):
+                return two.execute.BoundPropertyProxy(argument, key)
+        raise NotImplementedError('Script store-expression type not implemented: %s' % (nodtyp.__name__,))
+        
+        
+    @tornado.gen.coroutine
     def execcode_expr(self, nod, depth, baresymbol=False):
         self.task.tick()
         nodtyp = type(nod)
@@ -550,8 +569,8 @@ class EvalPropContext(object):
     @tornado.gen.coroutine
     def execcode_attribute(self, nod, depth):
         argument = yield self.execcode_expr(nod.value, depth)
-        # The real getattr() is way too powerful to offer up.
         key = nod.attr
+        # The real getattr() is way too powerful to offer up.
         if isinstance(argument, two.symbols.ScriptNamespace):
             return argument.get(key)
         raise ExecSandboxException('%s.%s: getattr not allowed' % (type(argument), key))
@@ -730,31 +749,10 @@ class EvalPropContext(object):
     def execcode_assign(self, nod, depth):
         if len(nod.targets) != 1:
             raise NotImplementedError('Script assignment has more than one target')
-        ### Make more complicated, for various l-values. But still opt-in.
-        ### No screwing up a QuietNamespace! Or ScriptFuncs!
-        target = nod.targets[0]
-        if type(target) != ast.Name:
-            raise NotImplementedError('Script assignment is not a simple symbol')
-        key = target.id
+        target = yield self.execcode_expr_store(nod.targets[0], depth)
         val = yield self.execcode_expr(nod.value, depth)
-        self.task.log.debug('### executing assignment: %s = %s', key, repr(val))
 
-        if key == '_':
-            # Assignment to _ is silently dropped, to sort-of support
-            # Python idiom.
-            return None
-        
-        if self.level != LEVEL_EXECUTE:
-            raise Exception('Properties may only be set in action code')
-        
-        iid = self.loctx.iid
-        locid = self.loctx.locid
-        yield motor.Op(self.app.mongodb.instanceprop.update,
-                       {'iid':iid, 'locid':locid, 'key':key},
-                       {'iid':iid, 'locid':locid, 'key':key, 'val':val},
-                       upsert=True)
-        self.changeset.add( ('instanceprop', iid, locid, key) )
-
+        yield target.store(self, self.loctx, val)
         return None
 
     @tornado.gen.coroutine
