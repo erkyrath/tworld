@@ -405,6 +405,9 @@ class EvalPropContext(object):
         if nodtyp is ast.Assign:
             res = yield self.execcode_assign(nod, depth)
             return res
+        if nodtyp is ast.Delete:
+            res = yield self.execcode_delete(nod, depth)
+            return res
         if nodtyp is ast.If:
             res = yield self.execcode_if(nod, depth)
             return None
@@ -416,7 +419,7 @@ class EvalPropContext(object):
     def execcode_expr_store(self, nod, depth):
         """Does not evaluate a complete expression. Instead, returns a
         wrapper object with store() and delete() methods.
-        (The ast node lets us know whether store or delete is coming up,
+        (The nod.ctx lets us know whether store or delete is coming up,
         but the way our proxies work, we don't much care.)
         """
         assert type(nod.ctx) is not ast.Load, 'target of assignment has Load context'
@@ -757,6 +760,13 @@ class EvalPropContext(object):
         val = yield self.execcode_expr(nod.value, depth)
 
         yield target.store(self, self.loctx, val)
+        return None
+
+    @tornado.gen.coroutine
+    def execcode_delete(self, nod, depth):
+        for subnod in nod.targets:
+            target = yield self.execcode_expr_store(subnod, depth)
+            yield target.delete(self, self.loctx)
         return None
 
     @tornado.gen.coroutine

@@ -219,6 +219,9 @@ immutable_symbol_table = {
     'True': True, 'False': False, 'None': None,
     }
 
+def is_immutable_symbol(val):
+    return (val in immutable_symbol_table)
+
 @tornado.gen.coroutine
 def find_symbol(app, loctx, key, locals=None, dependencies=None):
     """Look up a symbol, using the universal laws of symbol-looking-up.

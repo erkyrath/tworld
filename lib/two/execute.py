@@ -222,6 +222,8 @@ class BoundNameProxy(object):
     
     @tornado.gen.coroutine
     def delete(self, ctx, loctx):
+        if self.key == '_' or two.symbols.is_immutable_symbol(self.key):
+            raise Exception('Cannot delete keyword "%s"' % (self.key,))
         if ctx.level != LEVEL_EXECUTE:
             raise Exception('Properties may only be deleted in action code')
         iid = loctx.iid
@@ -236,6 +238,8 @@ class BoundNameProxy(object):
             # Assignment to _ is silently dropped, to sort-of support
             # Python idiom.
             return
+        if two.symbols.is_immutable_symbol(self.key):
+            raise Exception('Cannot delete keyword "%s"' % (self.key,))
         ### locals?
         if ctx.level != LEVEL_EXECUTE:
             raise Exception('Properties may only be set in action code')
