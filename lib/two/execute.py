@@ -5,6 +5,7 @@ from bson.objectid import ObjectId
 import motor
 
 from twcommon.excepts import MessageException, ErrorMessageException
+from twcommon.excepts import SymbolError, ExecRunawayException, ExecSandboxException
 from twcommon.misc import MAX_DESCLINE_LENGTH
 import two.task
 
@@ -192,8 +193,8 @@ class BoundPropertyProxy(object):
         self.proxy = proxy
         self.key = key
     @tornado.gen.coroutine
-    def load(self, ctx, loctx, val):
-        res = yield self.proxy.getprop(ctx, loctx, self.key, val)
+    def load(self, ctx, loctx):
+        res = yield self.proxy.getprop(ctx, loctx, self.key)
         return res
     @tornado.gen.coroutine
     def delete(self, ctx, loctx):
@@ -215,7 +216,7 @@ class BoundNameProxy(object):
         self.key = key
         
     @tornado.gen.coroutine
-    def load(self, ctx, loctx, val):
+    def load(self, ctx, loctx):
         ### locals?
         res = yield two.symbols.find_symbol(ctx.app, loctx, self.key, dependencies=ctx.dependencies)
         return res
@@ -251,7 +252,31 @@ class BoundNameProxy(object):
                        upsert=True)
         ctx.changeset.add( ('instanceprop', iid, locid, self.key) )
 
+class WorldLocationsProxy(PropertyProxyMixin, object):
+    """Represents the collection of locations (in the current world).
+    Has read-only properties, since you can't invent new locations or
+    destroy them on the fly.
+    There's only one of these, in the global namespace.
+    """
+    def __repr__(self):
+        return '<WorldLocationsProxy>'
+    
+    @tornado.gen.coroutine
+    def getprop(self, ctx, loctx, key):
+        res = yield motor.Op(ctx.app.mongodb.locations.find_one,
+                             {'wid':loctx.wid, 'key':key},
+                             {'_id':1})
+        if not res:
+            raise KeyError('No such location: %s' % (key,))
+        return LocationProxy(res['_id'])
 
+    @tornado.gen.coroutine
+    def delprop(self, ctx, loctx, key):
+        raise ExecSandboxException('%s.%s: locations cannot be deleted' % (type(self).__name__, key))
+    
+    @tornado.gen.coroutine
+    def setprop(self, ctx, loctx, key, val):
+        raise ExecSandboxException('%s.%s: locations cannot be assigned' % (type(self).__name__, key))
     
 @tornado.gen.coroutine
 def portal_in_reach(app, portal, uid, wid):

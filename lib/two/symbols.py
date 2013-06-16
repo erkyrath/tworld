@@ -175,9 +175,6 @@ def define_globals():
             raise KeyError('No such location: %s' % (obj,))
         return two.execute.LocationProxy(res['_id'])
 
-    ### Maybe also "locations" as a magic object with lockeys as (yieldy)
-    ### attributes.
-    
     @scriptfunc('player', group='_propmap')
     def global_player():
         """Create a PlayerProxy for the current player.
@@ -201,6 +198,7 @@ def define_globals():
     
     # Add some stuff to it.
     globmap['realm'] = two.execute.RealmProxy()
+    globmap['locations'] = two.execute.WorldLocationsProxy()
     map = dict(ScriptFunc.funcgroups['random'])
     globmap['random'] = ScriptNamespace(map)
 
