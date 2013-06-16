@@ -573,6 +573,9 @@ class EvalPropContext(object):
         # The real getattr() is way too powerful to offer up.
         if isinstance(argument, two.symbols.ScriptNamespace):
             return argument.get(key)
+        if isinstance(argument, two.execute.PropertyProxyMixin):
+            res = yield argument.getprop(self, self.loctx, key)
+            return res
         raise ExecSandboxException('%s.%s: getattr not allowed' % (type(argument), key))
         
     @tornado.gen.coroutine
@@ -866,7 +869,9 @@ class EvalPropContext(object):
             if nodkey == 'Interpolate':
                 try:
                     subres = yield self.evalobj(nod.expr, evaltype=EVALTYPE_CODE, depth=depth+1)
-                except SymbolError:
+                except LookupError: # includes SymbolError:
+                    continue
+                except AttributeError:
                     continue
                 # {text} objects have already added their contents to
                 # the accum array.
