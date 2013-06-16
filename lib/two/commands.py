@@ -399,6 +399,8 @@ def define_commands():
             lockey, dummy, key = key.partition('.')
             if not lockey:
                 locid = None
+            elif lockey == '@':
+                locid = '@'
             else:
                 location = yield motor.Op(app.mongodb.locations.find_one,
                                           {'wid':wid, 'key':lockey},
@@ -406,6 +408,16 @@ def define_commands():
                 if not location:
                     raise ErrorMessageException('No such location: %s' % (lockey,))
                 locid = location['_id']
+        if locid == '@':
+            res = yield motor.Op(app.mongodb.iplayerprop.find_one,
+                             {'iid':iid, 'uid':conn.uid, 'key':key})
+            if res:
+                raise MessageException('Player instance property: %s = %s' % (key, repr(res['val'])))
+            res = yield motor.Op(app.mongodb.wplayerprop.find_one,
+                                 {'wid':wid, 'uid':conn.uid, 'key':key})
+            if res:
+                raise MessageException('Player world property: %s = %s' % (key, repr(res['val'])))
+            raise MessageException('Player instance/world property not set: %s' % (key,))
         res = yield motor.Op(app.mongodb.instanceprop.find_one,
                              {'iid':iid, 'locid':locid, 'key':key})
         if res:
@@ -437,6 +449,8 @@ def define_commands():
             lockey, dummy, key = key.partition('.')
             if not lockey:
                 locid = None
+            elif lockey == '@':
+                locid = '@'
             else:
                 location = yield motor.Op(app.mongodb.locations.find_one,
                                           {'wid':wid, 'key':lockey},
@@ -444,6 +458,15 @@ def define_commands():
                 if not location:
                     raise ErrorMessageException('No such location: %s' % (lockey,))
                 locid = location['_id']
+        if locid == '@':
+            res = yield motor.Op(app.mongodb.iplayerprop.find_one,
+                             {'iid':iid, 'uid':conn.uid, 'key':key})
+            if not res:
+                raise MessageException('Player instance property not set: %s' % (key,))
+            yield motor.Op(app.mongodb.iplayerprop.remove,
+                       {'iid':iid, 'uid':conn.uid, 'key':key})
+            task.set_data_change( ('iplayerprop', iid, conn.uid, key) )
+            raise MessageException('Player instance property deleted: %s' % (key,))
         res = yield motor.Op(app.mongodb.instanceprop.find_one,
                              {'iid':iid, 'locid':locid, 'key':key})
         if not res:
@@ -482,6 +505,8 @@ def define_commands():
             lockey, dummy, key = key.partition('.')
             if not lockey:
                 locid = None
+            elif lockey == '@':
+                locid = '@'
             else:
                 location = yield motor.Op(app.mongodb.locations.find_one,
                                           {'wid':wid, 'key':lockey},
@@ -492,6 +517,13 @@ def define_commands():
         if not key.isidentifier():
             ### Permits Unicode identifiers, but whatever
             raise ErrorMessageException('Symbol assignment to invalid key: %s' % (key,))
+        if locid == '@':
+            yield motor.Op(app.mongodb.iplayerprop.update,
+                       {'iid':iid, 'uid':conn.uid, 'key':key},
+                       {'iid':iid, 'uid':conn.uid, 'key':key, 'val':newval},
+                       upsert=True)
+            task.set_data_change( ('iplayerprop', iid, conn.uid, key) )
+            raise MessageException('Player instance property set: %s = %s' % (key, repr(newval)))            
         yield motor.Op(app.mongodb.instanceprop.update,
                        {'iid':iid, 'locid':locid, 'key':key},
                        {'iid':iid, 'locid':locid, 'key':key, 'val':newval},
