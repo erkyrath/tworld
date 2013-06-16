@@ -139,6 +139,55 @@ def define_globals():
                 
         yield ctx.perform_event(you, youeval, others, otherseval, depth=depth)
 
+    @scriptfunc('move', group='_', yieldy=True)
+    def global_move(dest, you=None, oleave=None, oarrive=None):
+        """Move the player to another location in the same world, like {move}.
+        The first argument must be a location or location key. The rest
+        of the arguments must be string or {text}; they are messages displayed
+        for the player and other players.
+        """
+        ctx = EvalPropContext.get_current_context()
+        depth = ctx.depthatcall
+        
+        if isinstance(dest, two.execute.LocationProxy):
+            res = yield motor.Op(ctx.app.mongodb.locations.find_one,
+                                 {'_id':dest.locid, 'wid':ctx.loctx.wid},
+                                 {'_id':1})
+            if not res:
+                raise KeyError('No such location')
+            locid = dest.locid
+        else:
+            res = yield motor.Op(ctx.app.mongodb.locations.find_one,
+                                 {'key':dest, 'wid':ctx.loctx.wid},
+                                 {'_id':1})
+            if not res:
+                raise KeyError('No such location: %s' % (dest,))
+            locid = res['_id']
+            
+        youeval = False
+        oleaveeval = False
+        oarriveeval = False
+        if you:
+            if is_typed_dict(you, 'text'):
+                you = you.get('text', None)
+                youeval = True
+            else:
+                you = str(you)
+        if oleave:
+            if is_typed_dict(oleave, 'text'):
+                oleave = oleave.get('text', None)
+                oleaveeval = True
+            else:
+                oleave = str(oleave)
+        if oarrive:
+            if is_typed_dict(oarrive, 'text'):
+                oarrive = oarrive.get('text', None)
+                oarriveeval = True
+            else:
+                oarrive = str(oarrive)
+                
+        yield ctx.perform_move(locid, you, youeval, oleave, oleaveeval, oarrive, oarriveeval, depth=depth)
+        
     @scriptfunc('location', group='_', yieldy=True)
     def global_location(obj=None):
         """Create a LocationProxy.

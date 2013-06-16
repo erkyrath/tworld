@@ -687,7 +687,7 @@ class EvalPropContext(object):
                                       {'wid':self.loctx.wid, 'key':lockey},
                                       {'_id':1})
             if not location:
-                raise ErrorMessageException('No such location: %s' % (lockey,))
+                raise KeyError('No such location: %s' % (lockey,))
     
             player = yield motor.Op(self.app.mongodb.players.find_one,
                                     {'_id':uid},
@@ -911,6 +911,8 @@ class EvalPropContext(object):
 
     @tornado.gen.coroutine
     def perform_event(self, text, texteval, otext, otexteval, depth):
+        if self.level != LEVEL_EXECUTE:
+            raise Exception('Events may only occur in action code')
         if text:
             if texteval:
                 ctx = EvalPropContext(self.task, parent=self, depth=depth+1, level=LEVEL_MESSAGE)
@@ -927,6 +929,11 @@ class EvalPropContext(object):
                 val = otext
             self.task.write_event(others, val)
 
+    @tornado.gen.coroutine
+    def perform_move(self, locid, text, texteval, oleave, oleaveeval, oarrive, oarriveeval, depth):
+        if self.level != LEVEL_EXECUTE:
+            raise Exception('Moves may only occur in action code')
+        self.app.log.debug('#### move to locid %s', locid)
 
 def str_or_null(res):
     if res is None:
