@@ -36,6 +36,8 @@ class ScriptNamespace(object):
                 val = '{...}'
             elif isinstance(val, types.SimpleNamespace):
                 val = 'namespace(...)'
+            elif isinstance(val, ScriptNamespace):
+                val = 'ScriptNamespace(...)'
             else:
                 val = str(val)
                 if len(val) > 24:
@@ -113,6 +115,12 @@ def define_globals():
         interpreted.
         """
         return { 'type':'text', 'text':str(object) }
+
+    @scriptfunc('len', group='_')
+    def global_len(object):
+        """The length function.
+        """
+        return len(object)
 
     @scriptfunc('unfocus', group='_', yieldy=True)
     def global_unfocus(player=None):
