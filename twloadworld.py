@@ -509,7 +509,7 @@ if errorcount:
 
 if opts.display:
     if not args:
-        args = ['.'] + world.locationlist
+        args = ['.', '$player'] + world.locationlist
     for val in args:
         if '.' in val:
             lockey, dummy, key = val.partition('.')
@@ -666,7 +666,7 @@ if opts.remove:
 
 # The adding-stuff-to-the-database case.
 if not args:
-    args = ['.'] + world.locationlist
+    args = ['.', '$player'] + world.locationlist
 for val in args:
     if '.' in val:
         lockey, dummy, key = val.partition('.')
