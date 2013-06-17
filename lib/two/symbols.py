@@ -113,6 +113,32 @@ def define_globals():
         """
         return { 'type':'text', 'text':str(object) }
 
+    @scriptfunc('unfocus', group='_', yieldy=True)
+    def global_unfocus(player=None):
+        """Defocus the given player (or the current player, if none given).
+        This closes the focus pane, if it's open.
+        ### Maybe a second argument, for "unfocus if the focus is equal to
+        this"? Would let us optimize out the already-null case, too.
+        """
+        ctx = EvalPropContext.get_current_context()
+        if player is None:
+            if not ctx.uid:
+                raise Exception('No current player')
+            uid = ctx.uid
+        else:
+            res = yield motor.Op(ctx.app.mongodb.playstate.find_one,
+                                 {'_id':player.uid},
+                                 {'iid':1})
+            if not res:
+                raise KeyError('No such player')
+            if res['iid'] != ctx.loctx.iid:
+                raise Exception('Player is not in this instance')
+            uid = player.uid
+        yield motor.Op(ctx.app.mongodb.playstate.update,
+                       {'_id':uid},
+                       {'$set':{'focus':None}})
+        ctx.task.set_dirty(uid, DIRTY_FOCUS)
+
     @scriptfunc('event', group='_', yieldy=True)
     def global_event(you, others=None):
         """Send an event message to the current player, like {event}.
@@ -343,3 +369,4 @@ def find_symbol(app, loctx, key, locals=None, dependencies=None):
 from twcommon.misc import is_typed_dict
 import two.execute
 from two.evalctx import EvalPropContext
+from two.task import DIRTY_FOCUS
