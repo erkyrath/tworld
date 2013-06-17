@@ -98,6 +98,8 @@ class World(object):
         self.instancing = 'standard'
         self.props = {}
         self.proplist = []
+        self.playerprops = {}
+        self.playerproplist = []
         self.locations = {}
         self.locationlist = []
         self.portals = {}
@@ -205,6 +207,7 @@ def parse_world(filename):
             continue
 
         if isindent and curprop is not None:
+            ### Fails to handle extending player props
             if not curloc:
                 if curprop not in world.proplist:
                     world.proplist.append(curprop)
@@ -237,8 +240,17 @@ def parse_world(filename):
                 world.instancing = val
                 if val not in ('shared', 'solo', 'standard'):
                     error('$instancing value must be shared, solo, or standard')
+            elif key.startswith('$player.'):
+                key = key[8:].strip()
+                propval = parse_prop(val)
+                if key in world.playerprops:
+                    error('Player key defined twice: %s' % (key,))
+                world.playerprops[key] = propval
+                world.playerproplist.append(key)
+                curprop = key
+                continue
             else:
-                error('Unknown key: %s' % (key,))
+                error('Unknown $key: %s' % (key,))
             continue
         
         if not key.isidentifier():
@@ -520,6 +532,21 @@ if opts.display:
                 print('%s: %s' % (key, prop_to_string(world.props[key])))
                 print()
             continue
+
+        if lockey == '$player':
+            print('* (player properties)')
+            print()
+            if key is None:
+                for key in world.playerproplist:
+                    print('%s: %s' % (key, prop_to_string(world.playerprops[key])))
+                    print()
+            else:
+                if key not in world.playerprops:
+                    error('Property not found in %s: %s' % ('$player', key))
+                    continue
+                print('%s: %s' % (key, prop_to_string(world.playerprops[key])))
+                print()
+            continue            
             
         loc = world.locations.get(lockey, None)
         if loc is None:
@@ -606,6 +633,15 @@ if opts.remove:
                 print('removing world property: %s' % (key,))
             continue
             
+        if lockey == '$player':
+            if key is None:
+                db.wplayerprop.remove({'wid':wid})
+                print('removing all player properties')
+            else:
+                db.wplayerprop.remove({'wid':wid, 'key':key})
+                print('removing player property: %s' % (key,))
+            continue
+            
         loc = world.locations.get(lockey, None)
         if loc is None:
             error('Location not found: %s' % (lockey,))
@@ -657,6 +693,27 @@ for val in args:
             print('Writing world property: %s' % (key,))
             db.worldprop.update({'wid':wid, 'locid':None, 'key':key},
                                 {'wid':wid, 'locid':None, 'key':key, 'val':val},
+                                upsert=True)
+        continue
+    
+    if lockey == '$player':
+        # Player properties
+        if key is None:
+            # All player properties
+            for key in world.playerprops:
+                val = world.playerprops[key]
+                print('Writing player property: %s' % (key,))
+                db.wplayerprop.update({'wid':wid, 'uid':None, 'key':key},
+                                    {'wid':wid, 'uid':None, 'key':key, 'val':val},
+                                    upsert=True)
+        else:
+            if key not in world.playerprops:
+                error('Property not found in %s: %s' % ('$player', key))
+                continue
+            val = world.playerprops[key]
+            print('Writing player property: %s' % (key,))
+            db.wplayerprop.update({'wid':wid, 'uid':None, 'key':key},
+                                {'wid':wid, 'uid':None, 'key':key, 'val':val},
                                 upsert=True)
         continue
     

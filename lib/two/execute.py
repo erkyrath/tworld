@@ -48,7 +48,8 @@ class PlayerProxy(PropertyProxyMixin, object):
     @tornado.gen.coroutine
     def getprop(self, ctx, loctx, key):
         """Get a player property. This checks both the instance and world
-        tables.
+        tables, and also the all-players properties. (We do not expect to
+        see a world-level player-specific value, but it's legal.)
         """
         wid = loctx.wid
         iid = loctx.iid
@@ -69,6 +70,24 @@ class PlayerProxy(PropertyProxyMixin, object):
                 dependencies.add(('wplayerprop', wid, uid, key))
             res = yield motor.Op(ctx.app.mongodb.wplayerprop.find_one,
                                  {'wid':wid, 'uid':uid, 'key':key},
+                                 {'val':1})
+            if res:
+                return res['val']
+
+        if iid is not None:
+            if dependencies is not None:
+                dependencies.add(('iplayerprop', iid, None, key))
+            res = yield motor.Op(ctx.app.mongodb.iplayerprop.find_one,
+                                 {'iid':iid, 'uid':None, 'key':key},
+                                 {'val':1})
+            if res:
+                return res['val']
+    
+        if True:
+            if dependencies is not None:
+                dependencies.add(('wplayerprop', wid, None, key))
+            res = yield motor.Op(ctx.app.mongodb.wplayerprop.find_one,
+                                 {'wid':wid, 'uid':None, 'key':key},
                                  {'val':1})
             if res:
                 return res['val']
@@ -120,7 +139,8 @@ class LocationProxy(PropertyProxyMixin, object):
     
     @tornado.gen.coroutine
     def getprop(self, ctx, loctx, key):
-        """Get a property. This checks both the instance and world tables.
+        """Get a property. This checks both the instance and world tables,
+        and also the realm-level properties.
         """
         wid = loctx.wid
         iid = loctx.iid
@@ -144,6 +164,25 @@ class LocationProxy(PropertyProxyMixin, object):
                                  {'val':1})
             if res:
                 return res['val']
+
+        if iid is not None:
+            if dependencies is not None:
+                dependencies.add(('instanceprop', iid, None, key))
+            res = yield motor.Op(ctx.app.mongodb.instanceprop.find_one,
+                                 {'iid':iid, 'locid':None, 'key':key},
+                                 {'val':1})
+            if res:
+                return res['val']
+    
+        if True:
+            if dependencies is not None:
+                dependencies.add(('worldprop', wid, None, key))
+            res = yield motor.Op(ctx.app.mongodb.worldprop.find_one,
+                                 {'wid':wid, 'locid':None, 'key':key},
+                                 {'val':1})
+            if res:
+                return res['val']
+
 
         raise AttributeError('Property "%s" is not found' % (key,))
         
