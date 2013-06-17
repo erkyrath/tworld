@@ -545,6 +545,8 @@ class EvalPropContext(object):
         return opfunc(leftval, rightval)
 
     map_compare_operators = {
+        ast.Is: operator.is_,
+        ast.IsNot: operator.is_not,
         ast.Eq: operator.eq,
         ast.NotEq: operator.ne,
         ast.Lt: operator.lt,
