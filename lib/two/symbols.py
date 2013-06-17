@@ -261,6 +261,22 @@ def define_globals():
             raise Exception('No current player')
         return two.execute.PlayerProxy(ctx.uid)
 
+    @scriptfunc('timedelta', group='datetime')
+    def global_datetime_timedelta(days=0, seconds=0, microseconds=0, milliseconds=0, minutes=0, hours=0, weeks=0):
+        """Construct a timedelta object. See datetime.timedelta in the
+        Python library.
+        """
+        return datetime.timedelta(days=days, seconds=seconds, microseconds=microseconds, milliseconds=milliseconds, minutes=minutes, hours=hours, weeks=weeks)
+
+    @scriptfunc('now', group='datetime_propmap')
+    def global_datetime_now():
+        """Return the current task's start time.
+        This goes in a propmap group, meaning that the user will invoke
+        it as a property object: "_.now", no parens.
+        """
+        ctx = EvalPropContext.get_current_context()
+        return ctx.task.starttime
+
     @scriptfunc('choice', group='random')
     def global_random_choice(seq):
         """Choose a random member of a list.
@@ -274,8 +290,14 @@ def define_globals():
     # Add some stuff to it.
     globmap['realm'] = two.execute.RealmProxy()
     globmap['locations'] = two.execute.WorldLocationsProxy()
+    
     map = dict(ScriptFunc.funcgroups['random'])
     globmap['random'] = ScriptNamespace(map)
+
+    map = dict(ScriptFunc.funcgroups['datetime'])
+    globmap['datetime'] = ScriptNamespace(map, {
+            global_datetime_now.name: global_datetime_now.func
+            })
 
     # And a few entries that are generated each time they're fetched.
     propmap = dict([

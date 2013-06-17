@@ -503,13 +503,15 @@ class EvalPropContext(object):
         if not opfunc:
             raise NotImplementedError('Script unaryop type not implemented: %s' % (optyp.__name__,))
         return opfunc(argval)
-        
+
+    # These operators are actually polymorphic. Add includes concat,
+    # mod includes string-format, and so on.
     map_binop_operators = {
         ast.Add: operator.add,
         ast.Sub: operator.sub,
         ast.Mult: operator.mul,
         ast.Div: operator.truediv,
-        ast.Mod: ast.Div,
+        ast.Mod: operator.mod,
         }
         
     @tornado.gen.coroutine
