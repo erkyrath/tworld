@@ -122,6 +122,12 @@ def define_globals():
         """
         return len(object)
 
+    @scriptfunc('isinstance', group='_')
+    def global_isinstance(object, typ):
+        """The isinstance function.
+        """
+        return isinstance(object, typ)
+
     @scriptfunc('unfocus', group='_', yieldy=True)
     def global_unfocus(player=None):
         """Defocus the given player (or the current player, if none given).
@@ -270,13 +276,6 @@ def define_globals():
             raise Exception('No current player')
         return two.execute.PlayerProxy(ctx.uid)
 
-    @scriptfunc('timedelta', group='datetime')
-    def global_datetime_timedelta(days=0, seconds=0, microseconds=0, milliseconds=0, minutes=0, hours=0, weeks=0):
-        """Construct a timedelta object. See datetime.timedelta in the
-        Python library.
-        """
-        return datetime.timedelta(days=days, seconds=seconds, microseconds=microseconds, milliseconds=milliseconds, minutes=minutes, hours=hours, weeks=weeks)
-
     @scriptfunc('now', group='datetime_propmap')
     def global_datetime_now():
         """Return the current task's start time.
@@ -303,7 +302,11 @@ def define_globals():
     map = dict(ScriptFunc.funcgroups['random'])
     globmap['random'] = ScriptNamespace(map)
 
-    map = dict(ScriptFunc.funcgroups['datetime'])
+    #map = dict(ScriptFunc.funcgroups['datetime'])
+    ### Need an approximate-delta-in-English function
+    map = {}
+    # Expose some type constructors directly
+    map['timedelta'] = datetime.timedelta
     globmap['datetime'] = ScriptNamespace(map, {
             global_datetime_now.name: global_datetime_now.func
             })
@@ -316,7 +319,24 @@ def define_globals():
     # And that's our global namespace.
     return ScriptNamespace(globmap, propmap)
 
+# Table of what attributes can be read from what types. Used by
+# type_getattr_allowed().
+type_getattr_table = {
+    datetime.timedelta: set(['days', 'max', 'microseconds', 'min', 'resolution', 'seconds', 'total_seconds']),
+    }
 
+def type_getattr_allowed(typ, key):
+    """Given a type, what attributes do we permit script code to read?
+    This is important because unfettered access to foo.__dict__, for
+    example, would be catastrophic.
+    """
+    res = type_getattr_table.get(typ, None)
+    if not res:
+        return False
+    if res is True:
+        return True
+    return (key in res)
+    
 # These symbols are actually keywords (in Python 3), but they come out of
 # ast.parse() as Name nodes. They can never change.
 immutable_symbol_table = {

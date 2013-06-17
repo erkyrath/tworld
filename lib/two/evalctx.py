@@ -582,7 +582,10 @@ class EvalPropContext(object):
         if isinstance(argument, two.execute.PropertyProxyMixin):
             res = yield argument.getprop(self, self.loctx, key)
             return res
-        raise ExecSandboxException('%s.%s: getattr not allowed' % (type(argument).__name__, key))
+        typarg = type(argument)
+        if two.symbols.type_getattr_allowed(typarg, key):
+            return getattr(argument, key)
+        raise ExecSandboxException('%s.%s: getattr not allowed' % (typarg.__name__, key))
         
     @tornado.gen.coroutine
     def execcode_call(self, nod, depth):
@@ -612,7 +615,7 @@ class EvalPropContext(object):
                 return res
         ### Special case for {code} dicts...
         # This will raise TypeError if funcval is not callable.
-        funcval(*args, **kwargs)
+        return funcval(*args, **kwargs)
         
     @tornado.gen.coroutine
     def execcode_name(self, nod, depth, baresymbol=False):
