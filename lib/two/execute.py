@@ -1,3 +1,13 @@
+"""
+This module contains a grab-bag of tools used to execute player actions.
+We have a bunch of proxy classes, which appear in the TworldPy environment
+to represent locations and players and so on. We also have utility methods
+involved by player actions in the world.
+
+(The actual execution of TworldPy code is mostly handled in the evalctx
+module, not here.)
+"""
+
 import datetime
 
 import tornado.gen
@@ -123,6 +133,8 @@ class PlayerProxy(PropertyProxyMixin, object):
 class LocationProxy(PropertyProxyMixin, object):
     """Represents a location, in the script environment. The locid argument
     must be an ObjectId.
+
+    ### Support "player in location" containment operator?
     """
     def __init__(self, locid):
         self.locid = locid

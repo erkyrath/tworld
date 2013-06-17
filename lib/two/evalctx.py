@@ -1,3 +1,8 @@
+"""
+The context object for evaluating script code. Most of the implementation
+of TworldPy lives in the EvalPropContext module.
+"""
+
 import random
 import ast
 import operator
@@ -38,6 +43,13 @@ class EvalPropContext(object):
     is the identity and location of the player who is the center of the
     action. (Sorry about all the "context"s.) Or you can provide an existing
     EvalPropContext to clone.
+
+    The execution of a snippet of TworldPy code involves a lot of methods
+    on this object, all calling each other. The construction is somewhat
+    rickety, for which I apologize. The worst rigging is the "depth"
+    variable (roughly the call stack depth, tracked to catch infinite
+    recursions). This is passed everywhere as an argument, never stored.
+    There's gotta be a better way.
     """
 
     # We'll push contexts on here as we nest them. (It is occasionally
