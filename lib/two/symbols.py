@@ -207,6 +207,40 @@ def define_globals():
                 
         yield ctx.perform_event(you, youeval, others, otherseval, depth=depth)
 
+    @scriptfunc('eventloc', group='_', yieldy=True)
+    def global_eventloc(loc, all):
+        """Send an event message to all players in the given location.
+        (Location or key.)
+        """
+        ctx = EvalPropContext.get_current_context()
+        depth = ctx.depthatcall
+        iid = ctx.loctx.iid
+        
+        if isinstance(loc, two.execute.LocationProxy):
+            res = yield motor.Op(ctx.app.mongodb.locations.find_one,
+                                 {'_id':loc.locid, 'wid':ctx.loctx.wid},
+                                 {'_id':1})
+            if not res:
+                raise KeyError('No such location')
+            locid = loc.locid
+        else:
+            res = yield motor.Op(ctx.app.mongodb.locations.find_one,
+                                 {'key':loc, 'wid':ctx.loctx.wid},
+                                 {'_id':1})
+            if not res:
+                raise KeyError('No such location: %s' % (loc,))
+            locid = res['_id']
+            
+        if is_typed_dict(all, 'text'):
+            all = all.get('text', None)
+            subctx = EvalPropContext(ctx.task, parent=ctx, depth=depth+1, level=LEVEL_MESSAGE)
+            val = yield subctx.eval(all, evaltype=EVALTYPE_TEXT)
+        else:
+            val = str(all)
+                
+        others = yield ctx.task.find_location_players(iid, locid)
+        ctx.task.write_event(others, val)
+        
     @scriptfunc('move', group='_', yieldy=True)
     def global_move(dest, you=None, oleave=None, oarrive=None):
         """Move the player to another location in the same world, like {move}.
@@ -488,3 +522,5 @@ import two.execute
 import two.ipool
 from two.evalctx import EvalPropContext
 from two.task import DIRTY_FOCUS
+from two.evalctx import LEVEL_EXECUTE, LEVEL_MESSAGE
+from two.evalctx import EVALTYPE_RAW, EVALTYPE_TEXT

@@ -198,6 +198,12 @@ class Task(object):
             
     @tornado.gen.coroutine
     def find_locale_players(self, uid=None, notself=False):
+        """Generate a list of all players in the same location as a given
+        player. If no player is given, we presume the player that triggered
+        the current event. (Which means that for server events, you must
+        specify a uid or get None.)
+        If notself is true, the list excludes the given player.
+        """
         if uid is None:
             conn = self.app.playconns.get(self.connid)
             if not conn:
@@ -223,6 +229,20 @@ class Task(object):
             ostate = cursor.next_object()
             if notself and ostate['_id'] == uid:
                 continue
+            people.append(ostate['_id'])
+        cursor.close()
+            
+        return people
+        
+    @tornado.gen.coroutine
+    def find_location_players(self, iid, locid):
+        """Generate a list of players in a given location.
+        """
+        cursor = self.app.mongodb.playstate.find({'iid':iid, 'locid':locid},
+                                                 {'_id':1})
+        people = []
+        while (yield cursor.fetch_next):
+            ostate = cursor.next_object()
             people.append(ostate['_id'])
         cursor.close()
             
