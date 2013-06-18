@@ -22,6 +22,8 @@ The scheduling queue for script events is based on these principles:
   let the wake-ups occur if/when they reappear.)
 """
 
+import datetime
+
 import twcommon.misc
 
 class InstancePool:
@@ -29,6 +31,9 @@ class InstancePool:
         # Keep a link to the owning application.
         self.app = app
         self.log = self.app.log
+
+        # How long an instance stays uninhabited before we put it to sleep.
+        self.uninhabited_limit = datetime.timedelta(minutes=10)
 
         # The map containing all currently-awake instances.
         # Maps iids (ObjectIds) to Instance objects.
@@ -66,6 +71,14 @@ class InstancePool:
         instance = Instance(iid)
         self.map[iid] = instance
         return True
+
+    def remove_instance(self, iid):
+        """Remove an instance which has been put to sleep.
+        """
+        instance = self.map.pop(iid, None)  # removes and returns it
+        if instance is None:
+            return
+        ### discard all timer events for the instance!
 
 class Instance:
     def __init__(self, iid):

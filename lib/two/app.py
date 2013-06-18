@@ -74,6 +74,13 @@ class Tworld(object):
         res = tornado.ioloop.PeriodicCallback(func, 180100)
         res.start()
 
+        # This periodic command puts uninhabited instances to sleep.
+        # (Every minute, plus an uneven fraction of a second.)
+        def func():
+            self.queue_command({'cmd':'checkuninhabited'})
+        res = tornado.ioloop.PeriodicCallback(func, 60300)
+        res.start()
+
     def shutdown(self, reason=None):
         """This is called when an orderly shutdown is requested. (Either
         an admin request, or by the interrupt handler.) It should only

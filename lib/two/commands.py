@@ -111,6 +111,50 @@ def define_commands():
                     except Exception as ex:
                         task.log.warning('Caught exception (awakening instance): %s', ex, exc_info=app.debugstacktraces)
 
+    @command('checkuninhabited', isserver=True)
+    def cmd_checkuninhabited(app, task, cmd, stream):
+        # Go through all the awake instances. Those that are still
+        # inhabited, bump their timers. Those that have not been inhabited
+        # for a while, put to sleep.
+        # Go through the list of players who are in the world.
+        iidset = set()
+        cursor = app.mongodb.playstate.find({'iid':{'$ne':None}},
+                                            {'_id':1, 'iid':1})
+        while (yield cursor.fetch_next):
+            playstate = cursor.next_object()
+            iid = playstate['iid']
+            if iid:
+                iidset.add(iid)
+        cursor.close()
+        iidls = list(iidset)
+        for iid in iidls:
+            instance = app.ipool.get(iid)
+            # These instances should always be in the pool, but we'll
+            # do a safety check anyway.
+            if instance:
+                instance.lastinhabited = task.starttime
+        tooold = task.starttime - app.ipool.uninhabited_limit
+        for instance in app.ipool.all():
+            iid = instance.iid
+            if instance.lastinhabited < tooold:
+                app.log.info('Sleeping instance %s', iid)
+                instance = yield motor.Op(app.mongodb.instances.find_one,
+                                          {'_id':iid})
+                loctx = two.task.LocContext(None, wid=instance['wid'], scid=instance['scid'], iid=iid)
+                task.resetticks()
+                # If the instance/world has an on_sleep property, run it.
+                try:
+                    sleephook = yield two.symbols.find_symbol(app, loctx, 'on_sleep')
+                except:
+                    sleephook = None
+                if sleephook and twcommon.misc.is_typed_dict(sleephook, 'code'):
+                    try:
+                        ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
+                        yield ctx.eval(sleephook, evaltype=EVALTYPE_RAW)
+                    except Exception as ex:
+                        task.log.warning('Caught exception (sleeping instance): %s', ex, exc_info=app.debugstacktraces)
+                app.ipool.remove_instance(iid)
+    
     @command('connect', isserver=True, noneedmongo=True)
     def cmd_connect(app, task, cmd, stream):
         assert stream is not None, 'Tweb connect command from no stream.'
