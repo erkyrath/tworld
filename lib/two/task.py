@@ -125,6 +125,7 @@ class Task(object):
         self.changeset.add(key)
         
     def add_data_changes(self, set):
+        ### If data changes were dropped directly into the task, we wouldn't have to copy them in from the ctx. Simplify our lives.
         assert self.is_writable(), 'add_data_changes: Task was never set writable'
         self.changeset.update(set)
         

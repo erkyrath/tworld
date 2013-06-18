@@ -73,7 +73,7 @@ def define_commands():
         # At this point ioloop is still running, but the command queue
         # is frozen. A sys.exit will be along shortly.
 
-    @command('dbconnected', isserver=True)
+    @command('dbconnected', isserver=True, doeswrite=True)
     def cmd_dbconnected(app, task, cmd, stream):
         # We've connected (or reconnected) to mongodb. Re-synchronize any
         # data that we had cached from there.
@@ -105,13 +105,15 @@ def define_commands():
                 except:
                     awakenhook = None
                 if awakenhook and twcommon.misc.is_typed_dict(awakenhook, 'code'):
+                    ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
                     try:
-                        ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
                         yield ctx.eval(awakenhook, evaltype=EVALTYPE_RAW)
                     except Exception as ex:
                         task.log.warning('Caught exception (awakening instance): %s', ex, exc_info=app.debugstacktraces)
+                    if ctx.changeset:
+                        task.add_data_changes(ctx.changeset)
 
-    @command('checkuninhabited', isserver=True)
+    @command('checkuninhabited', isserver=True, doeswrite=True)
     def cmd_checkuninhabited(app, task, cmd, stream):
         # Go through all the awake instances. Those that are still
         # inhabited, bump their timers. Those that have not been inhabited
@@ -148,11 +150,13 @@ def define_commands():
                 except:
                     sleephook = None
                 if sleephook and twcommon.misc.is_typed_dict(sleephook, 'code'):
+                    ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
                     try:
-                        ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
                         yield ctx.eval(sleephook, evaltype=EVALTYPE_RAW)
                     except Exception as ex:
                         task.log.warning('Caught exception (sleeping instance): %s', ex, exc_info=app.debugstacktraces)
+                    if ctx.changeset:
+                        task.add_data_changes(ctx.changeset)
                 app.ipool.remove_instance(iid)
     
     @command('connect', isserver=True, noneedmongo=True)
@@ -239,7 +243,7 @@ def define_commands():
     def cmd_logplayerconntable(app, task, cmd, stream):
         app.playconns.dumplog()
         
-    @command('timerevent', isserver=True)
+    @command('timerevent', isserver=True, doeswrite=True)
     def cmd_timerevent(app, task, cmd, stream):
         iid = cmd.iid
         instance = app.ipool.get(iid)
@@ -254,11 +258,13 @@ def define_commands():
         else:
             func = str(func)
             functype = EVALTYPE_CODE
+        ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
         try:
-            ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
             yield ctx.eval(func, evaltype=functype)
         except Exception as ex:
             task.log.warning('Caught exception (timer event): %s', ex, exc_info=app.debugstacktraces)
+        if ctx.changeset:
+            task.add_data_changes(ctx.changeset)
         
     @command('connrefreshall', isserver=True, doeswrite=True)
     def cmd_connrefreshall(app, task, cmd, stream):
@@ -409,12 +415,13 @@ def define_commands():
             except:
                 awakenhook = None
             if awakenhook and twcommon.misc.is_typed_dict(awakenhook, 'code'):
+                ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
                 try:
-                    ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
                     yield ctx.eval(awakenhook, evaltype=EVALTYPE_RAW)
                 except Exception as ex:
                     task.log.warning('Caught exception (awakening instance): %s', ex, exc_info=app.debugstacktraces)
-                    
+                if ctx.changeset:
+                    task.add_data_changes(ctx.changeset)
 
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':cmd.uid},
