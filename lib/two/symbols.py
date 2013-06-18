@@ -91,6 +91,24 @@ def define_globals():
         res = ' '.join(str(val) for val in ls)
         ###?
 
+    @scriptfunc('style', group='_')
+    def global_style(style):
+        ctx = EvalPropContext.get_current_context()
+        if ctx.accum is None:
+            raise Exception('style() in non-printing context')
+        nod = two.interp.Style(style)
+        ctx.accum.append(nod.describe())
+        return '' ### tacky
+        
+    @scriptfunc('endstyle', group='_')
+    def global_endstyle(style):
+        ctx = EvalPropContext.get_current_context()
+        if ctx.accum is None:
+            raise Exception('endstyle() in non-printing context')
+        nod = two.interp.EndStyle(style)
+        ctx.accum.append(nod.describe())
+        return '' ### tacky
+        
     @scriptfunc('log', group='_')
     def global_log(*ls):
         """Log a message to the server log. Only works if debug is set
@@ -274,6 +292,12 @@ def define_globals():
             raise KeyError('No such location: %s' % (obj,))
         return two.execute.LocationProxy(res['_id'])
 
+    @scriptfunc('delay', group='_')
+    def global_delay(delta, func, repeat=False):
+        """
+        """
+        pass ###
+        
     @scriptfunc('player', group='_propmap')
     def global_player():
         """Create a PlayerProxy for the current player.
@@ -427,6 +451,7 @@ def find_symbol(app, loctx, key, locals=None, dependencies=None):
 
 # Late imports, to avoid circularity
 from twcommon.misc import is_typed_dict
+import two.interp
 import two.execute
 from two.evalctx import EvalPropContext
 from two.task import DIRTY_FOCUS
