@@ -91,6 +91,15 @@ def define_globals():
         res = ' '.join(str(val) for val in ls)
         ###?
 
+    @scriptfunc('log', group='_')
+    def global_log(*ls):
+        """Log a message to the server log. Only works if debug is set
+        in the server config file.
+        """
+        ctx = EvalPropContext.get_current_context()
+        if ctx.app.opts.debug:
+            ctx.app.log.info(*ls)
+        
     @scriptfunc('str', group='_')
     def global_str(object=''):
         """The str constructor.
