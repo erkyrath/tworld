@@ -312,6 +312,9 @@ def parse_prop(prop):
                 error('Portal property must have four fields')
                 return None
             return {'type':'portal', '_tempquad':subls}
+        elif key == 'datetime':
+            val = datetime.datetime.strptime(val, '%Y-%m-%d')
+            return datetime.datetime(year=val.year, month=val.month, day=val.day, tzinfo=datetime.timezone.utc)
         else:
             error('Unknown special property type: *%s' % (key,))
             return None

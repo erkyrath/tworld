@@ -118,36 +118,12 @@ def define_globals():
         if ctx.app.opts.debug:
             ctx.app.log.info(*ls)
         
-    @scriptfunc('str', group='_')
-    def global_str(object=''):
-        """The str constructor.
-        """
-        return str(object)
-
-    @scriptfunc('int', group='_')
-    def global_int(x=0, base=10):
-        """The int constructor.
-        """
-        return int(x, base=base)
-
-    @scriptfunc('bool', group='_')
-    def global_bool(x=False):
-        """The bool constructor.
-        """
-        return bool(x)
-
     @scriptfunc('text', group='_')
     def global_text(object=''):
         """Wrap a string as a {text} object, so that its markup will get
         interpreted.
         """
         return { 'type':'text', 'text':str(object) }
-
-    @scriptfunc('len', group='_')
-    def global_len(object):
-        """The length function.
-        """
-        return len(object)
 
     @scriptfunc('isinstance', group='_')
     def global_isinstance(object, typ):
@@ -159,6 +135,7 @@ def define_globals():
     def global_unfocus(player=None):
         """Defocus the given player (or the current player, if none given).
         This closes the focus pane, if it's open.
+        ### Or all players in a given location?
         ### Maybe a second argument, for "unfocus if the focus is equal to
         this"? Would let us optimize out the already-null case, too.
         """
@@ -393,6 +370,12 @@ def define_globals():
     globmap = dict(ScriptFunc.funcgroups['_'])
     
     # Add some stuff to it.
+    globmap['int'] = int
+    globmap['str'] = str
+    globmap['bool'] = bool
+    globmap['len'] = len
+    globmap['max'] = max
+    globmap['min'] = min
     globmap['realm'] = two.execute.RealmProxy()
     globmap['locations'] = two.execute.WorldLocationsProxy()
     
