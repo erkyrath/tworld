@@ -30,6 +30,21 @@ class LocContext(object):
         self.iid = iid
         self.locid = locid
 
+    def __repr__(self):
+        ls = []
+        if self.uid:
+            ls.append( ('uid', self.uid) )
+        if self.wid:
+            ls.append( ('wid', self.wid) )
+        if self.scid:
+            ls.append( ('scid', self.scid) )
+        if self.iid:
+            ls.append( ('iid', self.iid) )
+        if self.locid:
+            ls.append( ('locid', self.locid) )
+        val = ' '.join([ ('%s=%s' % (key, val)) for (key, val) in ls ])
+        return '<LocContext %s>' % (val,)
+
 class Task(object):
     """
     Context for the execution of one command in the command queue. This

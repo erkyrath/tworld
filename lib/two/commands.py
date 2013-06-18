@@ -294,6 +294,23 @@ def define_commands():
                                     {'wid':newwid, 'scid':newscid})
             app.log.info('Created instance %s (world %s, scope %s)', newiid, newwid, newscid)
 
+        awakening = app.ipool.notify_instance(newiid)
+        if awakening:
+            app.log.info('Awakening instance %s', newiid)
+            loctx = two.task.LocContext(None, wid=newwid, scid=newscid, iid=newiid)
+            # If the instance/world has an on_awaken property, run it.
+            try:
+                awakenhook = yield two.symbols.find_symbol(app, loctx, 'on_awaken')
+            except:
+                awakenhook = None
+            if awakenhook and twcommon.misc.is_typed_dict(awakenhook):
+                try:
+                    ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
+                    yield ctx.eval(awakenhook, evaltype=EVALTYPE_RAW)
+                except Exception as ex:
+                    self.task.log.warning('Caught exception (awakening instance): %s', ex, exc_info=app.debugstacktraces)
+                    
+
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':cmd.uid},
                        {'$set':{'iid':newiid,
@@ -311,7 +328,7 @@ def define_commands():
         if others:
             task.set_dirty(others, DIRTY_POPULACE)
             task.write_event(others, '%s appears.' % (playername,)) ###localize
-        task.write_event(cmd.uid, 'You are somewhere new.')
+        task.write_event(cmd.uid, 'You are somewhere new.') ###localize
         
     @command('uiprefs')
     def cmd_uiprefs(app, task, cmd, conn):
@@ -368,9 +385,11 @@ def define_commands():
         val = 'Focus dependency set: %s' % (conn.focusdependencies,)
         conn.write({'cmd':'message', 'text':val})
         
-    @command('meta_exception', restrict='debug')
-    def cmd_meta_exception(app, task, cmd, conn):
-        raise Exception('You asked for an exception.')
+    @command('meta_showipool', restrict='debug')
+    def cmd_meta_showipool(app, task, cmd, conn):
+        ls = app.ipool.all()
+        instls = ', '.join([ str(val.iid) for val in ls ])
+        raise MessageException('Instance pool has %d awake instances: %s' % (len(ls), instls))
 
     @command('meta_panic')
     def cmd_meta_panic(app, task, cmd, conn):
@@ -697,6 +716,7 @@ def define_commands():
 # Late imports, to avoid circularity
 import two.execute
 import two.evalctx
+import two.task
 from two.evalctx import LEVEL_EXECUTE
 from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_POPULACE, DIRTY_FOCUS
 from twcommon.access import ACC_VISITOR

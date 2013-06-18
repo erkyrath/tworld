@@ -12,6 +12,7 @@ import motor
 import two.webconn
 import two.playconn
 import two.mongomgr
+import two.ipool
 import two.commands
 import two.symbols
 import two.task
@@ -35,6 +36,7 @@ class Tworld(object):
         self.webconns = two.webconn.WebConnectionTable(self)
         self.playconns = two.playconn.PlayerConnectionTable(self)
         self.mongomgr = two.mongomgr.MongoMgr(self)
+        self.ipool = two.ipool.InstancePool(self)
 
         # The command queue.
         self.queue = []
