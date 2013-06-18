@@ -73,6 +73,44 @@ def define_commands():
         # At this point ioloop is still running, but the command queue
         # is frozen. A sys.exit will be along shortly.
 
+    @command('dbconnected', isserver=True)
+    def cmd_dbconnected(app, task, cmd, stream):
+        # We've connected (or reconnected) to mongodb. Re-synchronize any
+        # data that we had cached from there.
+        # Right now this means: awaken any inhabited instances.
+        # Go through the list of players who are in the world.
+        iidset = set()
+        cursor = app.mongodb.playstate.find({'iid':{'$ne':None}},
+                                            {'_id':1, 'iid':1})
+        while (yield cursor.fetch_next):
+            playstate = cursor.next_object()
+            iid = playstate['iid']
+            if iid:
+                iidset.add(iid)
+        cursor.close()
+        iidls = list(iidset)
+        iidls.sort()  # Just for consistency
+        for iid in iidls:
+            awakening = app.ipool.notify_instance(iid)
+            if awakening:
+                app.log.info('Awakening instance %s', iid)
+                instance = yield motor.Op(app.mongodb.instances.find_one,
+                                          {'_id':iid})
+                loctx = two.task.LocContext(None, wid=instance['wid'], scid=instance['scid'], iid=iid)
+                app.log.debug('#### loctx for awaken: %s', loctx)
+                task.resetticks()
+                # If the instance/world has an on_wake property, run it.
+                try:
+                    awakenhook = yield two.symbols.find_symbol(app, loctx, 'on_wake')
+                except:
+                    awakenhook = None
+                if awakenhook and twcommon.misc.is_typed_dict(awakenhook, 'code'):
+                    try:
+                        ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
+                        yield ctx.eval(awakenhook, evaltype=EVALTYPE_RAW)
+                    except Exception as ex:
+                        task.log.warning('Caught exception (awakening instance): %s', ex, exc_info=app.debugstacktraces)
+
     @command('connect', isserver=True, noneedmongo=True)
     def cmd_connect(app, task, cmd, stream):
         assert stream is not None, 'Tweb connect command from no stream.'
@@ -298,17 +336,19 @@ def define_commands():
         if awakening:
             app.log.info('Awakening instance %s', newiid)
             loctx = two.task.LocContext(None, wid=newwid, scid=newscid, iid=newiid)
-            # If the instance/world has an on_awaken property, run it.
+            app.log.debug('#### loctx for awaken: %s', loctx)
+            task.resetticks()
+            # If the instance/world has an on_wake property, run it.
             try:
-                awakenhook = yield two.symbols.find_symbol(app, loctx, 'on_awaken')
+                awakenhook = yield two.symbols.find_symbol(app, loctx, 'on_wake')
             except:
                 awakenhook = None
-            if awakenhook and twcommon.misc.is_typed_dict(awakenhook):
+            if awakenhook and twcommon.misc.is_typed_dict(awakenhook, 'code'):
                 try:
                     ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
                     yield ctx.eval(awakenhook, evaltype=EVALTYPE_RAW)
                 except Exception as ex:
-                    self.task.log.warning('Caught exception (awakening instance): %s', ex, exc_info=app.debugstacktraces)
+                    task.log.warning('Caught exception (awakening instance): %s', ex, exc_info=app.debugstacktraces)
                     
 
         yield motor.Op(app.mongodb.playstate.update,
@@ -718,5 +758,6 @@ import two.execute
 import two.evalctx
 import two.task
 from two.evalctx import LEVEL_EXECUTE
+from two.evalctx import EVALTYPE_RAW
 from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_POPULACE, DIRTY_FOCUS
 from twcommon.access import ACC_VISITOR

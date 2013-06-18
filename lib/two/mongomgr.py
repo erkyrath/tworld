@@ -74,6 +74,7 @@ class MongoMgr(object):
                 self.mongoavailable = True
                 self.app.mongodb = self.mongo[self.app.opts.mongo_database]
                 self.log.info('Mongo client open')
+                self.app.queue_command({'cmd':'dbconnected'})
             except Exception as ex:
                 self.mongoavailable = False
                 self.app.mongodb = None
