@@ -124,11 +124,6 @@ class Task(object):
         assert self.is_writable(), 'set_data_change: Task was never set writable'
         self.changeset.add(key)
         
-    def add_data_changes(self, set):
-        ### If data changes were dropped directly into the task, we wouldn't have to copy them in from the ctx. Simplify our lives.
-        assert self.is_writable(), 'add_data_changes: Task was never set writable'
-        self.changeset.update(set)
-        
     def set_dirty(self, ls, dirty):
         # ls may be a PlayerConnection, a uid (an ObjectId), or a list
         # of either. Or None.

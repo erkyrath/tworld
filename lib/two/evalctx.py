@@ -94,7 +94,6 @@ class EvalPropContext(object):
         self.accum = None
         self.linktargets = None
         self.dependencies = None
-        self.changeset = None
 
     def updateacdepends(self, ctx):
         """Merge in the actions and dependencies from a subcontext.        
@@ -218,8 +217,6 @@ class EvalPropContext(object):
             assert self.accum is None, 'EvalPropContext.accum should be None at depth zero'
             self.accum = []
             self.linktargets = {}
-            if self.level == LEVEL_EXECUTE:
-                self.changeset = set()
         
         if depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'selfdesc':
             assert self.accum is not None, 'EvalPropContext.accum should not be None here'

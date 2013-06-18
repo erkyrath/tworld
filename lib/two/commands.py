@@ -110,8 +110,6 @@ def define_commands():
                         yield ctx.eval(awakenhook, evaltype=EVALTYPE_RAW)
                     except Exception as ex:
                         task.log.warning('Caught exception (awakening instance): %s', ex, exc_info=app.debugstacktraces)
-                    if ctx.changeset:
-                        task.add_data_changes(ctx.changeset)
 
     @command('checkuninhabited', isserver=True, doeswrite=True)
     def cmd_checkuninhabited(app, task, cmd, stream):
@@ -155,8 +153,6 @@ def define_commands():
                         yield ctx.eval(sleephook, evaltype=EVALTYPE_RAW)
                     except Exception as ex:
                         task.log.warning('Caught exception (sleeping instance): %s', ex, exc_info=app.debugstacktraces)
-                    if ctx.changeset:
-                        task.add_data_changes(ctx.changeset)
                 app.ipool.remove_instance(iid)
     
     @command('connect', isserver=True, noneedmongo=True)
@@ -263,8 +259,6 @@ def define_commands():
             yield ctx.eval(func, evaltype=functype)
         except Exception as ex:
             task.log.warning('Caught exception (timer event): %s', ex, exc_info=app.debugstacktraces)
-        if ctx.changeset:
-            task.add_data_changes(ctx.changeset)
         
     @command('connrefreshall', isserver=True, doeswrite=True)
     def cmd_connrefreshall(app, task, cmd, stream):
@@ -420,8 +414,6 @@ def define_commands():
                     yield ctx.eval(awakenhook, evaltype=EVALTYPE_RAW)
                 except Exception as ex:
                     task.log.warning('Caught exception (awakening instance): %s', ex, exc_info=app.debugstacktraces)
-                if ctx.changeset:
-                    task.add_data_changes(ctx.changeset)
 
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':cmd.uid},

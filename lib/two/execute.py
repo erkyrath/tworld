@@ -114,7 +114,7 @@ class PlayerProxy(PropertyProxyMixin, object):
         uid = self.uid
         yield motor.Op(ctx.app.mongodb.iplayerprop.remove,
                        {'iid':iid, 'uid':uid, 'key':key})
-        ctx.changeset.add( ('iplayerprop', iid, uid, key) )
+        ctx.task.changeset.add( ('iplayerprop', iid, uid, key) )
 
     @tornado.gen.coroutine
     def setprop(self, ctx, loctx, key, val):
@@ -128,7 +128,7 @@ class PlayerProxy(PropertyProxyMixin, object):
                        {'iid':iid, 'uid':uid, 'key':key},
                        {'iid':iid, 'uid':uid, 'key':key, 'val':val},
                        upsert=True)
-        ctx.changeset.add( ('iplayerprop', iid, uid, key) )
+        ctx.task.changeset.add( ('iplayerprop', iid, uid, key) )
 
 class LocationProxy(PropertyProxyMixin, object):
     """Represents a location, in the script environment. The locid argument
@@ -208,7 +208,7 @@ class LocationProxy(PropertyProxyMixin, object):
         locid = self.locid
         yield motor.Op(ctx.app.mongodb.instanceprop.remove,
                        {'iid':iid, 'locid':locid, 'key':key})
-        ctx.changeset.add( ('instanceprop', iid, locid, key) )
+        ctx.task.changeset.add( ('instanceprop', iid, locid, key) )
 
     @tornado.gen.coroutine
     def setprop(self, ctx, loctx, key, val):
@@ -222,7 +222,7 @@ class LocationProxy(PropertyProxyMixin, object):
                        {'iid':iid, 'locid':locid, 'key':key},
                        {'iid':iid, 'locid':locid, 'key':key, 'val':val},
                        upsert=True)
-        ctx.changeset.add( ('instanceprop', iid, locid, key) )
+        ctx.task.changeset.add( ('instanceprop', iid, locid, key) )
         
 class RealmProxy(PropertyProxyMixin, object):
     """Represents the realm-level properties, in the script environment.
@@ -271,7 +271,7 @@ class RealmProxy(PropertyProxyMixin, object):
         locid = None
         yield motor.Op(ctx.app.mongodb.instanceprop.remove,
                        {'iid':iid, 'locid':locid, 'key':key})
-        ctx.changeset.add( ('instanceprop', iid, locid, key) )
+        ctx.task.changeset.add( ('instanceprop', iid, locid, key) )
 
     @tornado.gen.coroutine
     def setprop(self, ctx, loctx, key, val):
@@ -285,7 +285,7 @@ class RealmProxy(PropertyProxyMixin, object):
                        {'iid':iid, 'locid':locid, 'key':key},
                        {'iid':iid, 'locid':locid, 'key':key, 'val':val},
                        upsert=True)
-        ctx.changeset.add( ('instanceprop', iid, locid, key) )
+        ctx.task.changeset.add( ('instanceprop', iid, locid, key) )
 
 
 class BoundPropertyProxy(object):
@@ -338,7 +338,7 @@ class BoundNameProxy(object):
         locid = loctx.locid
         yield motor.Op(ctx.app.mongodb.instanceprop.remove,
                        {'iid':iid, 'locid':locid, 'key':self.key})
-        ctx.changeset.add( ('instanceprop', iid, locid, self.key) )
+        ctx.task.changeset.add( ('instanceprop', iid, locid, self.key) )
     
     @tornado.gen.coroutine
     def store(self, ctx, loctx, val):
@@ -357,7 +357,7 @@ class BoundNameProxy(object):
                        {'iid':iid, 'locid':locid, 'key':self.key},
                        {'iid':iid, 'locid':locid, 'key':self.key, 'val':val},
                        upsert=True)
-        ctx.changeset.add( ('instanceprop', iid, locid, self.key) )
+        ctx.task.changeset.add( ('instanceprop', iid, locid, self.key) )
 
 class WorldLocationsProxy(PropertyProxyMixin, object):
     """Represents the collection of locations (in the current world).
@@ -979,8 +979,6 @@ def perform_action(task, cmd, conn, target):
         task.log.warning('Action failed: %s', ex, exc_info=app.debugstacktraces)
         exmsg = '%s: %s' % (ex.__class__.__name__, ex,)
         conn.write({'cmd':'error', 'text':exmsg})
-    if ctx.changeset:
-        task.add_data_changes(ctx.changeset)
         
     
 # Late imports, to avoid circularity
