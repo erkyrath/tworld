@@ -349,6 +349,8 @@ def define_globals():
             (key, func.func) for (key, func) in ScriptFunc.funcgroups['_propmap'].items()
             ])
 
+    ### Run this through a site-specific Python hook.
+
     # And that's our global namespace.
     return ScriptNamespace(globmap, propmap)
 

@@ -26,42 +26,12 @@ class InterpNode(object):
             return Interpolate(expr)
         key, dummy, val = expr.partition(' ')
         val = val.strip()
-        # This could probably be more efficient
-        if key == '$para':
-            return ParaBreak()
-        if key == '$if':
-            return If(val)
-        if key == '$elif':
-            return ElIf(val)
-        if key == '$else':
-            return Else()
-        if key == '$end':
-            return End()
-        if key == '$name' or key == '$Name':
-            return PlayerRef('name') ### val may be an expression
-        if key == '$we':
-            return PlayerRef('we')
-        if key == '$us':
-            return PlayerRef('us')
-        if key == '$our':
-            return PlayerRef('our')
-        if key == '$ours':
-            return PlayerRef('ours')
-        if key == '$ourself':
-            return PlayerRef('ourself')
-        if key == '$We':
-            return PlayerRef('We')
-        if key == '$Our':
-            return PlayerRef('Our')
-        if key == '$em':
-            return Style('emph')
-        if key == '$/em':
-            return EndStyle('emph')
-        if key == '$fixed':
-            return Style('fixed')
-        if key == '$/fixed':
-            return EndStyle('fixed')
-        return '[Unknown key: %s]' % (key,)
+        nod = interp_node_table.get(key, None)
+        if nod is None:
+            return '[Unknown key: %s]' % (key,)
+        if callable(nod):
+            return nod(val)
+        return nod[0](*nod[1:])
 
 class Interpolate(InterpNode):
     classname = 'Interpolate'
@@ -171,6 +141,28 @@ class PlayerRef(InterpNode):
 
 ### LineBreak?
 ### Bracket, CloseBracket? (for literal '[' ']')
+
+interp_node_table = {
+    '$para': (ParaBreak,),
+    '$if': lambda val: If(val),
+    '$elif': lambda val: ElIf(val),
+    '$else': (Else,),
+    '$end': (End,),
+    '$name': (PlayerRef, 'name'),  ### val may be an expression
+    '$Name': (PlayerRef, 'name'),  ### val may be an expression
+    '$we': (PlayerRef, 'we'),
+    '$us': (PlayerRef, 'us'),
+    '$our': (PlayerRef, 'our'),
+    '$ours': (PlayerRef, 'ours'),
+    '$ourself': (PlayerRef, 'ourself'),
+    '$We': (PlayerRef, 'We'),
+    '$Our': (PlayerRef, 'Our'),
+    '$em': (Style, 'emph'),
+    '$/em': (EndStyle, 'emph'),
+    '$fixed': (Style, 'fixed'),
+    '$/fixed': (EndStyle, 'fixed'),
+        ### run this through a site-specific Python hook.
+    }
 
 re_bracketgroup = re.compile('[[]+')
 re_closeorbarorinterp = re.compile(']|[|][|]?|[[]')
