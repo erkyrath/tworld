@@ -823,6 +823,6 @@ import two.execute
 import two.evalctx
 import two.task
 from two.evalctx import LEVEL_EXECUTE
-from two.evalctx import EVALTYPE_RAW
+from two.evalctx import EVALTYPE_RAW, EVALTYPE_CODE
 from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_POPULACE, DIRTY_FOCUS
 from twcommon.access import ACC_VISITOR
