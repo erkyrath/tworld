@@ -239,6 +239,27 @@ def define_commands():
     def cmd_logplayerconntable(app, task, cmd, stream):
         app.playconns.dumplog()
         
+    @command('timerevent', isserver=True)
+    def cmd_timerevent(app, task, cmd, stream):
+        iid = cmd.iid
+        instance = app.ipool.get(iid)
+        if not instance:
+            raise ErrorMessageException('instance is not awake')
+        instance = yield motor.Op(app.mongodb.instances.find_one,
+                                  {'_id':iid})
+        loctx = two.task.LocContext(None, wid=instance['wid'], scid=instance['scid'], iid=iid)
+        func = cmd.func
+        if twcommon.misc.is_typed_dict(func, 'code'):
+            functype = EVALTYPE_RAW
+        else:
+            func = str(func)
+            functype = EVALTYPE_CODE
+        try:
+            ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
+            yield ctx.eval(func, evaltype=functype)
+        except Exception as ex:
+            task.log.warning('Caught exception (timer event): %s', ex, exc_info=app.debugstacktraces)
+        
     @command('connrefreshall', isserver=True, doeswrite=True)
     def cmd_connrefreshall(app, task, cmd, stream):
         # Refresh one connection (not all the player's connections!)
