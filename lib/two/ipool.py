@@ -55,9 +55,14 @@ class InstancePool:
         """
         instance = self.map.get(iid, None)
         if instance is not None:
-            instance.lastportin = twcommon.misc.now()
+            # Mark the instance as currently inhabited (and ported-into)
+            now = twcommon.misc.now()
+            instance.lastportin = now
+            instance.lastinhabited = now
             return False
 
+        # Newly awakened instance. The caller is responsible for invoking
+        # the on_wake hook.
         instance = Instance(iid)
         self.map[iid] = instance
         return True
@@ -65,7 +70,13 @@ class InstancePool:
 class Instance:
     def __init__(self, iid):
         self.iid = iid
+
+        now = twcommon.misc.now()
         
         # Timestamp of most recent player entry. We initialize this to
         # now, because player entry is what triggers this initialization.
-        self.lastportin = twcommon.misc.now()
+        self.lastportin = now
+
+        # Timestamp of the last time the instance was known to be inhabited.
+        self.lastinhabited = now
+

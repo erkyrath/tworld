@@ -93,11 +93,11 @@ def define_commands():
         for iid in iidls:
             awakening = app.ipool.notify_instance(iid)
             if awakening:
+                ### figure out lastawake, put in local!
                 app.log.info('Awakening instance %s', iid)
                 instance = yield motor.Op(app.mongodb.instances.find_one,
                                           {'_id':iid})
                 loctx = two.task.LocContext(None, wid=instance['wid'], scid=instance['scid'], iid=iid)
-                app.log.debug('#### loctx for awaken: %s', loctx)
                 task.resetticks()
                 # If the instance/world has an on_wake property, run it.
                 try:
@@ -334,9 +334,9 @@ def define_commands():
 
         awakening = app.ipool.notify_instance(newiid)
         if awakening:
+            ### figure out lastawake, put in local!
             app.log.info('Awakening instance %s', newiid)
             loctx = two.task.LocContext(None, wid=newwid, scid=newscid, iid=newiid)
-            app.log.debug('#### loctx for awaken: %s', loctx)
             task.resetticks()
             # If the instance/world has an on_wake property, run it.
             try:
