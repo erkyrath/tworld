@@ -29,7 +29,7 @@ import twcommon.misc
 class InstancePool:
 
     # How long an instance stays uninhabited before we put it to sleep.
-    UNINHABITED_LIMIT = datetime.timedelta(minutes=10)
+    UNINHABITED_LIMIT = datetime.timedelta(minutes=10.5)
 
     # Minimum intervals for scheduled events. (We don't want a millisecond
     # timer to start buzzing away.)
