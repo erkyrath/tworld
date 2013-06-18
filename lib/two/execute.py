@@ -947,7 +947,7 @@ def perform_action(task, cmd, conn, target):
                 task.write_event(others, '%s disappears.' % (playername,)) ###localize
             task.write_event(uid, 'The world fades away.') ###localize
 
-            # Jump to the void, and schedule a portin event.
+            # Move the player to the void, and schedule a portin event.
             portto = {'wid':newwid, 'scid':newscid, 'locid':newlocid}
             yield motor.Op(app.mongodb.playstate.update,
                            {'_id':uid},

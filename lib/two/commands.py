@@ -142,6 +142,7 @@ def define_commands():
                                  {'name':1})
             playername = res['name']
             task.write_event(others, '%s disappears.' % (playername,)) ###localize
+        # Move the player to the void.
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':cmd.uid},
                        {'$set':{'focus':None, 'iid':None, 'locid':None,
@@ -284,6 +285,9 @@ def define_commands():
         if False: ### check minaccess against scope access!
             task.write_event(cmd.uid, 'You do not have access to this instance.') ###localize
             return
+
+        # This is the one and only spot in the server code where a player
+        # *enters* a new instance.
         
         if instance:
             newiid = instance['_id']

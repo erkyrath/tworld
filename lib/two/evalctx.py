@@ -922,6 +922,8 @@ class EvalPropContext(object):
             others = yield self.task.find_locale_players(notself=True)
             if others:
                 self.task.write_event(others, msg)
+
+        # Move the player to the new location.
                 
         yield motor.Op(self.app.mongodb.playstate.update,
                        {'_id':self.uid},
