@@ -292,12 +292,42 @@ def define_globals():
             raise KeyError('No such location: %s' % (obj,))
         return two.execute.LocationProxy(res['_id'])
 
-    @scriptfunc('delay', group='_')
-    def global_delay(delta, func, repeat=False):
+    @scriptfunc('sched', group='_')
+    def global_sched(delta, func, repeat=False, cancel=None):
+        """Schedule an event to occur in the future. The delta argument
+        must be a timedelta or a number of seconds. The func should be
+        a code snippet or {code} object.
+        If repeat is true, the event will continue occurring regularly for
+        as long as the instance is awake.
+        If cancel is provided, the event can be cancelled later with the
+        unsched() function.
         """
+        ctx = EvalPropContext.get_current_context()
+        if not ctx.loctx.iid:
+            raise Exception('No current instance')
+        app = ctx.app
+        instance = app.ipool.get(ctx.loctx.iid)
+        if not instance:
+            raise Exception('Current instance is not awake')
+        if not isinstance(delta, datetime.timedelta):
+            delta = datetime.timedelta(seconds=delta)
+        instance.add_timer_event(delta, func, repeat=repeat, cancel=cancel)
+
+    @scriptfunc('unsched', group='_')
+    def global_unsched(cancel=None):
+        """Cancel all upcoming scheduled events for this instance.
+        If the cancel argument is given, this only cancels events that
+        were set up with the matching cancel argument.
         """
-        pass ###
-        
+        ctx = EvalPropContext.get_current_context()
+        if not ctx.loctx.iid:
+            raise Exception('No current instance')
+        app = ctx.app
+        instance = app.ipool.get(ctx.loctx.iid)
+        if not instance:
+            raise Exception('Current instance is not awake')
+        instance.remove_timer_events(cancel=cancel)
+
     @scriptfunc('player', group='_propmap')
     def global_player():
         """Create a PlayerProxy for the current player.
@@ -455,5 +485,6 @@ def find_symbol(app, loctx, key, locals=None, dependencies=None):
 from twcommon.misc import is_typed_dict
 import two.interp
 import two.execute
+import two.ipool
 from two.evalctx import EvalPropContext
 from two.task import DIRTY_FOCUS

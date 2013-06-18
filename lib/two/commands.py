@@ -133,7 +133,7 @@ def define_commands():
             # do a safety check anyway.
             if instance:
                 instance.lastinhabited = task.starttime
-        tooold = task.starttime - app.ipool.uninhabited_limit
+        tooold = task.starttime - app.ipool.UNINHABITED_LIMIT
         for instance in app.ipool.all():
             iid = instance.iid
             if instance.lastinhabited < tooold:
