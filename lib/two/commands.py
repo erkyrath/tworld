@@ -10,8 +10,6 @@ import twcommon.misc
 from twcommon import wcproto
 from twcommon.excepts import MessageException, ErrorMessageException
 
-import two.execute
-
 class Command:
     # As commands are defined with the @command decorator, they are stuffed
     # in this dict.
@@ -540,59 +538,16 @@ def define_commands():
         if len(cmd.args) != 1:
             raise MessageException('Usage: /move location-key')
         lockey = cmd.args[0]
-        playstate = yield motor.Op(app.mongodb.playstate.find_one,
-                                   {'_id':conn.uid},
-                                   {'iid':1, 'locid':1, 'focus':1})
-        iid = playstate['iid']
-        if not iid:
-            # In the void, there should be no actions.
-            raise ErrorMessageException('You are between worlds.')
-        instance = yield motor.Op(app.mongodb.instances.find_one,
-                                  {'_id':iid})
-        wid = instance['wid']
-        ### Following code is identical to 'move' in perform_action,
-        ### except that the leave/arrive messages are fixed.
+
+        loctx = yield task.get_loctx(conn.uid)
         location = yield motor.Op(app.mongodb.locations.find_one,
-                                  {'wid':wid, 'key':lockey},
+                                  {'wid':loctx.wid, 'key':lockey},
                                   {'_id':1})
         if not location:
             raise ErrorMessageException('No such location: %s' % (lockey,))
-        
-        player = yield motor.Op(app.mongodb.players.find_one,
-                                {'_id':conn.uid},
-                                {'name':1})
-        playername = player['name']
-            
-        msg = '%s disappears.' % (playername,) ###localize
-        if msg:
-            others = yield task.find_locale_players(notself=True)
-            if others:
-                task.write_event(others, msg)
-                
-        yield motor.Op(app.mongodb.playstate.update,
-                       {'_id':conn.uid},
-                       {'$set':{'locid':location['_id'], 'focus':None,
-                                'lastmoved': task.starttime }})
-        task.set_dirty(conn.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_POPULACE)
-        task.set_data_change( ('playstate', conn.uid, 'locid') )
-        task.clear_loctx(conn.uid)
-        
-        # We set everybody in the destination room DIRTY_POPULACE.
-        # (Players in the starting room have a dependency, which is already
-        # covered.)
-        others = yield task.find_locale_players(notself=True)
-        if others:
-            task.set_dirty(others, DIRTY_POPULACE)
-            
-        msg = '%s appears.' % (playername,) ###localize
-        if msg:
-            # others is already set
-            if others:
-                task.write_event(others, msg)
-        msg = 'Your location changes.' ###localize
-        if msg:
-            task.write_event(conn.uid, msg)
-        
+        ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
+
+        yield ctx.perform_move(location['_id'], 'Your location changes.', False, None, False, None, False, 0)
         
     @command('meta_holler', restrict='admin')
     def cmd_meta_holler(app, task, cmd, conn):
@@ -739,5 +694,9 @@ def define_commands():
         
     return Command.all_commands
 
+# Late imports, to avoid circularity
+import two.execute
+import two.evalctx
+from two.evalctx import LEVEL_EXECUTE
 from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_POPULACE, DIRTY_FOCUS
 from twcommon.access import ACC_VISITOR
