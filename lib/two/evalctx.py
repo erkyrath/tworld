@@ -480,6 +480,9 @@ class EvalPropContext(object):
         if nodtyp is ast.Attribute:
             res = yield self.execcode_attribute(nod, depth)
             return res
+        if nodtyp is ast.Subscript:
+            res = yield self.execcode_subscript(nod, depth)
+            return res
         if nodtyp is ast.Call:
             res = yield self.execcode_call(nod, depth)
             return res
@@ -600,7 +603,16 @@ class EvalPropContext(object):
         if two.symbols.type_getattr_allowed(typarg, key):
             return getattr(argument, key)
         raise ExecSandboxException('%s.%s: getattr not allowed' % (typarg.__name__, key))
-        
+
+    @tornado.gen.coroutine
+    def execcode_subscript(self, nod, depth):
+        argument = yield self.execcode_expr(nod.value, depth)
+        slice = nod.slice
+        if type(slice) is not ast.Index:
+            raise NotImplementedError('Subscript slices are not supported')
+        subscript = yield self.execcode_expr(slice.value, depth)
+        return argument[subscript]
+
     @tornado.gen.coroutine
     def execcode_call(self, nod, depth):
         funcval = yield self.execcode_expr(nod.func, depth)
