@@ -365,6 +365,18 @@ def define_globals():
         """
         return random.choice(seq)
 
+    @scriptfunc('randint', group='random')
+    def global_random_randint(a, b):
+        """Return a random integer in range [a, b], including both end
+        points.
+        """
+        return random.randint(a, b)
+
+    @scriptfunc('randrange', group='random')
+    def global_random_randrange(start, stop=None, step=1):
+        """Return a random integer from range(start, stop[, step]).
+        """
+        return random.randrange(start, stop=stop, step=1)
     
     # Copy the collection of top-level functions.
     globmap = dict(ScriptFunc.funcgroups['_'])
