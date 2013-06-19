@@ -37,7 +37,7 @@ class InstancePool:
     MIN_SCHED_REPEAT_DELAY = datetime.timedelta(seconds=10)
 
     # Maximum number of scheduled events at a time.
-    MAX_SCHED_EVENTS = 5 ###
+    MAX_SCHED_EVENTS = 16
     
     def __init__(self, app):
         # Keep a link to the owning application.
