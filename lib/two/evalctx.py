@@ -299,8 +299,11 @@ class EvalPropContext(object):
                 # Look up the destination portaldesc in a separate context.
                 altloctx = two.task.LocContext(None, wid=portal['wid'], locid=portal['locid'])
                 ctx = EvalPropContext(self.task, loctx=altloctx, depth=1, level=LEVEL_FLAT)
-                desttext = yield ctx.eval('portaldesc')
-                self.updateacdepends(ctx)
+                try:
+                    desttext = yield ctx.eval('portaldesc')
+                    self.updateacdepends(ctx)
+                except:
+                    desttext = None
                 if not desttext:
                     desttext = 'The destination is hazy.' ###localize
                 portalobj['view'] = desttext;
