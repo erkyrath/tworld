@@ -611,6 +611,10 @@ class EvalPropContext(object):
         if type(slice) is not ast.Index:
             raise NotImplementedError('Subscript slices are not supported')
         subscript = yield self.execcode_expr(slice.value, depth)
+        if isinstance(argument, two.execute.PropertyProxyMixin):
+            # Special case: property proxies can be accessed by subscript.
+            res = yield argument.getprop(self, self.loctx, subscript)
+            return res
         return argument[subscript]
 
     @tornado.gen.coroutine
