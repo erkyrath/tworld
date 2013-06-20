@@ -48,8 +48,25 @@ class ScriptNamespace(object):
 
     def get(self, key):
         if key in self.propmap:
-            return self.propmap[key]()
+            funcval = self.propmap[key]
+            if isinstance(funcval, ScriptFunc):
+                if not funcval.yieldy:
+                    return funcval.func()
+                else:
+                    raise Exception('ScriptNamespace: cannot use simple get() for a yieldy ScriptFunc!')
+            return funcval()
         return self.map[key]
+
+    def getyieldy(self, key):
+        if key in self.propmap:
+            funcval = self.propmap[key]
+            if isinstance(funcval, ScriptFunc):
+                if not funcval.yieldy:
+                    return (funcval.func(), False)
+                else:
+                    return (funcval.yieldfunc, True)
+            return (funcval(), False)
+        return (self.map[key], False)
 
     def has(self, key):
         return (key in self.map) or (key in self.propmap)
@@ -350,6 +367,28 @@ def define_globals():
             raise Exception('No current player')
         return two.execute.PlayerProxy(ctx.uid)
 
+    @scriptfunc('lastlocation', group='_propmap', yieldy=True)
+    def global_lastlocation():
+        """A LocationProxy for the last location (in this world) that
+        the player visited.
+        This goes in the propmap group, meaning that the user will invoke
+        it as a property object: "_.lastlocation", no parens.
+        """
+        ctx = EvalPropContext.get_current_context()
+        if not ctx.uid:
+            raise Exception('No current player')
+        res = yield motor.Op(ctx.app.mongodb.playstate.find_one,
+                             {'_id':ctx.uid},
+                             {'iid':1, 'lastlocid':1})
+        if not res:
+            raise KeyError('No such player')
+        if res['iid'] != ctx.loctx.iid:
+            raise Exception('Player is not in this instance')
+        locid = res.get('lastlocid', None)
+        if not locid:
+            return None
+        return two.execute.LocationProxy(locid)
+
     @scriptfunc('now', group='datetime_propmap')
     def global_datetime_now():
         """Return the current task's start time.
@@ -399,14 +438,11 @@ def define_globals():
     map = {}
     # Expose some type constructors directly
     map['timedelta'] = datetime.timedelta
-    globmap['datetime'] = ScriptNamespace(map, {
-            global_datetime_now.name: global_datetime_now.func
-            })
+    propmap = dict(ScriptFunc.funcgroups['datetime_propmap'])
+    globmap['datetime'] = ScriptNamespace(map, propmap)
 
     # And a few entries that are generated each time they're fetched.
-    propmap = dict([
-            (key, func.func) for (key, func) in ScriptFunc.funcgroups['_propmap'].items()
-            ])
+    propmap = dict(ScriptFunc.funcgroups['_propmap'])
 
     ### Run this through a site-specific Python hook.
 
@@ -505,7 +541,10 @@ def find_symbol(app, loctx, key, locals=None, dependencies=None):
             return res['val']
 
     if app.global_symbol_table.has(key):
-        return app.global_symbol_table.get(key)
+        (res, yieldy) = app.global_symbol_table.getyieldy(key)
+        if yieldy:
+            res = yield res()
+        return res
 
     raise SymbolError('Name "%s" is not found' % (key,))
 

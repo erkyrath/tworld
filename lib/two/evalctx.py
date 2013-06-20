@@ -595,7 +595,10 @@ class EvalPropContext(object):
         key = nod.attr
         # The real getattr() is way too powerful to offer up.
         if isinstance(argument, two.symbols.ScriptNamespace):
-            return argument.get(key)
+            (res, yieldy) = argument.getyieldy(key)
+            if yieldy:
+                res = yield res()
+            return res
         if isinstance(argument, two.execute.PropertyProxyMixin):
             res = yield argument.getprop(self, self.loctx, key)
             return res
