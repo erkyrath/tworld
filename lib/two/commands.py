@@ -227,7 +227,8 @@ def define_commands():
                        {'_id':cmd.uid},
                        {'$set':{'focus':None, 'iid':None, 'locid':None,
                                 'portto':portto,
-                                'lastmoved':twcommon.misc.now()}})
+                                'lastlocid': None,
+                                'lastmoved':task.starttime }})
         task.set_dirty(cmd.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_WORLD | DIRTY_POPULACE)
         task.set_data_change( ('playstate', cmd.uid, 'iid') )
         task.set_data_change( ('playstate', cmd.uid, 'locid') )
@@ -435,6 +436,7 @@ def define_commands():
                                 'locid':newlocid,
                                 'focus':None,
                                 'lastmoved': task.starttime,
+                                'lastlocid': None,
                                 'portto':None }})
         task.set_dirty(cmd.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_WORLD | DIRTY_POPULACE)
         task.set_data_change( ('playstate', cmd.uid, 'iid') )

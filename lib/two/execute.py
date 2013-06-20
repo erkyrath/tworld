@@ -955,6 +955,7 @@ def perform_action(task, cmd, conn, target):
                                     'locid':None,
                                     'focus':None,
                                     'lastmoved': task.starttime,
+                                    'lastlocid': None,
                                     'portto':portto }})
             task.set_dirty(uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_WORLD | DIRTY_POPULACE)
             task.set_data_change( ('playstate', uid, 'iid') )

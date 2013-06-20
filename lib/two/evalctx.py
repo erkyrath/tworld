@@ -943,7 +943,9 @@ class EvalPropContext(object):
                 
         yield motor.Op(self.app.mongodb.playstate.update,
                        {'_id':self.uid},
-                       {'$set':{'locid':locid, 'focus':None,
+                       {'$set':{'locid':locid,
+                                'focus':None,
+                                'lastlocid': self.loctx.locid,
                                 'lastmoved': self.task.starttime }})
         self.task.set_dirty(self.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_POPULACE)
         self.task.set_data_change( ('playstate', self.uid, 'locid') )
