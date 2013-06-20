@@ -388,7 +388,8 @@ def define_commands():
             return
 
         # This is the one and only spot in the server code where a player
-        # *enters* a new instance.
+        # *enters* a new instance. It's also the place where instances
+        # are created.
         
         if instance:
             newiid = instance['_id']
@@ -396,6 +397,19 @@ def define_commands():
             newiid = yield motor.Op(app.mongodb.instances.insert,
                                     {'wid':newwid, 'scid':newscid})
             app.log.info('Created instance %s (world %s, scope %s)', newiid, newwid, newscid)
+            # If the new instance has an on_init property, run it.
+            loctx = two.task.LocContext(None, wid=newwid, scid=newscid, iid=newiid)
+            task.resetticks()
+            try:
+                inithook = yield two.symbols.find_symbol(app, loctx, 'on_init')
+            except:
+                inithook = None
+            if inithook and twcommon.misc.is_typed_dict(inithook, 'code'):
+                ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
+                try:
+                    yield ctx.eval(inithook, evaltype=EVALTYPE_RAW)
+                except Exception as ex:
+                    task.log.warning('Caught exception (initing instance): %s', ex, exc_info=app.debugstacktraces)
 
         awakening = app.ipool.notify_instance(newiid)
         if awakening:
