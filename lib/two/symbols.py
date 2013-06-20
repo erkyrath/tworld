@@ -16,8 +16,8 @@ class ScriptNamespace(object):
     An entry in propmap is called and the result returned as the property
     value.    
 
-    Note that to fetch an attribute, you call nmsp.get(key). But in script
-    code, you'd say "nmsp.foo" or "nmsp['foo']".
+    Note that to fetch an attribute, you call nmsp.get(key) or
+    nmsp.getyieldy(key). But in script code, you'd say "nmsp.foo".
     
     Safe to print (as a str). Contained values are abbreviated, and it
     tries to avoid recursing into them.
@@ -47,6 +47,10 @@ class ScriptNamespace(object):
         return '<ScriptNamespace(%s)>' % (ls,)
 
     def get(self, key):
+        """Get an entry. This works for normal (attribute) entries and
+        non-yieldy property entries. If you're trying to fetch an
+        arbitrary entry, call getyieldy() instead.
+        """
         if key in self.propmap:
             funcval = self.propmap[key]
             if isinstance(funcval, ScriptFunc):
@@ -58,6 +62,14 @@ class ScriptNamespace(object):
         return self.map[key]
 
     def getyieldy(self, key):
+        """Get an entry which may be an asychronous operation.
+        (This is terrible, but better than handling every single
+        nmsp.attr as a coroutine call? I think?)
+        Anyhow, you call this with the idiom:
+          (res, yieldy) = nmsp.getyieldy(key)
+          if yieldy:
+            res = yield res()
+        """
         if key in self.propmap:
             funcval = self.propmap[key]
             if isinstance(funcval, ScriptFunc):
