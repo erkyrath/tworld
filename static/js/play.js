@@ -237,7 +237,7 @@ function toolpane_build_segment(key, hasmenu) {
         leftbutel.text('\u25BE'); /* down pointer */
     segel.append(leftbutel);
     var rightbutel =  $('<div>', {'class':'ToolControl ToolControlRight',
-                                  'title':'Open/close this section'});
+                                  'title':'Menu for this section'});
     rightbutel.text('\u25C6'); /* diamond */
     if (!hasmenu)
         rightbutel.addClass('ToolControlDimmed');
