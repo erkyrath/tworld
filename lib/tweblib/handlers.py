@@ -162,7 +162,6 @@ class MyRequestHandler(MyHandlerMixin, tornado.web.RequestHandler):
 class MainHandler(MyRequestHandler):
     """Top page: the login form.
     """
-    @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self):
         if not self.twsession:
@@ -175,7 +174,6 @@ class MainHandler(MyRequestHandler):
         else:
             self.render('main_auth.html')
 
-    @tornado.web.asynchronous
     @tornado.gen.coroutine
     def post(self):
 
@@ -245,7 +243,6 @@ class MainHandler(MyRequestHandler):
 class RegisterHandler(MyRequestHandler):
     """The page for registering a new account.
     """
-    @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self):
         if self.twsession:
@@ -254,7 +251,6 @@ class RegisterHandler(MyRequestHandler):
             return
         self.render('register.html')
 
-    @tornado.web.asynchronous
     @tornado.gen.coroutine
     def post(self):
 
@@ -347,7 +343,6 @@ class RegisterHandler(MyRequestHandler):
 class RecoverHandler(MyRequestHandler):
     """The page for recovering a lost password.
     """
-    @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self):
         self.render('recover.html')
@@ -355,7 +350,6 @@ class RecoverHandler(MyRequestHandler):
 class LogOutHandler(MyRequestHandler):
     """The sign-out page.
     """
-    @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self):
         # End this sign-in session and kill the cookie.
@@ -379,7 +373,6 @@ class LogOutHandler(MyRequestHandler):
 class PlayHandler(MyRequestHandler):
     """Handler for the game page itself.
     """
-    @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self):
         if not self.twsession:
@@ -400,13 +393,14 @@ class TopPageHandler(MyRequestHandler):
     def initialize(self, page):
         self.page = page
         
-    @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self):
         self.render('top_%s.html' % (self.page,))
 
 class AdminMainHandler(MyRequestHandler):
-
+    """Handler for the Admin page, which is rudimentary and not worth much
+    right now.
+    """
     @tornado.gen.coroutine
     def prepare(self):
         """
@@ -422,7 +416,6 @@ class AdminMainHandler(MyRequestHandler):
         if not res or not res.get('admin', False):
             raise tornado.web.HTTPError(403, 'You do not have admin access.')
     
-    @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self):
         self.render('admin.html',
@@ -430,7 +423,6 @@ class AdminMainHandler(MyRequestHandler):
                     tworldavailable=(self.application.twservermgr.tworldavailable),
                     conntable=self.application.twconntable.as_dict())
 
-    @tornado.web.asynchronous
     @tornado.gen.coroutine
     def post(self):
         if (self.get_argument('playerconntable', None)):
