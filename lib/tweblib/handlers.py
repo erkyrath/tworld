@@ -29,6 +29,14 @@ class MyHandlerMixin:
     
     twsessionstatus = None
     twsession = None
+
+    @tornado.gen.coroutine
+    def prepare(self):
+        """
+        Called before every get/post invocation for this handler. We use
+        the opportunity to look up the session status.
+        """
+        yield self.find_current_session()
     
     @tornado.gen.coroutine
     def find_current_session(self):
@@ -43,10 +51,8 @@ class MyHandlerMixin:
         remains None. This method should catch all its own exceptions
         (setting 'unknown').
 
-        All the handlers which want to show the header-bar status need to
-        call this. (It would be nice to call this automatically from the
-        prepare() method, but that can't be async in Tornado 3.0. Maybe in
-        3.1.)
+        This is invoked from the prepare() method, but also manually if
+        we know the session info has changed.
         """
         if self.application.caughtinterrupt:
             # Server is shutting down; don't accept any significant requests.
@@ -147,7 +153,6 @@ class MainHandler(MyRequestHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self):
-        yield self.find_current_session()
         if not self.twsession:
             try:
                 name = self.get_cookie('tworld_name', None)
@@ -161,7 +166,6 @@ class MainHandler(MyRequestHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def post(self):
-        yield self.find_current_session()
 
         # If the "register" form was submitted, jump to the other page.
         if (self.get_argument('register', None)):
@@ -232,7 +236,6 @@ class RegisterHandler(MyRequestHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self):
-        yield self.find_current_session()
         if self.twsession:
             # Can't register if you're already logged in!
             self.redirect('/')
@@ -242,7 +245,6 @@ class RegisterHandler(MyRequestHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def post(self):
-        yield self.find_current_session()
 
         # Apply canonicalizations to the name and password.
         name = self.get_argument('name', '')
@@ -336,7 +338,6 @@ class RecoverHandler(MyRequestHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self):
-        yield self.find_current_session()
         self.render('recover.html')
 
 class LogOutHandler(MyRequestHandler):
@@ -345,7 +346,6 @@ class LogOutHandler(MyRequestHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self):
-        yield self.find_current_session()
         # End this sign-in session and kill the cookie.
         yield self.application.twsessionmgr.remove_session(self)
         # Clobber any open web sockets on this session. (But the player
@@ -370,7 +370,6 @@ class PlayHandler(MyRequestHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self):
-        yield self.find_current_session()
         if not self.twsession:
             self.redirect('/')
             return
@@ -392,7 +391,6 @@ class TopPageHandler(MyRequestHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self):
-        yield self.find_current_session()
         self.render('top_%s.html' % (self.page,))
 
 class AdminMainHandler(MyRequestHandler):
@@ -400,7 +398,6 @@ class AdminMainHandler(MyRequestHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self):
-        yield self.find_current_session()
         ### check player credentials too!
         if self.twsessionstatus != 'auth':
             raise tornado.web.HTTPError(403, 'You do not have admin access.')
@@ -412,7 +409,6 @@ class AdminMainHandler(MyRequestHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def post(self):
-        yield self.find_current_session()
         ### check player credentials too!
         if self.twsessionstatus != 'auth':
             raise tornado.web.HTTPError(403, 'You do not have admin access.')
