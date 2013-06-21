@@ -114,8 +114,20 @@ class MyHandlerMixin:
             exception = exception + ''.join(ls)
         self.render('error.html', status_code=status_code, exctitle=exctitle, exception=exception)
 
-class MyErrorHandler(MyHandlerMixin, tornado.web.ErrorHandler):
+class MyNotFoundErrorHandler(MyHandlerMixin, tornado.web.ErrorHandler):
     """Customization of tornado's ErrorHandler."""
+    def initialize(self):
+        super().initialize(404)
+        
+    @tornado.gen.coroutine
+    def prepare(self):
+        """
+        The way tornado's ErrorHandler works is to raise the appropriate
+        error. We want to set up the session info first, then do that.
+        """
+        yield self.find_current_session()
+        raise tornado.web.HTTPError(self._status_code)
+    
     def get_template_namespace(self):
         map = super().get_template_namespace()
         map = self.extend_template_namespace(map)

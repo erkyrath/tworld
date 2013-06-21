@@ -136,7 +136,7 @@ for val in opts.top_pages:
     handlers.append( ('/'+val, tweblib.handlers.TopPageHandler, {'page': val}) )
 
 # Fallback 404 handler for everything else.
-handlers.append( (r'.*', tweblib.handlers.MyErrorHandler, {'status_code': 404}) )
+handlers.append( (r'.*', tweblib.handlers.MyNotFoundErrorHandler) )
 
 class TwebApplication(tornado.web.Application):
     """TwebApplication is a customization of the generic Tornado web app
