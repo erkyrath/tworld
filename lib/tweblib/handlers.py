@@ -394,13 +394,25 @@ class TopPageHandler(MyRequestHandler):
         self.render('top_%s.html' % (self.page,))
 
 class AdminMainHandler(MyRequestHandler):
+
+    @tornado.gen.coroutine
+    def prepare(self):
+        """
+        Called before every get/post invocation for this handler. We use
+        the opportunity to look up the session status, and then make sure
+        the player is an administrator.
+        """
+        yield self.find_current_session()
+        if self.twsessionstatus != 'auth':
+            raise tornado.web.HTTPError(403, 'You are not signed in.')
+        res = yield motor.Op(self.application.mongodb.players.find_one,
+                             { '_id':self.twsession['uid'] })
+        if not res or not res.get('admin', False):
+            raise tornado.web.HTTPError(403, 'You do not have admin access.')
     
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def get(self):
-        ### check player credentials too!
-        if self.twsessionstatus != 'auth':
-            raise tornado.web.HTTPError(403, 'You do not have admin access.')
         self.render('admin.html',
                     mongoavailable=(self.application.mongodb is not None),
                     tworldavailable=(self.application.twservermgr.tworldavailable),
@@ -409,9 +421,6 @@ class AdminMainHandler(MyRequestHandler):
     @tornado.web.asynchronous
     @tornado.gen.coroutine
     def post(self):
-        ### check player credentials too!
-        if self.twsessionstatus != 'auth':
-            raise tornado.web.HTTPError(403, 'You do not have admin access.')
         if (self.get_argument('playerconntable', None)):
             msg = { 'cmd':'logplayerconntable' }
             self.application.twservermgr.tworld_write(0, msg)
