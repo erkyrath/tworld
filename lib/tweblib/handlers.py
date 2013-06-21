@@ -7,6 +7,7 @@ import traceback
 import unicodedata
 import json
 
+from bson.objectid import ObjectId
 import tornado.web
 import tornado.gen
 import tornado.escape
@@ -396,6 +397,37 @@ class TopPageHandler(MyRequestHandler):
     @tornado.gen.coroutine
     def get(self):
         self.render('top_%s.html' % (self.page,))
+
+class BuildWorldHandler(MyRequestHandler):
+    @tornado.gen.coroutine
+    def prepare(self):
+        yield self.find_current_session()
+        if self.twsessionstatus != 'auth':
+            raise tornado.web.HTTPError(403, 'You are not signed in.')
+        res = yield motor.Op(self.application.mongodb.players.find_one,
+                             { '_id':self.twsession['uid'] })
+        if not res or not (res.get('admin', False) or res.get('build', False)):
+            raise tornado.web.HTTPError(403, 'You do not have build access.')
+        
+    @tornado.gen.coroutine
+    def get(self, wid):
+        wid = ObjectId(wid)
+        world = yield motor.Op(self.application.mongodb.worlds.find_one,
+                               { '_id':wid })
+        if not world:
+            raise Exception('No such world')
+        worldname = world.get('name', '???')
+        locations = []
+        locarray = []
+        cursor = self.application.mongodb.locations.find({'wid':wid})
+        while (yield cursor.fetch_next):
+            loc = cursor.next_object()
+            locations.append(loc)
+            locarray.append({'id':str(loc['_id']), 'name':loc['name']})
+        cursor.close()
+        locations.sort(key=lambda loc:loc['_id']) ### or other criterion?
+        locarray.sort(key=lambda loc:loc['id']) ### or other criterion?
+        self.render('build_world.html', wid=str(wid), worldname=worldname, locarray=json.dumps(locarray), locations=locations)
 
 class AdminMainHandler(MyRequestHandler):
     """Handler for the Admin page, which is rudimentary and not worth much

@@ -1,0 +1,85 @@
+#localepane > :first-child {
+  /* Cancel the top margin which the first locale pane entry usually gets. */
+  margin-top: 0px;
+}
+
+.BuildBar {
+  font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
+  font-weight: 100;
+  background: #D2D2B6;
+  margin-top: 0px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 20px;
+}
+
+.BuildBarItem {
+  font-size: 1.2em;
+}
+
+.BuildBarSep {
+  font-size: 1.2em;
+  color: #862;
+}
+
+#localepane .BuildBarItem a {
+  background: none;
+  color: #420;
+  text-decoration: none;
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+#localepane .BuildBarItem a:hover {
+  background: #C0C0A0;
+}
+
+.BuildPropTable {
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
+.BuildPropKey {
+  font-size: 1.1em;
+}
+
+.BuildPropTypeSelect {
+  float: right;
+  margin-right: 10px;
+  font-size: 1.0em;
+}
+
+
+
+#popup_menu {
+  background: #D2D2B6;
+  border: 1px solid #AA9;
+  border-radius: 8px;
+
+  padding: 10px 4px;
+  list-style: none;
+
+  font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
+  font-size: 1.0em;
+}
+
+#popup_menu li {
+  padding: 0px 20px;
+}
+
+#popup_menu a {
+  text-decoration: none;
+  color: #A30;
+}
+
+#popup_menu li:hover {
+  background: #BB8;
+}
+
+#popup_menu li.Disabled {
+  background: inherit;
+}
+
+#popup_menu .Disabled a {
+  color: #977;
+}

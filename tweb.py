@@ -127,6 +127,8 @@ handlers = [
     (r'/recover', tweblib.handlers.RecoverHandler),
     (r'/logout', tweblib.handlers.LogOutHandler),
     (r'/play', tweblib.handlers.PlayHandler),
+    (r'/build/world/([0-9a-f]+)', tweblib.handlers.BuildWorldHandler),
+    ###(r'/build/loc/([0-9a-f]+)', tweblib.handlers.BuildLocHandler),
     (r'/admin', tweblib.handlers.AdminMainHandler),
     (r'/websocket', tweblib.handlers.PlayWebSocketHandler),
     ]

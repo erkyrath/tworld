@@ -337,9 +337,13 @@ class Task(object):
                 player = yield motor.Op(self.app.mongodb.players.find_one,
                                         {'_id':conn.uid},
                                         {'admin':1})
-                if (player and player.get('admin', False)):
+                if not player:
+                    raise ErrorMessageException('Player not found!')
+                if (player.get('admin', False)):
                     # Admins always have creator rights.
                     pass
+                elif (not player.get('build', False)):
+                    raise ErrorMessageException('Command requires build permission: "%s"' % (cmdname,))
                 else:
                     playstate = yield motor.Op(self.app.mongodb.playstate.find_one,
                                                {'_id':conn.uid},
