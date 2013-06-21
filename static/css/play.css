@@ -30,6 +30,15 @@
   background: #EED;
 }
 
+#bottomcol_topedge {
+  position: absolute;
+  width: 100%;
+  left: 0px;
+  top: -1px;
+  height: 1px;
+  background: #DDB;
+}
+
 #eventboxpane {
   height: 100%;
   background: #F4F4E4;

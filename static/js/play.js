@@ -78,6 +78,7 @@ function build_page_structure() {
     topcol.append(leftcol);
     leftcol.append(localepane);
     topcol.append(rightcol);
+    bottomcol.append($('<div>', { id: 'bottomcol_topedge' }));
     bottomcol.append(eventboxpane);
     eventboxpane.append(eventpane);
     eventpane.append(inputline);
