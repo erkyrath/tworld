@@ -398,7 +398,8 @@ class TopPageHandler(MyRequestHandler):
     def get(self):
         self.render('top_%s.html' % (self.page,))
 
-class BuildWorldHandler(MyRequestHandler):
+
+class BuildBaseHandler(MyRequestHandler):
     @tornado.gen.coroutine
     def prepare(self):
         yield self.find_current_session()
@@ -406,28 +407,75 @@ class BuildWorldHandler(MyRequestHandler):
             raise tornado.web.HTTPError(403, 'You are not signed in.')
         res = yield motor.Op(self.application.mongodb.players.find_one,
                              { '_id':self.twsession['uid'] })
-        if not res or not (res.get('admin', False) or res.get('build', False)):
+        self.twisadmin = res.get('admin', False)
+        if not res or not (self.twisadmin or res.get('build', False)):
             raise tornado.web.HTTPError(403, 'You do not have build access.')
-        
+
     @tornado.gen.coroutine
-    def get(self, wid):
-        wid = ObjectId(wid)
+    def find_build_world(self, wid):
         world = yield motor.Op(self.application.mongodb.worlds.find_one,
                                { '_id':wid })
         if not world:
             raise Exception('No such world')
-        worldname = world.get('name', '???')
+        if world['creator'] != self.twsession['uid'] and not self.twisadmin:
+            raise tornado.web.HTTPError(403, 'You did not create this world.')
         locations = []
-        locarray = []
         cursor = self.application.mongodb.locations.find({'wid':wid})
         while (yield cursor.fetch_next):
             loc = cursor.next_object()
             locations.append(loc)
-            locarray.append({'id':str(loc['_id']), 'name':loc['name']})
         cursor.close()
         locations.sort(key=lambda loc:loc['_id']) ### or other criterion?
-        locarray.sort(key=lambda loc:loc['id']) ### or other criterion?
-        self.render('build_world.html', wid=str(wid), worldname=worldname, locarray=json.dumps(locarray), locations=locations)
+
+        return (world, locations)
+
+class BuildWorldHandler(BuildBaseHandler):
+    @tornado.gen.coroutine
+    def get(self, wid):
+        wid = ObjectId(wid)
+        (world, locations) = yield self.find_build_world(wid)
+
+        worldname = world.get('name', '???')
+        # This array must be handed to the client to construct the pop-up
+        # location menu.
+        locarray = [ {'id':str(loc['_id']), 'name':loc['name']} for loc in locations ]
+
+        self.render('build_world.html',
+                    wid=str(wid), worldname=worldname,
+                    locarray=json.dumps(locarray), locations=locations)
+
+class BuildLocHandler(BuildBaseHandler):
+    @tornado.gen.coroutine
+    def get(self, locid):
+        locid = ObjectId(locid)
+        location = yield motor.Op(self.application.mongodb.locations.find_one,
+                                  { '_id':locid })
+        if not location:
+            raise Exception('No such location')
+        wid = location['wid']
+        (world, locations) = yield self.find_build_world(wid)
+
+        worldname = world.get('name', '???')
+        # This array must be handed to the client to construct the pop-up
+        # location menu.
+        locarray = [ {'id':str(loc['_id']), 'name':loc['name']} for loc in locations ]
+
+        lockey = location.get('key', '???')
+        locname = location.get('name', '???')
+
+        props = []
+        cursor = self.application.mongodb.worldprop.find({'wid':wid, 'locid':locid}, {'key':1, 'val':1})
+        while (yield cursor.fetch_next):
+            prop = cursor.next_object()
+            props.append({'key':prop['key'], 'val':prop['val'], 'id':str(prop['_id'])})
+        cursor.close()
+        props.sort(key=lambda prop:prop['id']) ### or other criterion?
+        
+        self.render('build_loc.html',
+                    wid=str(wid), worldname=worldname,
+                    locarray=json.dumps(locarray), locations=locations,
+                    locname=locname, proparray=json.dumps(props))
+
 
 class AdminMainHandler(MyRequestHandler):
     """Handler for the Admin page, which is rudimentary and not worth much
