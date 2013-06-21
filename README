@@ -24,7 +24,7 @@ ways before Tworld hits beta, never mind 1.0.
 
 Python 3 (3.3 or later)
 MongoDB (2.4 or later)
-Tornado (3.0 or later)
+Tornado (3.1 or later)
 PyMongo (2.4 or later)
 Motor (0.1)
 
