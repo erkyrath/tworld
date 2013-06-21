@@ -47,6 +47,7 @@ function build_page_structure() {
     var rightcol = $('<div>', { id: 'rightcol' });
     var bottomcol = $('<div>', { id: 'bottomcol' });
     var eventpane = $('<div>', { id: 'eventpane' });
+    var eventboxpane = $('<div>', { id: 'eventboxpane' });
 
     localepane.append($('<div>', { id: 'localepane_locale' }));
     localepane.append($('<div>', { id: 'localepane_populace' }));
@@ -77,8 +78,8 @@ function build_page_structure() {
     topcol.append(leftcol);
     leftcol.append(localepane);
     topcol.append(rightcol);
-    bottomcol.append($('<div>', { id: 'bottomcol_topedge' }));
-    bottomcol.append(eventpane);
+    bottomcol.append(eventboxpane);
+    eventboxpane.append(eventpane);
     eventpane.append(inputline);
 
     /* Add the top-level, fully-constructed structures to the DOM last. More
