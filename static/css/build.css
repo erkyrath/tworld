@@ -34,9 +34,13 @@
   background: #C0C0A0;
 }
 
-.BuildPropTable {
+.BuildPropTableBox {
   margin-left: 20px;
   margin-right: 20px;
+}
+
+.BuildPropTable {
+  width: 100%;
 }
 
 .BuildPropKey {
