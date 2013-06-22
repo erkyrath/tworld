@@ -13,8 +13,14 @@ Building: {{ worldname }}
 <script src="{{ static_url('js/build.js') }}" type="text/javascript"></script>
 
 <script type="text/javascript">
+/* Which page is this? Cheap way of telling build.js. */
+var pageid = 'world';
 /* List of locations in this world. */
 var db_locations = {% raw locarray %};
+/* List of default realm-level properties. */
+var db_world_props = {% raw worldproparray %};
+/* List of default player-scope properties. */
+var db_player_props = {% raw playerproparray %};
 </script>
 {% end %}
 
@@ -26,6 +32,18 @@ var db_locations = {% raw locarray %};
 <span class="BuildBarItem"><a href="/build/world/{{wid}}">{{ worldname }}</a></span>
 <span class="BuildBarSep">&#x2013;</span>
 <span class="BuildBarItem"><a id="build_location_menu" href="#"><span style="color: #884">&#x25BE;</span> (select location)</a></span>
+</div>
+
+<div class="BuildPropTableBox">
+ <table id="build_world_properties" class="BuildPropTable">
+ <colgroup><col width="30%"><col width="70%"></colgroup>
+ </table>
+</div>
+
+<div class="BuildPropTableBox">
+ <table id="build_player_properties" class="BuildPropTable">
+ <colgroup><col width="30%"><col width="70%"></colgroup>
+ </table>
 </div>
 
 <ul>

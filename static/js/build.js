@@ -1,13 +1,9 @@
 
-/* Only called for pages with property tables. 
-*/
-function build_initial_proptable() {
-    var tableel = $('.BuildPropTable');
-
+function rebuild_proptable(tableel, proplist) {
     /* Remove any existing rows. */
     tableel.remove('tr');
 
-    jQuery.each(db_props, function(index, prop) {
+    jQuery.each(proplist, function(index, prop) {
             var rowel = $('<tr>', { valign:'top' });
             var cellkeyel = $('<td>');
             var cellvalel = $('<td>');
@@ -40,7 +36,12 @@ function setup_event_handlers() {
 /* The page-ready handler. Like onload(), but better, I'm told. */
 $(document).ready(function() {
     /*### install UI prefs to match play page? */
-    if ($('.BuildPropTable'))
-        build_initial_proptable();
+    if (pageid == 'loc') {
+        rebuild_proptable($('#build_loc_properties'), db_props);
+    }
+    if (pageid == 'world') {
+        rebuild_proptable($('#build_world_properties'), db_world_props);
+        rebuild_proptable($('#build_player_properties'), db_player_props);
+    }
     setup_event_handlers();
 });

@@ -13,6 +13,8 @@ Building: {{ worldname }}
 <script src="{{ static_url('js/build.js') }}" type="text/javascript"></script>
 
 <script type="text/javascript">
+/* Which page is this? Cheap way of telling build.js. */
+var pageid = 'loc';
 /* List of locations in this world. */
 var db_locations = {% raw locarray %};
 /* List of properties in the location. */
@@ -31,7 +33,7 @@ var db_props = {% raw proparray %};
 </div>
 
 <div class="BuildPropTableBox">
- <table class="BuildPropTable">
+ <table id="build_loc_properties" class="BuildPropTable">
  <colgroup><col width="30%"><col width="70%"></colgroup>
  </table>
 </div>

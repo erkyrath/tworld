@@ -429,6 +429,13 @@ class BuildBaseHandler(MyRequestHandler):
 
         return (world, locations)
 
+    def export_prop_array(self, ls):
+        res = []
+        for prop in ls:
+            newprop = {'key':prop['key'], 'val':prop['val'], 'id':str(prop['_id'])}
+            res.append(newprop)
+        return res
+
 class BuildMainHandler(BuildBaseHandler):
     @tornado.gen.coroutine
     def get(self):
@@ -452,9 +459,30 @@ class BuildWorldHandler(BuildBaseHandler):
         # location menu.
         locarray = [ {'id':str(loc['_id']), 'name':loc['name']} for loc in locations ]
 
+        worldprops = []
+        cursor = self.application.mongodb.worldprop.find({'wid':wid, 'locid':None}, {'key':1, 'val':1})
+        while (yield cursor.fetch_next):
+            prop = cursor.next_object()
+            worldprops.append(prop)
+        cursor.close()
+        worldprops.sort(key=lambda prop:prop['_id']) ### or other criterion?
+
+        playerprops = []
+        cursor = self.application.mongodb.wplayerprop.find({'wid':wid, 'uid':None}, {'key':1, 'val':1})
+        while (yield cursor.fetch_next):
+            prop = cursor.next_object()
+            playerprops.append(prop)
+        cursor.close()
+        playerprops.sort(key=lambda prop:prop['_id']) ### or other criterion?
+
+        encoder = JSONEncoderExtra()
+        worldproparray = encoder.encode(self.export_prop_array(worldprops))
+        playerproparray = encoder.encode(self.export_prop_array(playerprops))
+
         self.render('build_world.html',
                     wid=str(wid), worldname=worldname,
-                    locarray=json.dumps(locarray), locations=locations)
+                    locarray=json.dumps(locarray), locations=locations,
+                    worldproparray=worldproparray, playerproparray=playerproparray)
 
 ### Put elsewhere?
 class JSONEncoderExtra(json.JSONEncoder):
@@ -486,16 +514,17 @@ class BuildLocHandler(BuildBaseHandler):
         cursor = self.application.mongodb.worldprop.find({'wid':wid, 'locid':locid}, {'key':1, 'val':1})
         while (yield cursor.fetch_next):
             prop = cursor.next_object()
-            props.append({'key':prop['key'], 'val':prop['val'], 'id':str(prop['_id'])})
+            props.append(prop)
         cursor.close()
-        props.sort(key=lambda prop:prop['id']) ### or other criterion?
+        props.sort(key=lambda prop:prop['_id']) ### or other criterion?
 
         encoder = JSONEncoderExtra()
+        proparray = encoder.encode(self.export_prop_array(props))
         
         self.render('build_loc.html',
                     wid=str(wid), worldname=worldname,
                     locarray=json.dumps(locarray), locations=locations,
-                    locname=locname, proparray=encoder.encode(props))
+                    locname=locname, proparray=proparray)
 
 
 class AdminMainHandler(MyRequestHandler):
