@@ -444,6 +444,13 @@ class BuildWorldHandler(BuildBaseHandler):
                     wid=str(wid), worldname=worldname,
                     locarray=json.dumps(locarray), locations=locations)
 
+### Put elsewhere?
+class JSONEncoderExtra(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, ObjectId):
+            return str(obj)
+        return super().default(obj)
+        
 class BuildLocHandler(BuildBaseHandler):
     @tornado.gen.coroutine
     def get(self, locid):
@@ -470,11 +477,13 @@ class BuildLocHandler(BuildBaseHandler):
             props.append({'key':prop['key'], 'val':prop['val'], 'id':str(prop['_id'])})
         cursor.close()
         props.sort(key=lambda prop:prop['id']) ### or other criterion?
+
+        encoder = JSONEncoderExtra()
         
         self.render('build_loc.html',
                     wid=str(wid), worldname=worldname,
                     locarray=json.dumps(locarray), locations=locations,
-                    locname=locname, proparray=json.dumps(props))
+                    locname=locname, proparray=encoder.encode(props))
 
 
 class AdminMainHandler(MyRequestHandler):
