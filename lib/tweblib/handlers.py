@@ -400,8 +400,16 @@ class TopPageHandler(MyRequestHandler):
 
 
 class BuildBaseHandler(MyRequestHandler):
+    """Base class for the handlers for build pages. This has some common
+    functionality.
+    """
     @tornado.gen.coroutine
     def prepare(self):
+        """
+        Called before every get/post invocation for this handler. We use
+        the opportunity to make sure the player is authenticated and a
+        builder. We also save the admin flag as self.twisadmin.
+        """
         yield self.find_current_session()
         if self.twsessionstatus != 'auth':
             raise tornado.web.HTTPError(403, 'You are not signed in.')
@@ -413,12 +421,18 @@ class BuildBaseHandler(MyRequestHandler):
 
     @tornado.gen.coroutine
     def find_build_world(self, wid):
+        """Given the ObjectId of a world, look up the world and make sure
+        this player is the creator. We also look up the location list for
+        the world, since any build page that cares will have a location
+        pop-up.
+        """
         world = yield motor.Op(self.application.mongodb.worlds.find_one,
                                { '_id':wid })
         if not world:
             raise Exception('No such world')
         if world['creator'] != self.twsession['uid'] and not self.twisadmin:
             raise tornado.web.HTTPError(403, 'You did not create this world.')
+        
         locations = []
         cursor = self.application.mongodb.locations.find({'wid':wid})
         while (yield cursor.fetch_next):
@@ -430,9 +444,19 @@ class BuildBaseHandler(MyRequestHandler):
         return (world, locations)
 
     def export_prop_array(self, ls):
+        """Given an array of property values (from the db), return an array
+        suitable for handing over to the client for editing. This means
+        an array of type-keyed dicts. We wrap all native values as {value}
+        objects.
+        """
         res = []
         for prop in ls:
-            newprop = {'key':prop['key'], 'val':prop['val'], 'id':str(prop['_id'])}
+            val = prop['val']
+            if type(val) is dict and val.get('type', None):
+                pass
+            else:
+                val = { 'type':'value', 'value':val }
+            newprop = {'key':prop['key'], 'val':val, 'id':str(prop['_id'])}
             res.append(newprop)
         return res
 
