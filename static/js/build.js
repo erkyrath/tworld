@@ -2,6 +2,7 @@
 var property_type_selectors = [
     { value:'text', text:'Text' },
     { value:'move', text:'Move' },
+    { value:'event', text:'Event' },
     { value:'value', text:'Value' }
 ];
 
@@ -23,7 +24,10 @@ function rebuild_proptable(tableel, proplist) {
                 val = prop.val.text;
             }
             else if (valtype == 'move') {
-                val = prop.val.loc;
+                val = prop.val.loc; /*###*/
+            }
+            else if (valtype == 'event') {
+                val = prop.val.text; /*###*/
             }
             else {
                 valtype = 'value';
