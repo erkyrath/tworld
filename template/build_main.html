@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block page_title %}
+Building
+{% end %}
+
+{% block head_ext %}
+<link rel="stylesheet" href="{{ static_url('css/build.css') }}" type="text/css">
+{% end %}
+
+{% block body %}
+
+<div class="BuildBar">
+<span class="BuildBarItem"><a href="/build">Worlds</a></span>
+</div>
+
+<ul>
+ {% for world in worlds %}
+  <li><a href="/build/world/{{ world['id'] }}">{{ world['name'] }}</a>
+ {% end %}
+</ul>
+
+{% end %}
