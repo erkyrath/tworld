@@ -1,4 +1,10 @@
 
+var property_type_selectors = [
+    { value:'text', text:'Text' },
+    { value:'move', text:'Move' },
+    { value:'value', text:'Value' }
+];
+
 function rebuild_proptable(tableel, proplist) {
     /* Remove any existing rows. */
     tableel.remove('tr');
@@ -8,8 +14,32 @@ function rebuild_proptable(tableel, proplist) {
             var cellkeyel = $('<td>');
             var cellvalel = $('<td>');
 
+            var val = '';
+            var valtype = prop.val.type;
+            if (valtype == 'value') {
+                val = prop.val.value;
+            }
+            else if (valtype == 'text') {
+                val = prop.val.text;
+            }
+            else if (valtype == 'move') {
+                val = prop.val.loc;
+            }
+            else {
+                valtype = 'value';
+                val = '"???"';
+            }
+
             cellkeyel.append($('<span>', { 'class':'BuildPropKey' }).text(prop.key));
-            cellvalel.text(''+prop.val); /*###*/
+            var selectel = $('<select>', { 'class':'BuildPropTypeSelect' });
+            for (var ix=0; ix<property_type_selectors.length; ix++) {
+                var selector = property_type_selectors[ix];
+                selectel.append($('<option>', { value:selector.value }).text(selector.text));
+            }
+            selectel.prop('value', valtype);
+            cellkeyel.append(selectel);
+
+            cellvalel.text(val); /*###*/
 
             rowel.append(cellkeyel);
             rowel.append(cellvalel);

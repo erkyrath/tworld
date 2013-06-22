@@ -455,7 +455,8 @@ class BuildBaseHandler(MyRequestHandler):
             if type(val) is dict and val.get('type', None):
                 pass
             else:
-                val = { 'type':'value', 'value':val }
+                ### If I defaulted to double-quotes for strings, it would be a bit tidier.
+                val = { 'type':'value', 'value':repr(val) }
             newprop = {'key':prop['key'], 'val':val, 'id':str(prop['_id'])}
             res.append(newprop)
         return res
@@ -509,6 +510,7 @@ class BuildWorldHandler(BuildBaseHandler):
                     worldproparray=worldproparray, playerproparray=playerproparray)
 
 ### Put elsewhere?
+### Necessary at all? I may be pushing all JSONable values now. Although I need to think about datetime objects.
 class JSONEncoderExtra(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, ObjectId):
