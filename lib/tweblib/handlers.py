@@ -429,6 +429,18 @@ class BuildBaseHandler(MyRequestHandler):
 
         return (world, locations)
 
+class BuildMainHandler(BuildBaseHandler):
+    @tornado.gen.coroutine
+    def get(self):
+        worlds = []
+        cursor = self.application.mongodb.worlds.find({'creator':self.twsession['uid']}, {'name':1})
+        while (yield cursor.fetch_next):
+            world = cursor.next_object()
+            worlds.append({'name':world['name'], 'id':str(world['_id'])})
+        cursor.close()
+        worlds.sort(key=lambda world:world['id']) ### or other criterion?
+        self.render('build_main.html', worlds=worlds)
+        
 class BuildWorldHandler(BuildBaseHandler):
     @tornado.gen.coroutine
     def get(self, wid):
