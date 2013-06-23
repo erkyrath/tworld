@@ -221,14 +221,14 @@ def define_commands():
         # location.
         portto = getattr(cmd, 'portto', None)
         
-        task.write_event(cmd.uid, 'The world fades away.') ###localize
+        task.write_event(cmd.uid, app.localize('action.portout')) # 'The world fades away.'
         others = yield task.find_locale_players(uid=cmd.uid, notself=True)
         if others:
             res = yield motor.Op(app.mongodb.players.find_one,
                                  {'_id':cmd.uid},
                                  {'name':1})
             playername = res['name']
-            task.write_event(others, '%s disappears.' % (playername,)) ###localize
+            task.write_event(others, app.localize('action.oportout') % (playername,)) # '%s disappears.'
         # Move the player to the void.
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':cmd.uid},
@@ -392,7 +392,7 @@ def define_commands():
         else:
             minaccess = ACC_VISITOR
         if False: ### check minaccess against scope access!
-            task.write_event(cmd.uid, 'You do not have access to this instance.') ###localize
+            task.write_event(cmd.uid, app.localize('message.instance_no_access')) # 'You do not have access to this instance.'
             return
 
         # This is the one and only spot in the server code where a player
@@ -454,8 +454,8 @@ def define_commands():
         others = yield task.find_locale_players(uid=cmd.uid, notself=True)
         if others:
             task.set_dirty(others, DIRTY_POPULACE)
-            task.write_event(others, '%s appears.' % (playername,)) ###localize
-        task.write_event(cmd.uid, 'You are somewhere new.') ###localize
+            task.write_event(others, app.localize('action.oportin') % (playername,)) # '%s appears.'
+        task.write_event(cmd.uid, app.localize('action.portin')) # 'You are somewhere new.'
         
     @command('uiprefs')
     def cmd_uiprefs(app, task, cmd, conn):
@@ -767,7 +767,7 @@ def define_commands():
                        {'_id':portal['_id']},
                        {'$set': {'preferred':True}})
         desc = yield two.execute.portal_description(app, portal, conn.uid, location=True)
-        raise MessageException('Panic portal set to %s, %s.' % (desc['world'], desc['location'])) ###localize
+        raise MessageException(app.localize('message.panic_portal_set') % (desc['world'], desc['location'])) # 'Panic portal set to %s, %s.'
         
     @command('selfdesc', doeswrite=True)
     def cmd_selfdesc(app, task, cmd, conn):
