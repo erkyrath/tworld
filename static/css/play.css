@@ -82,12 +82,12 @@
 .ui-resizable-s > .ResizingThumb {
   position: relative;
   top: 4px;
-  width: 10%;
+  width: 12%;
   height: 0px;
   margin: auto;
   background: none;
-  border-top: 1px dashed #CCB;
-  border-bottom: 1px dashed #EEC;
+  border-top: 1px dashed #C0C0B0;
+  border-bottom: 1px dashed #FFD;
   z-index: -1;
 }
 
