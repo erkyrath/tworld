@@ -1,4 +1,6 @@
 
+var NBSP = '\u00A0';
+
 var property_type_selectors = [
     { value:'text', text:'Text' },
     { value:'code', text:'Code' },
@@ -44,6 +46,12 @@ function rebuild_proptable(tableel, proplist) {
                 editls = [ { key:'value', val:'"???"' } ];
             }
 
+            if (editls.length > 1) {
+                /* Put in a blank label to line up with the second column's
+                   label. */
+                var sublabel = $('<div>', { 'class':'BuildPropSublabel' }).text(NBSP);
+                cellkeyel.append(sublabel);
+            }
             cellkeyel.append($('<span>', { 'class':'BuildPropKey' }).text(prop.key));
             var selectel = $('<select>', { 'class':'BuildPropTypeSelect' });
             for (var ix=0; ix<property_type_selectors.length; ix++) {
