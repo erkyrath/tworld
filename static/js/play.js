@@ -428,7 +428,7 @@ function toolpane_plist_update() {
     for (var ix=0; ix<seg.list.length; ix++) {
         var portal = seg.list[ix];
 
-        el = $('<li>');
+        el = $('<li>', {'class':'ToolListButtonish'});
         el.append($('<span>').text(portal.world));
         el.append(' \u2013 '); /* en-dash */
         el.append($('<span>').text(portal.location));

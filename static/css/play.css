@@ -377,12 +377,20 @@ ul.ToolList + ul.ToolList {
   text-indent: 0px;
 }
 
+.ToolListButtonish:hover {
+  background: #DDC;
+  cursor: pointer;
+}
+
 .ToolListDimmed {
   color: #888;
 }
 
 .ToolListSelected {
   background: #FFA;
+}
+.ToolListSelected:hover {
+  background: #EEA;
 }
 
 .ToolGloss {
