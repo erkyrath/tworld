@@ -34,6 +34,11 @@
   background: #C0C0A0;
 }
 
+.BuildSectionHead {
+  font-weight: normal;
+  font-style: italic;
+}
+
 .BuildPropTableBox {
   margin-left: 20px;
   margin-right: 20px;
@@ -42,6 +47,10 @@
 .BuildPropTable {
   font-family: Helvetica, Arial, sans-serif;
   width: 100%;
+}
+
+.BuildPropTable td {
+  padding-bottom: 4px;
 }
 
 .BuildPropKey {
