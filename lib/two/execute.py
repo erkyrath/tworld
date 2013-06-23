@@ -869,7 +869,7 @@ def perform_action(task, cmd, conn, target):
             res = yield motor.Op(app.mongodb.portals.find_one,
                                  newportal)
             if res:
-                raise MessageException('This portal is already in your collection.') ###localize
+                raise MessageException(app.localize('message.copy_already_have')) # 'This portal is already in your collection.'
 
             # Look through the player's list and find the entry with the
             # highest listpos.
@@ -897,7 +897,7 @@ def perform_action(task, cmd, conn, target):
                     for subconn in subls:
                         subconn.write({'cmd':'updateplist', 'map':map})
 
-            conn.write({'cmd':'message', 'text':'You copy the portal to your collection.'}) ###localize
+            conn.write({'cmd':'message', 'text':app.localize('message.copy_ok')}) # 'You copy the portal to your collection.'
             return
 
         if restype == 'portal':
@@ -932,7 +932,7 @@ def perform_action(task, cmd, conn, target):
             else:
                 minaccess = ACC_VISITOR
             if False: ### check minaccess against scope access!
-                task.write_event(uid, 'You do not have access to this instance.') ###localize
+                task.write_event(uid, app.localize('message.instance_no_access')) # 'You do not have access to this instance.'
                 return
         
             res = yield motor.Op(app.mongodb.players.find_one,
@@ -944,8 +944,8 @@ def perform_action(task, cmd, conn, target):
             if others:
                 # Don't need to dirty populace; everyone here has a
                 # dependency.
-                task.write_event(others, '%s disappears.' % (playername,)) ###localize
-            task.write_event(uid, 'The world fades away.') ###localize
+                task.write_event(others, app.localize('action.oportout') % (playername,)) # '%s disappears.'
+            task.write_event(uid, app.localize('action.portout')) # 'The world fades away.'
 
             # Move the player to the void, and schedule a portin event.
             portto = {'wid':newwid, 'scid':newscid, 'locid':newlocid}
