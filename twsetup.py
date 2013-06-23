@@ -50,6 +50,10 @@ tornado.options.define(
     'upgradedb', type=bool,
     help='upgrade an old database to the current schema')
 
+tornado.options.define(
+    'localize', type=str,
+    help='pathname of localization data file')
+
 # Parse 'em up.
 tornado.options.parse_command_line()
 opts = tornado.options.options
@@ -231,3 +235,80 @@ if not world:
         }
     db.worldprop.insert(desc)
     
+# The localize entries.
+
+default_localize_entries = """
+# Here we define the default localization entries.
+# + marks entries that the Javascript client needs to know about.
+
++misc.world: world
++misc.location: location
++misc.instance: instance
++misc.creator: creator
+
++client.tool.title.portals: Portals
++client.tool.title.this_portal: This Portal
++client.tool.title.preferences: Preferences
+
++client.tool.menu.return_to_start: Return to Start
++client.tool.menu.set_panic_portal: Set as Panic Portal
+
++client.label.copy_portal: Copy this portal to your collection
++client.label.not_copyable: This portal cannot be copied
++client.label.back_to_plist: (Back to the collection)
++client.label.enter_portal: Enter the portal.
++client.label.plist_is_empty: The collection is empty.
++client.eventpane.start: Click on the links above to explore. Type in this pane to chat with nearby players.
+
+action.portout: The world fades away.
+action.portin: You are somewhere new.
+action.oportout: %s disappears.
+action.oportin: %s appears.
+action.oleave: %s leaves.
+action.oarrive: %s arrives.
+
+message.instance_no_access: You do not have access to this instance.
+message.panic_portal_set: Panic portal set to %s, %s.
+message.no_portaldesc: The destination is hazy.
+message.copy_already_have: This portal is already in your collection.
+message.copy_ok: You copy the portal to your collection.
+
+"""
+
+def parse_localization(fl):
+    res = []
+    lang = None
+    for ln in fl:
+        ln = ln.strip()
+        if not ln or ln.startswith('#'):
+            continue
+        if ln.startswith('*'):
+            lang = ln[1:].strip()
+            continue
+        clientflag = False
+        if ln.startswith('+'):
+            clientflag = True
+            ln = ln[1:].strip()
+        key, dummy, val = ln.partition(':')
+        if not dummy:
+            continue
+        key = key.strip()
+        val = val.strip()
+        res.append( (key, lang, clientflag, val) )
+    return res
+
+if opts.localize:
+    fl = open(opts.localize)
+    locls = parse_localization(fl)
+    fl.close()
+else:
+    locls = parse_localization(default_localize_entries.split('\n'))
+
+for (key, lang, client, val) in locls:
+    obj = { 'key':key, 'lang':lang, 'val':val }
+    if client:
+        obj['client'] = True
+    db.localize.update({ 'key':key, 'lang':lang },
+                       obj, upsert=True)
+    
+
