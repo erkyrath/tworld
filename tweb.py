@@ -102,6 +102,7 @@ logging.basicConfig(**logconf)
 
 # Now that we have a python_path, we can import the tworld-specific modules.
 
+import twcommon.localize
 import twcommon.autoreload
 import tweblib.session
 import tweblib.handlers
@@ -158,6 +159,9 @@ class TwebApplication(tornado.web.Application):
         # This will be self.twservermgr.mongo[mongo_database], when that's
         # available.
         self.mongodb = None
+
+        # This will be replaced when mongodb connects.
+        self.localize = twcommon.localize.Localization()
 
         # Set up a session manager (for web client sessions).
         self.twsessionmgr = tweblib.session.SessionMgr(self)

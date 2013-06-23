@@ -58,7 +58,7 @@ def load_localization(app, clientonly=False):
     # the client entries.
     search = {}
     if clientonly:
-        search = { client:True }
+        search = { 'client': True }
     cursor = app.mongodb.localize.find(search)
     while (yield cursor.fetch_next):
         loc = cursor.next_object()

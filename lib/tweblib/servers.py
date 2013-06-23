@@ -11,6 +11,7 @@ import tornado.platform
 
 import motor
 
+import twcommon.localize
 from twcommon import wcproto
 
 class ServerMgr(object):
@@ -119,12 +120,24 @@ class ServerMgr(object):
                 self.mongoavailable = True
                 self.app.mongodb = self.mongo[self.app.twopts.mongo_database]
                 self.log.info('Mongo client open')
+                # Schedule a callback to load up the localization data.
+                tornado.ioloop.IOLoop.instance().add_callback(self.load_localization)
             except Exception as ex:
                 self.mongoavailable = False
                 self.app.mongodb = None
                 self.log.error('Mongo client not open: %s', ex)
         
         self.mongotimerbusy = False
+
+    @tornado.gen.coroutine
+    def load_localization(self):
+        if (self.mongoavailable):
+            try:
+                self.app.localize = yield twcommon.localize.load_localization(self.app, clientonly=True)
+                self.log.info('Localization data loaded.')
+            except Exception as ex:
+                self.log.warning('Caught exception (loading localization data): %s', ex)
+            
 
     def monitor_tworld_status(self):
         """Check the status of the Tworld connection. If the socket is
