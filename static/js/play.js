@@ -340,7 +340,7 @@ function toolpane_toggle_min(ev) {
 
 
 function toolpane_fill_pane_prefs(seg) {
-    seg.titleel.text('Preferences');
+    seg.titleel.text(localize('client.tool.title.preferences'));
 
     var listel = $('<ul>', {'class':'ToolList'});
     seg.bodyel.append(listel);
@@ -368,7 +368,7 @@ function toolpane_fill_pane_prefs(seg) {
 }
 
 function toolpane_fill_pane_plist(seg) {
-    seg.titleel.text('Portals'); /*###localize */
+    seg.titleel.text(localize('client.tool.title.portals'));
 
     var listel = $('<ul>', {'class':'ToolList'});
     seg.listel = listel;
@@ -388,11 +388,11 @@ function toolpane_fill_pane_plist(seg) {
 
     seg.rightbutel.contextMenu('popup_menu', 
         [
-            { text:'Return to Start', /*###localize*/
+            { text:localize('client.tool.menu.return_to_start'),
                     click: function() {
                     websocket_send_json({ cmd:'portstart' });
                 } },
-            { text:'Set as Panic Portal', /*###localize*/
+            { text:localize('client.tool.menu.set_panic_portal'),
                     enableHook: function() { return toolsegments['plist'].selection; },
                     click: function() {
                     var seg = toolsegments['plist'];
@@ -504,32 +504,32 @@ function toolpane_portal_addremove() {
 }
 
 function toolpane_fill_pane_portal(seg) {
-    seg.titleel.text('This Portal'); /*###localize */
+    seg.titleel.text(localize('client.tool.title.this_portal'));
 
     var listel = $('<ul>', {'class':'ToolList'});
     seg.bodyel.append(listel);
 
     var el = $('<li>');
     listel.append(el);
-    el.append($('<div>', {'class':'ToolLabelRight'}).text('world')); /*### localize */
+    el.append($('<div>', {'class':'ToolLabelRight'}).text(localize('misc.world')));
     var worldel = $('<span>').text('-');
     el.append(worldel);
 
     el = $('<li>');
     listel.append(el);
-    el.append($('<div>', {'class':'ToolLabelRight'}).text('location')); /*### localize */
+    el.append($('<div>', {'class':'ToolLabelRight'}).text(localize('misc.location')));
     var locel = $('<span>').text('-');
     el.append(locel);
 
     el = $('<li>');
     listel.append(el);
-    el.append($('<div>', {'class':'ToolLabelRight'}).text('instance')); /*### localize */
+    el.append($('<div>', {'class':'ToolLabelRight'}).text(localize('misc.instance')));
     var scopeel = $('<span>').text('-');
     el.append(scopeel);
 
     el = $('<li>');
     listel.append(el);
-    el.append($('<div>', {'class':'ToolLabelRight'}).text('creator')); /*### localize */
+    el.append($('<div>', {'class':'ToolLabelRight'}).text(localize('misc.creator')));
     var creatorel = $('<span>').text('-');
     el.append(creatorel);
 
@@ -537,10 +537,10 @@ function toolpane_fill_pane_portal(seg) {
     seg.bodyel.append(listel);
 
     var copyel = $('<li>');
-    el = $('<a>', {href:'#'}).text('Copy this portal to your collection'); /*###localize*/
+    el = $('<a>', {href:'#'}).text(localize('client.label.copy_portal'));
     copyel.append(el);
     listel.append(copyel);
-    var nocopyel = $('<li>', {'class':'StyleEmph'}).text('This portal cannot be copied'); /*###localize*/
+    var nocopyel = $('<li>', {'class':'StyleEmph'}).text(localize('client.label.not_copyable'));
     listel.append(nocopyel);
 
     copyel.on('click', function(ev) {
@@ -774,7 +774,7 @@ function focuspane_set_special(ls) {
             var extrals = [];
             if (backtarget) {
                 var ael = $('<a>', {href:'#'+backtarget});
-                ael.text('(Back to the collection)'); /* ###localize */
+                ael.text(localize('client.label.back_to_plist'));
                 ael.on('click', {target:backtarget}, evhan_click_action);
                 var el = $('<p>');
                 el.append(ael);
@@ -784,7 +784,7 @@ function focuspane_set_special(ls) {
             el.text(portalobj.view);
             extrals.push(el);
             var ael = $('<a>', {href:'#'+target});
-            ael.text('Enter the portal.'); /* ###localize */
+            ael.text(localize('client.label.enter_portal'));
             ael.on('click', {target:target}, evhan_click_action);
             el = $('<p>');
             el.append(ael);
@@ -801,7 +801,7 @@ function focuspane_set_special(ls) {
                description. */
             var extrals = [];
             if (!portlist.length) {
-                var el = $('<p>').text('The collection is empty.'); /* ###localize */
+                var el = $('<p>').text(localize('client.label.plist_is_empty'));
                 extrals.push(el);
             }
             else {
@@ -1509,7 +1509,7 @@ function handle_updown_doneresize(ev, ui) {
 function evhan_websocket_open() {
     if (!everconnected) {
         /* Good time for a welcome message. */
-        eventpane_add('Click on the links above to explore. Type in this pane to chat with nearby players.', 'EventMessage'); /*###localize */
+        eventpane_add(localize('client.eventpane.start'), 'EventMessage');
     }
 
     connected = true;
@@ -1565,6 +1565,17 @@ function websocket_send_json(obj) {
     websocket.send(val);
 }
 
+/* Return the localization of a string, as defined in the db_localize table.
+   (Which was set up for us by tweb, using the localize data from the
+   database.)
+*/
+function localize(key) {
+    var res = db_localize[key];
+    if (res)
+        return res;
+    /* Not found. Return a terrible default that people will notice. */
+    return '** ' + key + ' **';
+}
 
 /* The page-ready handler. Like onload(), but better, I'm told. */
 $(document).ready(function() {
