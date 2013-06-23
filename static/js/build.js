@@ -1,6 +1,7 @@
 
 var property_type_selectors = [
     { value:'text', text:'Text' },
+    { value:'code', text:'Code' },
     { value:'move', text:'Move' },
     { value:'event', text:'Event' },
     { value:'value', text:'Value' }
@@ -15,23 +16,32 @@ function rebuild_proptable(tableel, proplist) {
             var cellkeyel = $('<td>');
             var cellvalel = $('<td>');
 
-            var val = '';
+            var editls = [];
             var valtype = prop.val.type;
             if (valtype == 'value') {
-                val = prop.val.value;
+                editls = [ { key:'value', val:prop.val.value } ];
             }
             else if (valtype == 'text') {
-                val = prop.val.text;
+                editls = [ { key:'text', val:prop.val.text } ];
+            }
+            else if (valtype == 'code') {
+                editls = [ { key:'text', val:prop.val.text } ];
             }
             else if (valtype == 'move') {
-                val = prop.val.loc; /*###*/
+                editls = [
+                    { key:'loc', val:prop.val.loc, label:'Destination' },
+                    { key:'text', val:prop.val.text, label:'Action' },
+                    { key:'oleave', val:prop.val.oleave, label:'Leave' },
+                    { key:'oarrive', val:prop.val.oarrive, label:'Arrive' } ];
             }
             else if (valtype == 'event') {
-                val = prop.val.text; /*###*/
+                editls = [ 
+                    { key:'text', val:prop.val.text, label:'Actor' },
+                    { key:'otext', val:prop.val.otext, label:'Others' } ];
             }
             else {
                 valtype = 'value';
-                val = '"???"';
+                editls = [ { key:'value', val:'"???"' } ];
             }
 
             cellkeyel.append($('<span>', { 'class':'BuildPropKey' }).text(prop.key));
@@ -43,7 +53,18 @@ function rebuild_proptable(tableel, proplist) {
             selectel.prop('value', valtype);
             cellkeyel.append(selectel);
 
-            cellvalel.text(val); /*###*/
+            for (var ix=0; ix<editls.length; ix++) {
+                var subpane = editls[ix];
+                if (subpane.label) {
+                    var sublabel = $('<div>', { 'class':'BuildPropSublabel' }).text(subpane.label);
+                    cellvalel.append(sublabel);
+                }
+                var subpanel = $('<textarea>', { 'class':'BuildPropSubpane', 'rows':'1' });
+                /* subpane.val may be undef here */
+                if (subpane.val)
+                    subpanel.text(subpane.val);
+                cellvalel.append(subpanel);
+            }
 
             rowel.append(cellkeyel);
             rowel.append(cellvalel);

@@ -63,7 +63,23 @@
   font-size: 1.0em;
 }
 
+.BuildPropSublabel {
+  font-size: 0.8em;
+  font-style: italic;
+  color: #888;
+  text-align: right;
+}
 
+.BuildPropSubpane {
+  font-family: Helvetica, Arial, sans-serif;
+  background: #FFFFF4;
+  width: 100%;
+  margin: 0px;
+  border: 1px solid #CCC;
+  padding: 4px 4px;
+  font-size: 1em;
+  border-radius: 3px;
+}
 
 #popup_menu {
   background: #D2D2B6;
