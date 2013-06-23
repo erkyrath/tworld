@@ -7,12 +7,26 @@ Because this data is used often and changed rarely, we cache it all in
 memory. If you update it, you'll have to restart the tweb and tworld
 processes, and also ask clients to reload their browser pages. (We might
 add reloading notifications in the future.)
+
+This class supports multiple languages; that is, the data table may have
+entries for a given key in several languages. The tworld/tweb apps do not
+yet make use of this facility, however. (It's not completely trivial,
+because messages like oleave/oarrive are currently broadcast to all
+listeners without change. Full language support would require localizing
+these messages per-listener.)
 """
 
 import tornado.gen
 import motor
 
 class Localization:
+    """Create a Localization object with the (async) function
+    load_localization(). Or you can construct a blank one directly.
+
+    For simplicity, use the object by calling it: loc(key). There is
+    no separate get method.
+    """
+    
     def __init__(self):
         """Initialize a blank object. This is usable; you'll just get
         placeholder defaults for every key.
@@ -21,7 +35,7 @@ class Localization:
         # The default map (English) is self.langs[None].
         self.langs = { None: {} }
 
-    def get(self, key, lang=None):
+    def __call__(self, key, lang=None):
         if lang is not None and lang in self.langs:
             res = self.langs[lang].get(key, None)
             if res is not None:

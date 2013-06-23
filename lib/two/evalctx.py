@@ -305,7 +305,7 @@ class EvalPropContext(object):
                 except:
                     desttext = None
                 if not desttext:
-                    desttext = 'The destination is hazy.' ###localize
+                    desttext = self.app.localize('message.no_portaldesc') # 'The destination is hazy.'
                 portalobj['view'] = desttext;
                 specres = ['portal', ackey, portalobj, backkey, extratext]
                 self.wasspecial = True
@@ -933,7 +933,7 @@ class EvalPropContext(object):
                 
         msg = oleave
         if msg is None:
-            msg = '%s leaves.' % (playername,) ###localize
+            msg = self.app.localize('action.oleave') % (playername,) # '%s leaves.'
         elif oleaveeval:
             ctx = EvalPropContext(self.task, parent=self, depth=depth+1, level=LEVEL_MESSAGE)
             msg = yield ctx.eval(msg, evaltype=EVALTYPE_TEXT)
@@ -963,7 +963,7 @@ class EvalPropContext(object):
             
         msg = oarrive
         if msg is None:
-            msg = '%s arrives.' % (playername,) ###localize
+            msg = self.app.localize('action.oarrive') % (playername,) # '%s arrives.'
         elif oarriveeval:
             ctx = EvalPropContext(self.task, parent=self, depth=depth+1, level=LEVEL_MESSAGE)
             msg = yield ctx.eval(msg, evaltype=EVALTYPE_TEXT)

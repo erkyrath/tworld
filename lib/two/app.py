@@ -33,6 +33,7 @@ class Tworld(object):
         # available.
         self.mongodb = None
 
+        self.localize = twcommon.localize.Localization()
         self.webconns = two.webconn.WebConnectionTable(self)
         self.playconns = two.playconn.PlayerConnectionTable(self)
         self.mongomgr = two.mongomgr.MongoMgr(self)

@@ -7,6 +7,7 @@ from bson.objectid import ObjectId
 import motor
 
 import twcommon.misc
+import twcommon.localize
 from twcommon import wcproto
 from twcommon.excepts import MessageException, ErrorMessageException
 
@@ -77,8 +78,14 @@ def define_commands():
     def cmd_dbconnected(app, task, cmd, stream):
         # We've connected (or reconnected) to mongodb. Re-synchronize any
         # data that we had cached from there.
-        # Right now this means: awaken any inhabited instances.
+        # Right now this means: Load up the localization data.
+        # Awaken any inhabited instances.
         # Go through the list of players who are in the world.
+        try:
+            task.app.localize = yield twcommon.localize.load_localization(task.app)
+        except Exception as ex:
+            task.log.warning('Caught exception (loading localization data): %s', ex, exc_info=app.debugstacktraces)
+        
         iidset = set()
         cursor = app.mongodb.playstate.find({'iid':{'$ne':None}},
                                             {'_id':1, 'iid':1})
