@@ -816,7 +816,7 @@ function focuspane_set_special(ls) {
                     lel.append(ael);
                     lel.append(' ' + NBSP + ' ');
                     var spel = $('<span>', {'class':'StyleEmph'});
-                    spel.text('(created by ' + portal.creator + ')');
+                    spel.text(localize('client.label.created_by_paren').replace('%s', portal.creator));
                     lel.append(spel);
                     el.append(lel);
                 }

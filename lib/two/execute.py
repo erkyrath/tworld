@@ -660,18 +660,19 @@ def generate_update(task, conn, dirty):
         creator = yield motor.Op(app.mongodb.players.find_one,
                                  {'_id':world['creator']},
                                  {'name':1})
-        creatorname = 'Created by %s' % (creator['name'],)
+        creatorname = app.localize('label.created_by') % (creator['name'],)
     
         if scope['type'] == 'glob':
-            scopename = '(Global instance)'
+            scopename = app.localize('label.global_instance_paren')
+        elif scope['type'] == 'pers' and scope['uid'] == conn.uid:
+            scopename = app.localize('label.personal_instance_you_paren')
         elif scope['type'] == 'pers':
-        ### Probably leave off the name if it's you
             scopeowner = yield motor.Op(app.mongodb.players.find_one,
                                         {'_id':scope['uid']},
                                         {'name':1})
-            scopename = '(Personal instance: %s)' % (scopeowner['name'],)
+            scopename = app.localize('label.personal_instance_paren') % (scopeowner['name'],)
         elif scope['type'] == 'grp':
-            scopename = '(Group: %s)' % (scope['group'],)
+            scopename = app.localize('label.group_instance_paren') % (scope['group'],)
         else:
             scopename = '???'
 

@@ -258,7 +258,14 @@ default_localize_entries = """
 +client.label.back_to_plist: (Back to the collection)
 +client.label.enter_portal: Enter the portal.
 +client.label.plist_is_empty: The collection is empty.
++client.label.created_by_paren: (created by %s)
 +client.eventpane.start: Click on the links above to explore. Type in this pane to chat with nearby players.
+
+label.created_by: Created by %s
+label.global_instance_paren: (Global instance)
+label.personal_instance_you_paren: (Personal instance)
+label.personal_instance_paren: (Personal: %s)
+label.group_instance_paren: (Group: %s)
 
 action.portout: The world fades away.
 action.portin: You are somewhere new.
