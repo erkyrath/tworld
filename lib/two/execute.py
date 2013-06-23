@@ -634,7 +634,7 @@ def generate_update(task, conn, dirty):
     
     iid = playstate['iid']
     if not iid:
-        msg['world'] = {'world':'(In transition)', 'scope':'\u00A0', 'creator':'...'}
+        msg['world'] = {'world':app.localize('label.in_transition'), 'scope':'\u00A0', 'creator':'...'}
         msg['focus'] = False ### probably needs to be something for linking out of the void
         msg['populace'] = False
         msg['locale'] = { 'desc': '...' }

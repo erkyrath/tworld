@@ -261,6 +261,7 @@ default_localize_entries = """
 +client.label.created_by_paren: (created by %s)
 +client.eventpane.start: Click on the links above to explore. Type in this pane to chat with nearby players.
 
++label.in_transition: (In transition)
 label.created_by: Created by %s
 label.global_instance_paren: (Global instance)
 label.personal_instance_you_paren: (Personal instance)
