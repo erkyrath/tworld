@@ -63,7 +63,9 @@ function rebuild_proptable(tableel, proplist) {
                 /* subpane.val may be undef here */
                 if (subpane.val)
                     subpanel.text(subpane.val);
-                cellvalel.append(subpanel);
+                var boxel = $('<div>', { 'style':'position:relative;' }).append(subpanel);
+                /* ### subpanel.autosize() when updating? */
+                cellvalel.append(boxel);
             }
 
             rowel.append(cellkeyel);
@@ -99,4 +101,6 @@ $(document).ready(function() {
         rebuild_proptable($('#build_player_properties'), db_player_props);
     }
     setup_event_handlers();
+    /* Give all the textareas the magic autosizing behavior. */
+    $('textarea').autosize();
 });
