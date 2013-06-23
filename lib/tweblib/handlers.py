@@ -386,7 +386,11 @@ class PlayHandler(MyRequestHandler):
                 pref = cursor.next_object()
                 uiprefs[pref['key']] = pref['val']
             cursor.close()
-        self.render('play.html', uiprefs=json.dumps(uiprefs))
+        # We could use the client preferred language here.
+        localize = self.application.twlocalize.all()
+        self.render('play.html',
+                    uiprefs=json.dumps(uiprefs),
+                    localize=json.dumps(localize))
         
 class TopPageHandler(MyRequestHandler):
     """Handler for miscellaneous top-level pages ("about", etc.)

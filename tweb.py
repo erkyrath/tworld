@@ -161,7 +161,7 @@ class TwebApplication(tornado.web.Application):
         self.mongodb = None
 
         # This will be replaced when mongodb connects.
-        self.localize = twcommon.localize.Localization()
+        self.twlocalize = twcommon.localize.Localization()
 
         # Set up a session manager (for web client sessions).
         self.twsessionmgr = tweblib.session.SessionMgr(self)

@@ -36,6 +36,9 @@ class Localization:
         self.langs = { None: {} }
 
     def __call__(self, key, lang=None):
+        """Get the localization of a key, in the given language or the
+        default.
+        """
         if lang is not None and lang in self.langs:
             res = self.langs[lang].get(key, None)
             if res is not None:
@@ -45,7 +48,17 @@ class Localization:
             return res
         # Not found. Return a terrible default that people will notice.
         return '** %s **' % (key,)
-        
+
+    def all(self, lang=None):
+        """Return the entire map for a given language (including defaults).
+        """
+        # Make a copy.
+        map = dict(self.langs[None])
+        if lang is not None and lang in self.langs:
+            map.extend(self.langs[lang])
+        return map
+
+
 @tornado.gen.coroutine
 def load_localization(app, clientonly=False):
     """Load up the localization data.

@@ -133,7 +133,7 @@ class ServerMgr(object):
     def load_localization(self):
         if (self.mongoavailable):
             try:
-                self.app.localize = yield twcommon.localize.load_localization(self.app, clientonly=True)
+                self.app.twlocalize = yield twcommon.localize.load_localization(self.app, clientonly=True)
                 self.log.info('Localization data loaded.')
             except Exception as ex:
                 self.log.warning('Caught exception (loading localization data): %s', ex)
