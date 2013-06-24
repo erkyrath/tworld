@@ -537,7 +537,7 @@ class BuildLocHandler(BuildBaseHandler):
         # location menu.
         locarray = [ {'id':str(loc['_id']), 'name':loc['name']} for loc in locations ]
 
-        lockey = location.get('key', '???')
+        lockey = location.get('key')
         locname = location.get('name', '???')
 
         props = []
@@ -554,7 +554,8 @@ class BuildLocHandler(BuildBaseHandler):
         self.render('build_loc.html',
                     wid=str(wid), worldname=worldname,
                     locarray=json.dumps(locarray), locations=locations,
-                    locname=locname, proparray=proparray)
+                    locname=locname, lockey=json.dumps(lockey),
+                    proparray=proparray)
 
 
 class AdminMainHandler(MyRequestHandler):
