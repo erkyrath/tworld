@@ -49,3 +49,13 @@ chat and MUD apps.
 
 Open-source under the MIT license. See the "LICENSE" file.
 
+This package includes the following third-party software:
+
+  jQuery JavaScript Library v1.9.1
+    http://jquery.com/  (MIT license)
+  jQuery UI v1.10.3
+    http://jqueryui.com  (MIT license)
+  jQuery.contextMenu version 1.7 (with modifications)
+    https://github.com/arnklint/jquery-contextMenu  (public domain)
+  jQuery Autosize v1.17.1
+    https://github.com/jackmoore/autosize  (MIT license)
