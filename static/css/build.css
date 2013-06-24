@@ -84,6 +84,10 @@
   border-radius: 3px;
 }
 
+.BuildPropButtons {
+  text-align: right;
+}
+
 #popup_menu {
   background: #D2D2B6;
   border: 1px solid #AA9;

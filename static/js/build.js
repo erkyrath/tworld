@@ -12,10 +12,12 @@
    - propmap: maps prop keys to prop objects.
 
    A prop object (propref) has this structure:
+   - id: the prop id
    - key: the prop key
    - tablekey: as above
    - valtype: 'text', 'code', 'value', etc
    - rowel: jQuery ref to the <tr> element
+   - cellvalel: jQuery ref to the second-col <td> element
    - areamap: maps subpane keys to <textarea> elements
    - buttonsel: jQuery ref to the <div> containing buttons
 */
@@ -78,10 +80,10 @@ function update_prop(tableref, prop) {
         editls = [ { key:'value', val:'"???"' } ];
     }
 
-    if (tableref.propmap[prop.key] !== undefined) {
-        /* Property is already present in table. */
-        /*### Update subpanes! Er, unless the type has changed? */
-        var propref = tableref.propmap[prop.key];
+    var propref = tableref.propmap[prop.key];
+    if (propref !== undefined && propref.valtype == valtype) {
+        /* Property is already present in table, with same type. All we have
+           to do is update the subpane contents. */
         var areamap = propref.areamap;
         for (var ix=0; ix<editls.length; ix++) {
             var subpane = editls[ix];
@@ -92,6 +94,15 @@ function update_prop(tableref, prop) {
                 subpanel.val('');
             subpanel.trigger('autosize.resize');
         }
+    }
+    else if (propref !== undefined) {
+        /* Property is present in table, but with a different type. We
+           need to clean out the second-column cell and rebuild it. */
+        propref.cellvalel.empty();
+        propref.valtype = valtype;
+        var buildres = build_value_cell(propref.cellvalel, prop.key, editls);
+        propref.areamap = buildres.areamap;
+        propref.buttonsel = buildres.buttonsel;
     }
     else {
         /* Property is not in table. Add a row. */
@@ -116,48 +127,56 @@ function update_prop(tableref, prop) {
         selectel.prop('value', valtype);
         cellkeyel.append(selectel);
 
-        var areamap = {};
-    
-        for (var ix=0; ix<editls.length; ix++) {
-            var subpane = editls[ix];
-            if (subpane.label) {
-                var sublabel = $('<div>', { 'class':'BuildPropSublabel' }).text(subpane.label);
-                cellvalel.append(sublabel);
-            }
-            var subpanel = $('<textarea>', { 'class':'BuildPropSubpane', 'rows':'1' });
-            /* subpane.val may be undef here */
-            if (subpane.val)
-                subpanel.val(subpane.val);
-            else
-                subpanel.val('');
-            var boxel = $('<div>', { 'style':'position:relative;' }).append(subpanel);
-            /* ### subpanel.autosize() when updating? */
-            cellvalel.append(boxel);
-
-            areamap[subpane.key] = subpanel;
-            subpanel.data('key', prop.key);
-            subpanel.data('subkey', subpane.key);
-        }
-    
-        var buttonsel = $('<div>', { style:'display: none; text-align: right;' });
-        var buttonel = $('<input>', { type:'submit', value:'Revert' });
-        buttonsel.append(buttonel);
-        var buttonel = $('<input>', { type:'submit', value:'Save' });
-        buttonsel.append(buttonel);
-        cellvalel.append(buttonsel);
+        var buildres = build_value_cell(cellvalel, prop.key, editls);
     
         rowel.append(cellkeyel);
         rowel.append(cellvalel);
         tableel.append(rowel);
 
         var propref = {
-            key: prop.key, tablekey: tableref.tablekey, valtype: valtype,
-            rowel: rowel, buttonsel: buttonsel, areamap: areamap
+            id: prop.id, key: prop.key, 
+            tablekey: tableref.tablekey, valtype: valtype,
+            rowel: rowel, cellvalel: cellvalel, buttonsel: buildres.buttonsel,
+            areamap: buildres.areamap
         };
 
         tableref.proplist.push(prop.key);
         tableref.propmap[prop.key] = propref;
     }
+}
+
+function build_value_cell(cellvalel, propkey, editls) {
+    var areamap = {};
+    
+    for (var ix=0; ix<editls.length; ix++) {
+        var subpane = editls[ix];
+        if (subpane.label) {
+            var sublabel = $('<div>', { 'class':'BuildPropSublabel' }).text(subpane.label);
+            cellvalel.append(sublabel);
+        }
+        var subpanel = $('<textarea>', { 'class':'BuildPropSubpane', 'rows':'1' });
+        /* subpane.val may be undef here */
+        if (subpane.val)
+            subpanel.val(subpane.val);
+        else
+            subpanel.val('');
+        var boxel = $('<div>', { 'style':'position:relative;' }).append(subpanel);
+        /* ### subpanel.autosize() when updating? */
+        cellvalel.append(boxel);
+        
+        areamap[subpane.key] = subpanel;
+        subpanel.data('key', propkey);
+        subpanel.data('subkey', subpane.key);
+    }
+    
+    var buttonsel = $('<div>', { 'class':'BuildPropButtons', style:'display: none;' });
+    var buttonel = $('<input>', { type:'submit', value:'Revert' });
+    buttonsel.append(buttonel);
+    var buttonel = $('<input>', { type:'submit', value:'Save' });
+    buttonsel.append(buttonel);
+    cellvalel.append(buttonsel);
+    
+    return { areamap:areamap, buttonsel:buttonsel };
 }
 
 function setup_event_handlers() {
@@ -190,3 +209,7 @@ $(document).ready(function() {
     /* Give all the textareas the magic autosizing behavior. */
     $('textarea').autosize();
 });
+
+/*####*/
+tempprop = { id:'51ad76b4275d31a2ce51ea9a', key:'desc', val:{'text':'Gonzaga', 'type':'text'} };
+tempprop2 = { id:'51ad76b4275d31a2ce51ea9a', key:'desc', val:{'loc':'birnham', 'type':'move'} };
