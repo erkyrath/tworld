@@ -56,6 +56,10 @@
   border-top: 1px solid #CCB;
 }
 
+.BuildPropDirty {
+  background: #FF8;
+}
+
 .BuildPropKey {
   font-size: 1.1em;
 }
@@ -75,7 +79,7 @@
 
 .BuildPropSubpane {
   font-family: Helvetica, Arial, sans-serif;
-  background: #FFFFF4;
+  background: none;
   width: 100%;
   margin: 0px;
   /* border: 1px solid #CCC; */

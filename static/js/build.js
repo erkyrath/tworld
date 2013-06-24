@@ -108,7 +108,7 @@ function update_prop(tableref, prop) {
         propref.keyel.text(prop.key);
         propref.cellvalel.empty();
         propref.valtype = valtype;
-        var buildres = build_value_cell(propref.cellvalel, prop.key, editls);
+        var buildres = build_value_cell(propref.cellvalel, tableref.tablekey, prop.key, prop.id, editls);
         propref.areamap = buildres.areamap;
         propref.buttonsel = buildres.buttonsel;
     }
@@ -136,7 +136,7 @@ function update_prop(tableref, prop) {
         selectel.prop('value', valtype);
         cellkeyel.append(selectel);
 
-        var buildres = build_value_cell(cellvalel, prop.key, editls);
+        var buildres = build_value_cell(cellvalel, tableref.tablekey, prop.key, prop.id, editls);
     
         rowel.append(cellkeyel);
         rowel.append(cellvalel);
@@ -154,7 +154,7 @@ function update_prop(tableref, prop) {
     }
 }
 
-function build_value_cell(cellvalel, propkey, editls) {
+function build_value_cell(cellvalel, tablekey, propkey, propid, editls) {
     var areamap = {};
     
     for (var ix=0; ix<editls.length; ix++) {
@@ -174,7 +174,9 @@ function build_value_cell(cellvalel, propkey, editls) {
         cellvalel.append(boxel);
         
         areamap[subpane.key] = subpanel;
+        subpanel.data('tablekey', tablekey);
         subpanel.data('key', propkey);
+        subpanel.data('id', propid);
         subpanel.data('subkey', subpane.key);
     }
     
@@ -186,6 +188,20 @@ function build_value_cell(cellvalel, propkey, editls) {
     cellvalel.append(buttonsel);
     
     return { areamap:areamap, buttonsel:buttonsel };
+}
+
+function prop_set_dirty(tableref, propref, dirty) {
+    console.log('### setting prop ' + propref.key + ' to dirty=' + dirty);
+    if (dirty) {
+        propref.dirty = true;
+        propref.rowel.addClass('BuildPropDirty');
+        propref.buttonsel.slideDown(200);
+    }
+    else {
+        propref.dirty = false;
+        propref.rowel.removeClass('BuildPropDirty');
+        propref.buttonsel.slideUp(200);
+    }
 }
 
 function setup_event_handlers() {
@@ -202,6 +218,28 @@ function setup_event_handlers() {
                     position: { my:'left top', at:'left bottom', of:el }
             } );
     }
+
+    /* Give all the textareas the magic autosizing behavior. */
+    $('textarea').autosize();
+    $('textarea').on('input', evhan_input_textarea);
+}
+
+function evhan_input_textarea(ev) {
+    var el = $(ev.target);
+    var tablekey = el.data('tablekey');
+    var id = el.data('id');
+    var subkey = el.data('subkey');
+
+    var tableref = tables[tablekey];
+    if (!tableref)
+        return;
+    var propref = tableref.propmap[id];
+    if (!propref) {
+        console.log('No such property entry: ' + tablekey + ':' + id + ':' + subkey);
+    }
+    if (!propref.dirty) {
+        prop_set_dirty(tableref, propref, true);
+    }
 }
 
 /* The page-ready handler. Like onload(), but better, I'm told. */
@@ -215,7 +253,5 @@ $(document).ready(function() {
         build_proptable($('#build_player_properties'), db_player_props, '$player');
     }
     setup_event_handlers();
-    /* Give all the textareas the magic autosizing behavior. */
-    $('textarea').autosize();
 });
 
