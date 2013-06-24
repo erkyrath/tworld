@@ -81,6 +81,17 @@ function update_prop(tableref, prop) {
     if (tableref.propmap[prop.key] !== undefined) {
         /* Property is already present in table. */
         /*### Update subpanes! Er, unless the type has changed? */
+        var propref = tableref.propmap[prop.key];
+        var areamap = propref.areamap;
+        for (var ix=0; ix<editls.length; ix++) {
+            var subpane = editls[ix];
+            var subpanel = areamap[subpane.key];
+            if (subpane.val)
+                subpanel.val(subpane.val);
+            else
+                subpanel.val('');
+            subpanel.trigger('autosize.resize');
+        }
     }
     else {
         /* Property is not in table. Add a row. */
@@ -116,7 +127,9 @@ function update_prop(tableref, prop) {
             var subpanel = $('<textarea>', { 'class':'BuildPropSubpane', 'rows':'1' });
             /* subpane.val may be undef here */
             if (subpane.val)
-                subpanel.text(subpane.val);
+                subpanel.val(subpane.val);
+            else
+                subpanel.val('');
             var boxel = $('<div>', { 'style':'position:relative;' }).append(subpanel);
             /* ### subpanel.autosize() when updating? */
             cellvalel.append(boxel);
