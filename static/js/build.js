@@ -51,6 +51,11 @@ function build_proptable(tableel, proplist, tablekey) {
 }
 
 function update_prop(tableref, prop) {
+    if (tableref === undefined) {
+        console.log('No table for this property group!');
+        return;
+    }
+
     var tableel = tableref.rootel;
 
     var editls = [];
