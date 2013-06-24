@@ -8,8 +8,8 @@
    A table (tableref) has this structure:
    - tablekey: location key, '$realm', '$player'
    - rootel: jQuery ref to the <table> element
-   - proplist: list of prop keys, in the order displayed
-   - propmap: maps prop keys to prop objects.
+   - proplist: list of prop IDs, in the order displayed
+   - propmap: maps prop IDs to prop objects.
 
    A prop object (propref) has this structure:
    - id: the prop id
@@ -17,6 +17,7 @@
    - tablekey: as above
    - valtype: 'text', 'code', 'value', etc
    - rowel: jQuery ref to the <tr> element
+   - keyel: jQuery ref to the <span> element containing the key name
    - cellvalel: jQuery ref to the second-col <td> element
    - areamap: maps subpane keys to <textarea> elements
    - buttonsel: jQuery ref to the <div> containing buttons
@@ -80,10 +81,11 @@ function update_prop(tableref, prop) {
         editls = [ { key:'value', val:'"???"' } ];
     }
 
-    var propref = tableref.propmap[prop.key];
+    var propref = tableref.propmap[prop.id];
     if (propref !== undefined && propref.valtype == valtype) {
         /* Property is already present in table, with same type. All we have
            to do is update the subpane contents. */
+        propref.keyel.text(prop.key);
         var areamap = propref.areamap;
         for (var ix=0; ix<editls.length; ix++) {
             var subpane = editls[ix];
@@ -98,6 +100,7 @@ function update_prop(tableref, prop) {
     else if (propref !== undefined) {
         /* Property is present in table, but with a different type. We
            need to clean out the second-column cell and rebuild it. */
+        propref.keyel.text(prop.key);
         propref.cellvalel.empty();
         propref.valtype = valtype;
         var buildres = build_value_cell(propref.cellvalel, prop.key, editls);
@@ -118,7 +121,8 @@ function update_prop(tableref, prop) {
             var sublabel = $('<div>', { 'class':'BuildPropSublabel' }).text(NBSP);
             cellkeyel.append(sublabel);
         }
-        cellkeyel.append($('<span>', { 'class':'BuildPropKey' }).text(prop.key));
+        var keyel = $('<span>', { 'class':'BuildPropKey' }).text(prop.key);
+        cellkeyel.append(keyel);
         var selectel = $('<select>', { 'class':'BuildPropTypeSelect' });
         for (var ix=0; ix<property_type_selectors.length; ix++) {
             var selector = property_type_selectors[ix];
@@ -137,11 +141,11 @@ function update_prop(tableref, prop) {
             id: prop.id, key: prop.key, 
             tablekey: tableref.tablekey, valtype: valtype,
             rowel: rowel, cellvalel: cellvalel, buttonsel: buildres.buttonsel,
-            areamap: buildres.areamap
+            keyel: keyel, areamap: buildres.areamap
         };
 
-        tableref.proplist.push(prop.key);
-        tableref.propmap[prop.key] = propref;
+        tableref.proplist.push(prop.id);
+        tableref.propmap[prop.id] = propref;
     }
 }
 
@@ -210,6 +214,3 @@ $(document).ready(function() {
     $('textarea').autosize();
 });
 
-/*####*/
-tempprop = { id:'51ad76b4275d31a2ce51ea9a', key:'desc', val:{'text':'Gonzaga', 'type':'text'} };
-tempprop2 = { id:'51ad76b4275d31a2ce51ea9a', key:'desc', val:{'loc':'birnham', 'type':'move'} };
