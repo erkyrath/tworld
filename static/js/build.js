@@ -333,9 +333,20 @@ function evhan_button_save(ev) {
                 if (data.error) {
                     prop_set_warning(tableref, propref, data.error);
                     prop_set_dirty(tableref, propref, true);
+                    return;
                 }
-                else {
+                var tableref = null;
+                if (pageid == 'world')
+                    tableref = tables[data.loc];
+                else if (pageid == 'loc' && pagelocid == data.loc)
+                    tableref = tables[pagelockey];
+                if (!tableref) {
+                    console.log('No such table: ' + data.loc + '!');
+                    return;
                 }
+                update_prop(tableref, data.prop);
+                prop_set_warning(tableref, propref, null);
+                prop_set_dirty(tableref, propref, false);
             },
             error: function(jqxhr, status, error) {
                 console.log('### ajax failure: ' + status + '; ' + error);

@@ -6,6 +6,7 @@ import datetime
 import traceback
 import unicodedata
 import json
+import ast
 
 from bson.objectid import ObjectId
 import tornado.web
@@ -470,6 +471,35 @@ class BuildBaseHandler(MyRequestHandler):
             res.append(newprop)
         return res
 
+    def import_property(self, prop):
+        """Given a type-keyed dict from the client, convert it into database
+        form. Raises an exception if a problem occurs.
+        This is written strictly; it never allows in typed structures that
+        we don't recognize. 
+        """
+        valtype = prop['type']
+        if valtype == 'value':
+            ### This does not cope with ObjectIds, datetimes, or other
+            ### such items.
+            ### It also allows arbitrary typed dicts, which makes a mockery
+            ### of the strictness I mentioned.
+            return ast.literal_eval(prop['value'])
+        if valtype == 'text':
+            return { 'type':valtype, 'text':prop.get('text', None) }
+        if valtype == 'code':
+            return { 'type':valtype, 'text':prop.get('text', None) }
+        if valtype == 'event':
+            return { 'type':valtype,
+                     'text':prop.get('text', None),
+                     'otext':prop.get('otext', None) }
+        if valtype == 'move':
+            return { 'type':valtype,
+                     'loc':prop.get('loc', None),
+                     'text':prop.get('text', None),
+                     'oleave':prop.get('oleave', None),
+                     'oarrive':prop.get('oarrive', None) }
+        raise Exception('Unknown property type: %s' % (valtype,))
+
 class BuildMainHandler(BuildBaseHandler):
     @tornado.gen.coroutine
     def get(self):
@@ -567,6 +597,8 @@ class BuildSetPropHandler(BuildBaseHandler):
     def post(self):
         self.application.twlog.debug('### property value: %s', repr(self.get_argument('val')))
         try:
+            key = self.get_argument('key')
+            propid = ObjectId(self.get_argument('id'))
             wid = ObjectId(self.get_argument('world'))
             locid = self.get_argument('loc')
             if locid == '$realm':
@@ -593,8 +625,35 @@ class BuildSetPropHandler(BuildBaseHandler):
     
             if self.get_argument('delete', False):
                 raise Exception('### Delete it!')
-    
-            self.write( { 'error': 'Dummy error' } )
+
+            newval = self.get_argument('val')
+            newval = json.loads(newval)
+            newval = self.import_property(newval)
+
+            # Make sure this doesn't collide with an existing key (in a
+            # different property).
+            if loc == '$player':
+                # We can only edit all-player wplayerprops here.
+                oprop = yield motor.Op(self.application.mongodb.wplayerprop.find_one,
+                                       { 'wid':wid, 'uid':None, 'key':key })
+            else:
+                oprop = yield motor.Op(self.application.mongodb.worldprop.find_one,
+                                       { 'wid':wid, 'locid':locid, 'key':key })
+            if oprop and oprop['_id'] != propid:
+                raise Exception('A property with that key already exists.')
+
+            if loc == '$player':
+                prop = { '_id':propid, 'key':key, 'val':newval,
+                         'wid':wid, 'uid':None }
+            else:
+                prop = { '_id':propid, 'key':key, 'val':newval,
+                         'wid':wid, 'locid':locid }
+            ### write the damn thing
+
+            # Converting the value for the javascript client goes through
+            # this array-based call, because I am sloppy like that.
+            returnprop = self.export_prop_array([prop])[0]
+            self.write( { 'loc':self.get_argument('loc'), 'prop':returnprop } )
         except Exception as ex:
             # Any exception that occurs, return as an error message.
             self.application.twlog.warning('Caught exception (setting property): %s', ex)
