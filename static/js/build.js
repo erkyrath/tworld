@@ -15,6 +15,7 @@
    - id: the prop id
    - key: the prop key
    - tablekey: as above
+   - val: as handed over by the server
    - valtype: 'text', 'code', 'value', etc
    - rowel: jQuery ref to the <tr> element
    - keyel: jQuery ref to the <span> element containing the key name
@@ -90,6 +91,7 @@ function update_prop(tableref, prop) {
     if (propref !== undefined && propref.valtype == valtype) {
         /* Property is already present in table, with same type. All we have
            to do is update the subpane contents. */
+        propref.val = prop;
         propref.keyel.text(prop.key);
         var areamap = propref.areamap;
         for (var ix=0; ix<editls.length; ix++) {
@@ -105,6 +107,7 @@ function update_prop(tableref, prop) {
     else if (propref !== undefined) {
         /* Property is present in table, but with a different type. We
            need to clean out the second-column cell and rebuild it. */
+        propref.val = prop;
         propref.keyel.text(prop.key);
         propref.cellvalel.empty();
         propref.valtype = valtype;
@@ -143,7 +146,7 @@ function update_prop(tableref, prop) {
         tableel.append(rowel);
 
         var propref = {
-            id: prop.id, key: prop.key, 
+            id: prop.id, key: prop.key, val: prop,
             tablekey: tableref.tablekey, valtype: valtype,
             rowel: rowel, cellvalel: cellvalel, buttonsel: buildres.buttonsel,
             keyel: keyel, areamap: buildres.areamap
