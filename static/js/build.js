@@ -315,18 +315,32 @@ function evhan_button_save(ev) {
         });
     
     msg = { id:propref.id, key:propref.key, val:JSON.stringify(valobj),
+            world:pageworldid,
             _xsrf: xsrf_token };
+    if (pageid == 'loc') {
+        msg.loc = pagelocid;
+    }
+    else if (pageid == 'world') {
+        msg.loc = tableref.tablekey;
+    }
 
     jQuery.ajax({
             url: '/build/setprop',
             type: 'POST',
             data: msg,
             success: function(data, status, jqhxr) {
-                console.log('### ajax success: ' + data);
+                console.log('### ajax success: ' + JSON.stringify(data));
+                if (data.error) {
+                    prop_set_warning(tableref, propref, data.error);
+                    prop_set_dirty(tableref, propref, true);
+                }
+                else {
+                }
             },
             error: function(jqxhr, status, error) {
-                console.log('### ajax failure: ' + status + ' ' + error);
+                console.log('### ajax failure: ' + status + '; ' + error);
                 prop_set_warning(tableref, propref, error);
+                prop_set_dirty(tableref, propref, true);
             },
             dataType: 'json'
         });

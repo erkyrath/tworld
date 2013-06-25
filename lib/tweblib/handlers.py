@@ -559,14 +559,46 @@ class BuildLocHandler(BuildBaseHandler):
         self.render('build_loc.html',
                     wid=str(wid), worldname=worldname,
                     locarray=json.dumps(locarray), locations=locations,
-                    locname=locname, lockey=json.dumps(lockey),
+                    locname=locname, locid=str(locid), lockey=json.dumps(lockey),
                     proparray=proparray)
 
 class BuildSetPropHandler(BuildBaseHandler):
     @tornado.gen.coroutine
     def post(self):
         self.application.twlog.debug('### property value: %s', repr(self.get_argument('val')))
-
+        try:
+            wid = ObjectId(self.get_argument('world'))
+            locid = self.get_argument('loc')
+            if locid == '$realm':
+                locid = None
+            elif locid == '$player':
+                pass  # special case
+            else:
+                locid = ObjectId(locid)
+    
+            # Check the heck out of the arguments.
+            world = yield motor.Op(self.application.mongodb.worlds.find_one,
+                                   { '_id':wid })
+            if not world:
+                raise Exception('No such world')
+            if world['creator'] != self.twsession['uid'] and not self.twisadmin:
+                raise tornado.web.HTTPError(403, 'You did not create this world.')
+            if locid in (None, '$player'):
+                loc = locid
+            else:
+                loc = yield motor.Op(self.application.mongodb.locations.find_one,
+                                     { '_id':locid })
+                if not loc:
+                    raise Exception('No such location')
+    
+            if self.get_argument('delete', False):
+                raise Exception('### Delete it!')
+    
+            self.write( { 'error': 'Dummy error' } )
+        except Exception as ex:
+            # Any exception that occurs, return as an error message.
+            self.application.twlog.warning('Caught exception (setting property): %s', ex)
+            self.write( { 'error': str(ex) } )
 
 class AdminMainHandler(MyRequestHandler):
     """Handler for the Admin page, which is rudimentary and not worth much
