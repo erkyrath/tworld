@@ -485,7 +485,7 @@ class BuildBaseHandler(MyRequestHandler):
             ### of the strictness I mentioned.
             val = prop.get('value', None)
             if not val:
-                raise Exception('Blank value is not allowed')
+                raise Exception('Value entry may not be blank')
             return ast.literal_eval(val)
         if valtype == 'text':
             return { 'type':valtype, 'text':prop.get('text', None) }
@@ -626,6 +626,12 @@ class BuildSetPropHandler(BuildBaseHandler):
                 if not loc:
                     raise Exception('No such location')
 
+            # Construct the new property, except for the value
+            if loc == '$player':
+                prop = { '_id':propid, 'key':key, 'wid':wid, 'uid':None }
+            else:
+                prop = { '_id':propid, 'key':key, 'wid':wid, 'locid':locid }
+                
             # Fetch the current version of the property (possibly None)
             if loc == '$player':
                 # We can only edit all-player wplayerprops here.
@@ -640,11 +646,18 @@ class BuildSetPropHandler(BuildBaseHandler):
                     ### push into trash queue
                     pass ###
             
-                raise Exception('### Delete it!')
+                ### delete the damn thing
+
+                # We have to return all the property information (except for
+                # the value) so the client knows what row to delete.
+                returnprop = {'key':prop['key'], 'id':str(prop['_id'])}
+                self.write( { 'loc':self.get_argument('loc'), 'delete':True, 'prop':returnprop } )
+                return
 
             newval = self.get_argument('val')
             newval = json.loads(newval)
             newval = self.import_property(newval)
+            prop['val'] = newval
 
             # Make sure this doesn't collide with an existing key (in a
             # different property).
@@ -655,12 +668,6 @@ class BuildSetPropHandler(BuildBaseHandler):
                 ### push into trash queue
                 pass ###
             
-            if loc == '$player':
-                prop = { '_id':propid, 'key':key, 'val':newval,
-                         'wid':wid, 'uid':None }
-            else:
-                prop = { '_id':propid, 'key':key, 'val':newval,
-                         'wid':wid, 'locid':locid }
             ### write the damn thing
 
             # Converting the value for the javascript client goes through

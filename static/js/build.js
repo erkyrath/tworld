@@ -32,7 +32,8 @@ var property_type_selectors = [
     { value:'code', text:'Code' },
     { value:'move', text:'Move' },
     { value:'event', text:'Event' },
-    { value:'value', text:'Value' }
+    { value:'value', text:'Value' },
+    { value:'delete', text:'(Delete)' }
 ];
 
 var initial_setup_done = false;
@@ -112,6 +113,10 @@ function update_prop(tableref, prop, nocopy) {
             { key:'text', val:prop.val.text, label:'(Message)' },
             { key:'otext', val:prop.val.otext, label:'(Message to other players)' } ];
     }
+    else if (valtype == 'delete') {
+        /* No subpanes, just the "delete" button */
+        editls = [];
+    }
     else {
         valtype = 'value';
         editls = [ { key:'value', val:'"???"' } ];
@@ -184,6 +189,28 @@ function update_prop(tableref, prop, nocopy) {
 
         tableref.proplist.push(prop.id);
         tableref.propmap[prop.id] = propref;
+    }
+}
+
+/* Delete a row of the table, if it exists.
+*/
+function delete_prop(tableref, prop, nocopy) {
+    if (tableref === undefined) {
+        console.log('No table for this property group!');
+        return;
+    }
+
+    var tableel = tableref.rootel;
+    var propref = tableref.propmap[prop.id];
+    if (propref !== undefined) {
+        delete tableref.propmap[prop.id];
+        /* Is this really the best way to delete one entry from a JS array? */
+        var ix = tableref.proplist.indexOf(prop.id);
+        if (ix >= 0)
+            tableref.proplist.splice(ix, 1);
+        propref.rowel.slideUp(200, function() {
+                propref.rowel.remove();
+            });
     }
 }
 
@@ -323,6 +350,9 @@ function evhan_button_save(ev) {
     else if (pageid == 'world') {
         msg.loc = tableref.tablekey;
     }
+    if (valtype == 'delete') {
+        msg.delete = true;
+    }
 
     jQuery.ajax({
             url: '/build/setprop',
@@ -344,9 +374,14 @@ function evhan_button_save(ev) {
                     console.log('No such table: ' + data.loc + '!');
                     return;
                 }
-                update_prop(tableref, data.prop);
-                prop_set_warning(tableref, propref, null);
-                prop_set_dirty(tableref, propref, false);
+                if (data.delete) {
+                    delete_prop(tableref, data.prop);
+                }
+                else {
+                    update_prop(tableref, data.prop);
+                    prop_set_warning(tableref, propref, null);
+                    prop_set_dirty(tableref, propref, false);
+                }
             },
             error: function(jqxhr, status, error) {
                 console.log('### ajax failure: ' + status + '; ' + error);
