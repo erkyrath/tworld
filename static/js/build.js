@@ -147,6 +147,7 @@ function update_prop(tableref, prop, nocopy) {
         var buildres = build_value_cell(propref.cellvalel, tableref.tablekey, prop.key, prop.id, editls);
         propref.areamap = buildres.areamap;
         propref.buttonsel = buildres.buttonsel;
+        propref.warningel = buildres.warningel;
     }
     else {
         /* Property is not in table. Add a row. */
@@ -306,6 +307,47 @@ function evhan_button_save(ev) {
     }
 
     console.log('### save prop entry: ' + tablekey + ':' + id);
+
+    /* Turn the subpane entries back into a property value. */
+    var valtype = propref.valtype;
+    var areamap = propref.areamap;
+    var valobj = { type: propref.valtype };
+    var val;
+    if (valtype == 'value') {
+        val = jQuery.trim(areamap.value.prop('value'));
+        if (val)
+            valobj.value = val;
+    }
+    else if (valtype == 'text') {
+        val = jQuery.trim(areamap.text.prop('value'));
+        if (val)
+            valobj.text = val;
+    }
+    else if (valtype == 'code') {
+        val = jQuery.trim(areamap.text.prop('value'));
+        if (val)
+            valobj.text = val;
+    }
+    else {
+        /* Include nothing, I guess. */
+    }
+    
+    msg = { id:propref.id, key:propref.key, val:JSON.stringify(valobj),
+            _xsrf: xsrf_token };
+
+    jQuery.ajax({
+            url: '/build/setprop',
+            type: 'POST',
+            data: msg,
+            success: function(data, status, jqhxr) {
+                console.log('### ajax success: ' + data);
+            },
+            error: function(jqxhr, status, error) {
+                console.log('### ajax failure: ' + status + ' ' + error);
+                prop_set_warning(tableref, propref, error);
+            },
+            dataType: 'json'
+        });
 }
 
 function evhan_prop_type_change(ev) {

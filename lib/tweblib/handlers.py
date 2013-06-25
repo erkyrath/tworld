@@ -423,6 +423,11 @@ class BuildBaseHandler(MyRequestHandler):
         if not res or not (self.twisadmin or res.get('build', False)):
             raise tornado.web.HTTPError(403, 'You do not have build access.')
 
+    def extend_template_namespace(self, map):
+        map = super().extend_template_namespace(map)
+        map['xsrf_token'] = tornado.escape.xhtml_escape(self.xsrf_token)
+        return map
+
     @tornado.gen.coroutine
     def find_build_world(self, wid):
         """Given the ObjectId of a world, look up the world and make sure
@@ -556,6 +561,11 @@ class BuildLocHandler(BuildBaseHandler):
                     locarray=json.dumps(locarray), locations=locations,
                     locname=locname, lockey=json.dumps(lockey),
                     proparray=proparray)
+
+class BuildSetPropHandler(BuildBaseHandler):
+    @tornado.gen.coroutine
+    def post(self):
+        self.application.twlog.debug('### property value: %s', repr(self.get_argument('val')))
 
 
 class AdminMainHandler(MyRequestHandler):
