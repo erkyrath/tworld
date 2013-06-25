@@ -483,7 +483,10 @@ class BuildBaseHandler(MyRequestHandler):
             ### such items.
             ### It also allows arbitrary typed dicts, which makes a mockery
             ### of the strictness I mentioned.
-            return ast.literal_eval(prop['value'])
+            val = prop.get('value', None)
+            if not val:
+                raise Exception('Blank value is not allowed')
+            return ast.literal_eval(val)
         if valtype == 'text':
             return { 'type':valtype, 'text':prop.get('text', None) }
         if valtype == 'code':
@@ -622,8 +625,21 @@ class BuildSetPropHandler(BuildBaseHandler):
                                      { '_id':locid })
                 if not loc:
                     raise Exception('No such location')
-    
+
+            # Fetch the current version of the property (possibly None)
+            if loc == '$player':
+                # We can only edit all-player wplayerprops here.
+                oprop = yield motor.Op(self.application.mongodb.wplayerprop.find_one,
+                                       { 'wid':wid, 'uid':None, 'key':key })
+            else:
+                oprop = yield motor.Op(self.application.mongodb.worldprop.find_one,
+                                       { 'wid':wid, 'locid':locid, 'key':key })
+
             if self.get_argument('delete', False):
+                if oprop:
+                    ### push into trash queue
+                    pass ###
+            
                 raise Exception('### Delete it!')
 
             newval = self.get_argument('val')
@@ -632,16 +648,13 @@ class BuildSetPropHandler(BuildBaseHandler):
 
             # Make sure this doesn't collide with an existing key (in a
             # different property).
-            if loc == '$player':
-                # We can only edit all-player wplayerprops here.
-                oprop = yield motor.Op(self.application.mongodb.wplayerprop.find_one,
-                                       { 'wid':wid, 'uid':None, 'key':key })
-            else:
-                oprop = yield motor.Op(self.application.mongodb.worldprop.find_one,
-                                       { 'wid':wid, 'locid':locid, 'key':key })
             if oprop and oprop['_id'] != propid:
                 raise Exception('A property with that key already exists.')
 
+            if oprop:
+                ### push into trash queue
+                pass ###
+            
             if loc == '$player':
                 prop = { '_id':propid, 'key':key, 'val':newval,
                          'wid':wid, 'uid':None }
