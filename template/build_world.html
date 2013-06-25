@@ -16,12 +16,16 @@ Building: {{ worldname }}
 <script type="text/javascript">
 /* Which page is this? Cheap way of telling build.js. */
 var pageid = 'world';
+var pageworldid = "{{wid}}";
+var pagelocid = null;
 /* List of locations in this world. */
 var db_locations = {% raw locarray %};
 /* List of default realm-level properties. */
 var db_world_props = {% raw worldproparray %};
 /* List of default player-scope properties. */
 var db_player_props = {% raw playerproparray %};
+/* Form verification token. (Tornado checks this against a cookie.) */
+var xsrf_token = "{{ xsrf_token }}";
 </script>
 {% end %}
 
@@ -53,10 +57,16 @@ var db_player_props = {% raw playerproparray %};
 
 <h3 class="BuildSectionHead">Locations</h3>
 
-<ul>
+<div class="BuildPropTableBox">
+ <table class="BuildPropTable" cellspacing="0">
+ <colgroup><col width="30%"><col width="70%"></colgroup>
  {% for loc in locations %}
-  <li><a href="/build/loc/{{ loc['_id'] }}">{{ loc['name'] }}</a>
+  <tr>
+   <td><a href="/build/loc/{{ loc['_id'] }}">{{ loc['key'] }}</a></td>
+   <td><a href="/build/loc/{{ loc['_id'] }}">{{ loc['name'] }}</a></td>
+  </tr>
  {% end %}
-</ul>
+ </table>
+</div>
 
 {% end %}

@@ -14,10 +14,16 @@ Building
 <span class="BuildBarItem"><a href="/build">Worlds</a></span>
 </div>
 
-<ul>
+<h3 class="BuildSectionHead">Your Worlds</h3>
+
+<div class="BuildPropTableBox">
+ <table class="BuildPropTable" cellspacing="0">
  {% for world in worlds %}
-  <li><a href="/build/world/{{ world['id'] }}">{{ world['name'] }}</a>
+  <tr>
+   <td><a href="/build/world/{{ world['id'] }}">{{ world['name'] }}</a>
+  </tr>
  {% end %}
-</ul>
+ </table>
+</div>
 
 {% end %}
