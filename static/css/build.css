@@ -60,6 +60,11 @@
   background: #FF8;
 }
 
+.BuildPropWarning {
+  font-style: italic;
+  color: #D00;
+}
+
 .BuildPropKey {
   font-size: 1.1em;
 }

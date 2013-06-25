@@ -183,7 +183,7 @@ function update_prop(tableref, prop, nocopy) {
             id: prop.id, key: prop.key, val: prop,
             tablekey: tableref.tablekey, valtype: valtype,
             rowel: rowel, cellvalel: cellvalel, buttonsel: buildres.buttonsel,
-            selectel: selectel,
+            warningel: buildres.warningel, selectel: selectel,
             keyel: keyel, areamap: buildres.areamap
         };
 
@@ -222,6 +222,9 @@ function build_value_cell(cellvalel, tablekey, propkey, propid, editls) {
             subpanel.on('input', evhan_input_textarea);
         }
     }
+
+    var warningel = $('<div>', { 'class':'BuildPropWarning', style:'display: none;' });
+    cellvalel.append(warningel);
     
     var buttonsel = $('<div>', { 'class':'BuildPropButtons', style:'display: none;' });
     var buttonel = $('<input>', { type:'submit', value:'Revert' });
@@ -232,7 +235,7 @@ function build_value_cell(cellvalel, tablekey, propkey, propid, editls) {
     buttonsel.append(buttonel);
     cellvalel.append(buttonsel);
     
-    return { areamap:areamap, buttonsel:buttonsel };
+    return { areamap:areamap, buttonsel:buttonsel, warningel:warningel };
 }
 
 function prop_set_dirty(tableref, propref, dirty) {
@@ -246,6 +249,18 @@ function prop_set_dirty(tableref, propref, dirty) {
         propref.dirty = false;
         propref.rowel.removeClass('BuildPropDirty');
         propref.buttonsel.filter(":visible").slideUp(200);
+    }
+}
+
+function prop_set_warning(tableref, propref, message) {
+    if (message) {
+        propref.warningel.text(message);
+        propref.warningel.filter(":hidden").slideDown(200);
+    }
+    else {
+        propref.warningel.filter(":visible").slideUp(200, function() {
+                propref.warningel.empty();
+            });
     }
 }
 
@@ -282,6 +297,7 @@ function evhan_button_revert(ev) {
 
     update_prop(tableref, propref.val);
     prop_set_dirty(tableref, propref, false);
+    prop_set_warning(tableref, propref, null);
 }
 
 function evhan_button_save(ev) {
