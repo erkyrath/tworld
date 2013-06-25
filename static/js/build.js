@@ -232,7 +232,6 @@ function build_value_cell(cellvalel, tablekey, propkey, propid, editls) {
 }
 
 function prop_set_dirty(tableref, propref, dirty) {
-    console.log('### setting prop ' + propref.key + ' to dirty=' + dirty);
     if (dirty) {
         propref.dirty = true;
         propref.rowel.addClass('BuildPropDirty');
@@ -306,31 +305,14 @@ function evhan_button_save(ev) {
         console.log('No such property entry: ' + tablekey + ':' + id);
     }
 
-    console.log('### save prop entry: ' + tablekey + ':' + id);
-
     /* Turn the subpane entries back into a property value. */
     var valtype = propref.valtype;
-    var areamap = propref.areamap;
     var valobj = { type: propref.valtype };
-    var val;
-    if (valtype == 'value') {
-        val = jQuery.trim(areamap.value.prop('value'));
+    jQuery.each(propref.areamap, function(subkey, subpanel) {
+        var val = jQuery.trim(subpanel.prop('value'));
         if (val)
-            valobj.value = val;
-    }
-    else if (valtype == 'text') {
-        val = jQuery.trim(areamap.text.prop('value'));
-        if (val)
-            valobj.text = val;
-    }
-    else if (valtype == 'code') {
-        val = jQuery.trim(areamap.text.prop('value'));
-        if (val)
-            valobj.text = val;
-    }
-    else {
-        /* Include nothing, I guess. */
-    }
+            valobj[subkey] = val;
+        });
     
     msg = { id:propref.id, key:propref.key, val:JSON.stringify(valobj),
             _xsrf: xsrf_token };
@@ -363,7 +345,6 @@ function evhan_prop_type_change(ev) {
         console.log('No such property entry: ' + tablekey + ':' + id);
     }
 
-    console.log('### type change: ' + tablekey + ':' + id + ' = ' + $(ev.target).prop('value'));
     var valtype = $(ev.target).prop('value');
     /* Construct an empty property structure of the given type. We
        could get fancy with default values, but we won't. */
