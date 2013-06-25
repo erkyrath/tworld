@@ -92,25 +92,25 @@ function update_prop(tableref, prop, nocopy) {
     var editls = [];
     var valtype = prop.val.type;
     if (valtype == 'value') {
-        editls = [ { key:'value', val:prop.val.value } ];
+        editls = [ { key:'value', val:prop.val.value, label:'Value' } ];
     }
     else if (valtype == 'text') {
-        editls = [ { key:'text', val:prop.val.text } ];
+        editls = [ { key:'text', val:prop.val.text, label:'Text' } ];
     }
     else if (valtype == 'code') {
-        editls = [ { key:'text', val:prop.val.text } ];
+        editls = [ { key:'text', val:prop.val.text, label:'Code' } ];
     }
     else if (valtype == 'move') {
         editls = [
             { key:'loc', val:prop.val.loc, label:'Destination' },
-            { key:'text', val:prop.val.text, label:'Action' },
-            { key:'oleave', val:prop.val.oleave, label:'Leave' },
-            { key:'oarrive', val:prop.val.oarrive, label:'Arrive' } ];
+            { key:'text', val:prop.val.text, label:'(Move message)' },
+            { key:'oleave', val:prop.val.oleave, label:'[$name] leaves.' },
+            { key:'oarrive', val:prop.val.oarrive, label:'[$name] arrives.' } ];
     }
     else if (valtype == 'event') {
         editls = [ 
-            { key:'text', val:prop.val.text, label:'Actor' },
-            { key:'otext', val:prop.val.otext, label:'Others' } ];
+            { key:'text', val:prop.val.text, label:'(Message)' },
+            { key:'otext', val:prop.val.otext, label:'(Message to other players)' } ];
     }
     else {
         valtype = 'value';
@@ -156,12 +156,6 @@ function update_prop(tableref, prop, nocopy) {
 
         rowel.data('key', prop.key);
     
-        if (editls.length > 1) {
-            /* Put in a blank label to line up with the second column's
-               label. */
-            var sublabel = $('<div>', { 'class':'BuildPropSublabel' }).text(NBSP);
-            cellkeyel.append(sublabel);
-        }
         var keyel = $('<span>', { 'class':'BuildPropKey' }).text(prop.key);
         cellkeyel.append(keyel);
         var selectel = $('<select>', { 'class':'BuildPropTypeSelect' });
@@ -197,16 +191,14 @@ function build_value_cell(cellvalel, tablekey, propkey, propid, editls) {
     
     for (var ix=0; ix<editls.length; ix++) {
         var subpane = editls[ix];
-        if (subpane.label) {
-            var sublabel = $('<div>', { 'class':'BuildPropSublabel' }).text(subpane.label);
-            cellvalel.append(sublabel);
-        }
         var subpanel = $('<textarea>', { 'class':'BuildPropSubpane', 'rows':'1' });
         /* subpane.val may be undef here */
         if (subpane.val)
             subpanel.val(subpane.val);
         else
             subpanel.val('');
+        if (subpane.label)
+            subpanel.prop('placeholder', subpane.label);
         var boxel = $('<div>', { 'style':'position:relative;' }).append(subpanel);
         /* ### subpanel.autosize() when updating? */
         cellvalel.append(boxel);
