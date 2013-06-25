@@ -35,6 +35,30 @@ var property_type_selectors = [
     { value:'value', text:'Value' }
 ];
 
+var initial_setup_done = false;
+
+function setup_event_handlers() {
+    var el = $('#build_location_menu');
+
+    if (el) {
+        var ls = jQuery.map(db_locations, function(loc, index) {
+                return { text:loc.name, click:function() { window.location = '/build/loc/' + loc.id; } };
+            });
+        el.contextMenu('popup_menu',
+            ls,
+            { 
+                leftClick: true,
+                    position: { my:'left top', at:'left bottom', of:el }
+            } );
+    }
+
+    initial_setup_done = true;
+
+    /* Give all the textareas the magic autosizing behavior. */
+    $('textarea').autosize();
+    $('textarea').on('input', evhan_input_textarea);
+}
+
 function build_proptable(tableel, proplist, tablekey) {
     var tableref = tables[tablekey];
     if (tableref === undefined) {
@@ -51,7 +75,13 @@ function build_proptable(tableel, proplist, tablekey) {
     }
 }
 
-function update_prop(tableref, prop) {
+/* Update (or add) a row of a property table. The table must exist; the
+   row is added if it doesn't exist.
+
+   If nocopy is set, the "original" (revert) value of the property is 
+   left unchanged.
+*/
+function update_prop(tableref, prop, nocopy) {
     if (tableref === undefined) {
         console.log('No table for this property group!');
         return;
@@ -91,7 +121,8 @@ function update_prop(tableref, prop) {
     if (propref !== undefined && propref.valtype == valtype) {
         /* Property is already present in table, with same type. All we have
            to do is update the subpane contents. */
-        propref.val = prop;
+        if (!nocopy)
+            propref.val = prop;
         propref.keyel.text(prop.key);
         var areamap = propref.areamap;
         for (var ix=0; ix<editls.length; ix++) {
@@ -107,8 +138,10 @@ function update_prop(tableref, prop) {
     else if (propref !== undefined) {
         /* Property is present in table, but with a different type. We
            need to clean out the second-column cell and rebuild it. */
-        propref.val = prop;
+        if (!nocopy)
+            propref.val = prop;
         propref.keyel.text(prop.key);
+        propref.selectel.prop('value', valtype);
         propref.cellvalel.empty();
         propref.valtype = valtype;
         var buildres = build_value_cell(propref.cellvalel, tableref.tablekey, prop.key, prop.id, editls);
@@ -137,6 +170,7 @@ function update_prop(tableref, prop) {
             selectel.append($('<option>', { value:selector.value }).text(selector.text));
         }
         selectel.prop('value', valtype);
+        selectel.on('change', { tablekey:tableref.tablekey, id:prop.id }, evhan_prop_type_change);
         cellkeyel.append(selectel);
 
         var buildres = build_value_cell(cellvalel, tableref.tablekey, prop.key, prop.id, editls);
@@ -149,6 +183,7 @@ function update_prop(tableref, prop) {
             id: prop.id, key: prop.key, val: prop,
             tablekey: tableref.tablekey, valtype: valtype,
             rowel: rowel, cellvalel: cellvalel, buttonsel: buildres.buttonsel,
+            selectel: selectel,
             keyel: keyel, areamap: buildres.areamap
         };
 
@@ -181,12 +216,19 @@ function build_value_cell(cellvalel, tablekey, propkey, propid, editls) {
         subpanel.data('key', propkey);
         subpanel.data('id', propid);
         subpanel.data('subkey', subpane.key);
+
+        if (initial_setup_done) {
+            subpanel.autosize();
+            subpanel.on('input', evhan_input_textarea);
+        }
     }
     
     var buttonsel = $('<div>', { 'class':'BuildPropButtons', style:'display: none;' });
     var buttonel = $('<input>', { type:'submit', value:'Revert' });
+    buttonel.on('click', { tablekey:tablekey, id:propid }, evhan_button_revert);
     buttonsel.append(buttonel);
     var buttonel = $('<input>', { type:'submit', value:'Save' });
+    buttonel.on('click', { tablekey:tablekey, id:propid }, evhan_button_save);
     buttonsel.append(buttonel);
     cellvalel.append(buttonsel);
     
@@ -198,33 +240,13 @@ function prop_set_dirty(tableref, propref, dirty) {
     if (dirty) {
         propref.dirty = true;
         propref.rowel.addClass('BuildPropDirty');
-        propref.buttonsel.slideDown(200);
+        propref.buttonsel.filter(":hidden").slideDown(200);
     }
     else {
         propref.dirty = false;
         propref.rowel.removeClass('BuildPropDirty');
-        propref.buttonsel.slideUp(200);
+        propref.buttonsel.filter(":visible").slideUp(200);
     }
-}
-
-function setup_event_handlers() {
-    var el = $('#build_location_menu');
-
-    if (el) {
-        var ls = jQuery.map(db_locations, function(loc, index) {
-                return { text:loc.name, click:function() { window.location = '/build/loc/' + loc.id; } };
-            });
-        el.contextMenu('popup_menu',
-            ls,
-            { 
-                leftClick: true,
-                    position: { my:'left top', at:'left bottom', of:el }
-            } );
-    }
-
-    /* Give all the textareas the magic autosizing behavior. */
-    $('textarea').autosize();
-    $('textarea').on('input', evhan_input_textarea);
 }
 
 function evhan_input_textarea(ev) {
@@ -243,6 +265,60 @@ function evhan_input_textarea(ev) {
     if (!propref.dirty) {
         prop_set_dirty(tableref, propref, true);
     }
+}
+
+function evhan_button_revert(ev) {
+    ev.preventDefault();
+    var tablekey = ev.data.tablekey;
+    var id = ev.data.id;
+
+    var tableref = tables[tablekey];
+    if (!tableref)
+        return;
+    var propref = tableref.propmap[id];
+    if (!propref) {
+        console.log('No such property entry: ' + tablekey + ':' + id);
+    }
+
+    update_prop(tableref, propref.val);
+    prop_set_dirty(tableref, propref, false);
+}
+
+function evhan_button_save(ev) {
+    ev.preventDefault();
+    var tablekey = ev.data.tablekey;
+    var id = ev.data.id;
+
+    var tableref = tables[tablekey];
+    if (!tableref)
+        return;
+    var propref = tableref.propmap[id];
+    if (!propref) {
+        console.log('No such property entry: ' + tablekey + ':' + id);
+    }
+
+    console.log('### save prop entry: ' + tablekey + ':' + id);
+}
+
+function evhan_prop_type_change(ev) {
+    ev.preventDefault();
+    var tablekey = ev.data.tablekey;
+    var id = ev.data.id;
+
+    var tableref = tables[tablekey];
+    if (!tableref)
+        return;
+    var propref = tableref.propmap[id];
+    if (!propref) {
+        console.log('No such property entry: ' + tablekey + ':' + id);
+    }
+
+    console.log('### type change: ' + tablekey + ':' + id + ' = ' + $(ev.target).prop('value'));
+    var valtype = $(ev.target).prop('value');
+    /* Construct an empty property structure of the given type. We
+       could get fancy with default values, but we won't. */
+    update_prop(tableref, { id:propref.id, key:propref.key, val:{ type:valtype } }, true);
+    prop_set_dirty(tableref, propref, true);
 }
 
 /* The page-ready handler. Like onload(), but better, I'm told. */
