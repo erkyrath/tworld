@@ -71,6 +71,18 @@ function build_proptable(tableel, proplist, tablekey) {
     /* Remove any existing rows. */
     tableel.remove('tr');
 
+    /* Add a "add new" row (which will stick at the bottom) */
+    var rowel = $('<tr>');
+    var cellel = $('<td>', { colspan:2 });
+    var buttonsel = $('<div>', { 'class':'BuildPropButtons' });
+    var buttonel = $('<input>', { 'class':'BuildPropButtonLarge', type:'submit', value:'Add New' });
+    cellel.append(buttonsel);
+    buttonsel.append(buttonel);
+    rowel.append(cellel);
+    tableel.append(rowel);
+
+    buttonel.on('click', { tablekey:tablekey }, evhan_button_addnew);
+
     for (var ix=0; ix<proplist.length; ix++) {
         update_prop(tableref, proplist[ix]);
     }
@@ -177,7 +189,7 @@ function update_prop(tableref, prop, nocopy) {
     
         rowel.append(cellkeyel);
         rowel.append(cellvalel);
-        tableel.append(rowel);
+        tableel.children().filter(":last").before(rowel);
 
         var propref = {
             id: prop.id, key: prop.key, val: prop,
@@ -350,6 +362,7 @@ function evhan_button_save(ev) {
     else if (pageid == 'world') {
         msg.loc = tableref.tablekey;
     }
+
     if (valtype == 'delete') {
         msg.delete = true;
     }
@@ -387,6 +400,51 @@ function evhan_button_save(ev) {
                 console.log('### ajax failure: ' + status + '; ' + error);
                 prop_set_warning(tableref, propref, error);
                 prop_set_dirty(tableref, propref, true);
+            },
+            dataType: 'json'
+        });
+}
+
+function evhan_button_addnew(ev) {
+    ev.preventDefault();
+    var tablekey = ev.data.tablekey;
+
+    var tableref = tables[tablekey];
+    if (!tableref)
+        return;
+
+    msg = { world:pageworldid,
+            _xsrf: xsrf_token };
+    if (pageid == 'loc') {
+        msg.loc = pagelocid;
+    }
+    else if (pageid == 'world') {
+        msg.loc = tableref.tablekey;
+    }
+
+    jQuery.ajax({
+            url: '/build/addprop',
+            type: 'POST',
+            data: msg,
+            success: function(data, status, jqhxr) {
+                console.log('### ajax success: ' + JSON.stringify(data));
+                if (data.error) {
+                    console.log('### error: ' + data.error);
+                    return;
+                }
+                var tableref = null;
+                if (pageid == 'world')
+                    tableref = tables[data.loc];
+                else if (pageid == 'loc' && pagelocid == data.loc)
+                    tableref = tables[pagelockey];
+                if (!tableref) {
+                    console.log('No such table: ' + data.loc + '!');
+                    return;
+                }
+                update_prop(tableref, data.prop);
+            },
+            error: function(jqxhr, status, error) {
+                console.log('### ajax failure: ' + status + '; ' + error);
             },
             dataType: 'json'
         });

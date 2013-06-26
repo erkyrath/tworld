@@ -603,7 +603,6 @@ class BuildLocHandler(BuildBaseHandler):
 class BuildSetPropHandler(BuildBaseHandler):
     @tornado.gen.coroutine
     def post(self):
-        self.application.twlog.debug('### property value: %s', repr(self.get_argument('val')))
         try:
             key = self.get_argument('key')
             propid = ObjectId(self.get_argument('id'))
@@ -718,6 +717,90 @@ class BuildSetPropHandler(BuildBaseHandler):
             # Any exception that occurs, return as an error message.
             self.application.twlog.warning('Caught exception (setting property): %s', ex)
             self.write( { 'error': str(ex) } )
+
+class BuildAddPropHandler(BuildBaseHandler):
+    @tornado.gen.coroutine
+    def post(self):
+        try:
+            wid = ObjectId(self.get_argument('world'))
+            locid = self.get_argument('loc')
+            if locid == '$realm':
+                locid = None
+            elif locid == '$player':
+                pass  # special case
+            else:
+                locid = ObjectId(locid)
+    
+            # Check the heck out of the arguments.
+            world = yield motor.Op(self.application.mongodb.worlds.find_one,
+                                   { '_id':wid })
+            if not world:
+                raise Exception('No such world')
+            if world['creator'] != self.twsession['uid'] and not self.twisadmin:
+                raise tornado.web.HTTPError(403, 'You did not create this world.')
+            if locid in (None, '$player'):
+                loc = locid
+            else:
+                loc = yield motor.Op(self.application.mongodb.locations.find_one,
+                                     { '_id':locid })
+                if not loc:
+                    raise Exception('No such location')
+
+            # Now we have to invent a fresh new prop key. This is kind
+            # of a nuisance.
+            counter = 0
+            while True:
+                key = 'key_%d' % (counter,)
+                if loc == '$player':
+                    oprop = yield motor.Op(self.application.mongodb.wplayerprop.find_one,
+                                       { 'wid':wid, 'uid':None, 'key':key })
+                else:
+                    oprop = yield motor.Op(self.application.mongodb.worldprop.find_one,
+                                       { 'wid':wid, 'locid':locid, 'key':key })
+                if not oprop:
+                    break
+                counter = counter+1
+
+            # Construct the new property, with a boring default value
+            if loc == '$player':
+                prop = { 'key':key, 'wid':wid, 'uid':None }
+            else:
+                prop = { 'key':key, 'wid':wid, 'locid':locid }
+            prop['val'] = { 'type':'text' }
+            
+            # And now we write it.
+            if loc == '$player':
+                propid = yield motor.Op(self.application.mongodb.wplayerprop.insert,
+                                        prop)
+                dependency = ('wplayerprop', wid, None, key)
+            else:
+                propid = yield motor.Op(self.application.mongodb.worldprop.insert,
+                                        prop)
+                dependency = ('worldprop', wid, locid, key)
+
+            prop['_id'] = propid
+
+            # Send dependency key to tworld. (Theoretically, no player should
+            # be holding a dependency on a brand-new key. But we'll be
+            # paranoid.
+            try:
+                encoder = JSONEncoderExtra()
+                depmsg = encoder.encode({ 'cmd':'notifydatachange', 'change':dependency })
+                self.application.twservermgr.tworld_write(0, depmsg)
+            except Exception as ex:
+                self.application.twlog.warning('Unable to notify tworld of data change: %s', ex)
+
+            # Converting the value for the javascript client goes through
+            # this array-based call, because I am sloppy like that.
+            returnprop = self.export_prop_array([prop])[0]
+            self.write( { 'loc':self.get_argument('loc'), 'prop':returnprop } )
+            
+        except Exception as ex:
+            # Any exception that occurs, return as an error message.
+            self.application.twlog.warning('Caught exception (setting property): %s', ex)
+            self.write( { 'error': str(ex) } )
+
+
 
 class AdminMainHandler(MyRequestHandler):
     """Handler for the Admin page, which is rudimentary and not worth much
