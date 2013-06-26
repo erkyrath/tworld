@@ -71,8 +71,11 @@ function build_proptable(tableel, proplist, tablekey) {
         tables[tablekey] = tableref;
     }
 
-    /* Remove any existing rows. */
-    tableel.remove('tr');
+    /* Empty out the table. */
+    tableel.empty();
+
+    /* Add a colgroup, defining the column widths. */
+    tableel.append($('<colgroup><col width="30%"></col><col width="70%"></col></colgroup>'));
 
     /* Add a "add new" row (which will stick at the bottom) */
     var rowel = $('<tr>');
@@ -192,7 +195,7 @@ function update_prop(tableref, prop, nocopy) {
     
         rowel.append(cellkeyel);
         rowel.append(cellvalel);
-        tableel.children().filter(":last").before(rowel);
+        tableel.find('tr').filter(':last').before(rowel);
 
         var propref = {
             id: prop.id, key: prop.key, val: prop,
@@ -289,7 +292,7 @@ function prop_set_dirty(tableref, propref, dirty) {
         propref.dirty = true;
         propref.rowel.addClass('BuildPropDirty');
         var newlabel = (dirty == 'delete') ? 'Delete' : 'Save';
-        propref.buttonsel.children('input').filter(':last').prop('value', newlabel);
+        propref.buttonsel.find('input').filter(':last').prop('value', newlabel);
         propref.buttonsel.filter(":hidden").slideDown(200);
     }
     else {
