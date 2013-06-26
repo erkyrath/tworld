@@ -63,7 +63,7 @@ function setup_event_handlers() {
 /* Construct the contents of a property table. This is called at page-load
    time.
 */
-function build_proptable(tableel, proplist, tablekey) {
+function build_proptable(tableel, proplist, tablekey, title) {
     var tableref = tables[tablekey];
     if (tableref === undefined) {
         tableref = { tablekey:tablekey, rootel:tableel,
@@ -76,6 +76,12 @@ function build_proptable(tableel, proplist, tablekey) {
 
     /* Add a colgroup, defining the column widths. */
     tableel.append($('<colgroup><col width="30%"></col><col width="70%"></col></colgroup>'));
+
+    var rowel = $('<tr>');
+    var cellel = $('<th>', { colspan:2 });
+    cellel.text(title);
+    rowel.append(cellel);
+    tableel.append(rowel);
 
     /* Add a "add new" row (which will stick at the bottom) */
     var rowel = $('<tr>');
@@ -498,11 +504,11 @@ function evhan_prop_type_change(ev) {
 $(document).ready(function() {
     /*### install UI prefs to match play page? */
     if (pageid == 'loc') {
-        build_proptable($('#build_loc_properties'), db_props, pagelockey);
+        build_proptable($('#build_loc_properties'), db_props, pagelockey, 'Location properties');
     }
     if (pageid == 'world') {
-        build_proptable($('#build_world_properties'), db_world_props, '$realm');
-        build_proptable($('#build_player_properties'), db_player_props, '$player');
+        build_proptable($('#build_world_properties'), db_world_props, '$realm', 'Realm properties');
+        build_proptable($('#build_player_properties'), db_player_props, '$player', 'Player default properties');
     }
     setup_event_handlers();
 });

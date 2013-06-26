@@ -40,6 +40,8 @@
 }
 
 .BuildPropTableBox {
+  margin-top: 1.5em;
+  border-top: 1px solid #CCB;
   padding-left: 20px;
   padding-right: 20px;
   background: #F8F8E8;
@@ -49,6 +51,14 @@
   font-family: Helvetica, Arial, sans-serif;
   width: 100%;
   border-bottom: 1px solid #CCB;
+}
+
+.BuildPropTable th {
+  text-align: right;
+  font-weight: normal;
+  font-style: italic;
+  padding-top: 2px;
+  padding-bottom: 2px;
 }
 
 .BuildPropTable td {
