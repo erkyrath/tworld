@@ -320,6 +320,7 @@ def sluggify(text):
     and converting other characters to underscores. We try to avoid too
     many underscores in a row, but also try to keep them meaningful. (So
     'dr who' and 'Dr__Who' sluggify differently.)
+    See also re_valididentifier in tweblib/handlers.py.
     ### Would be nice to follow Py3 identifier rules here, for Unicode.
     """
     text = text.lower()

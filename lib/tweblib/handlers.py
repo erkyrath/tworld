@@ -7,6 +7,7 @@ import traceback
 import unicodedata
 import json
 import ast
+import re
 
 from bson.objectid import ObjectId
 import tornado.web
@@ -558,7 +559,11 @@ class JSONEncoderExtra(json.JSONEncoder):
         if isinstance(obj, ObjectId):
             return str(obj)
         return super().default(obj)
-        
+
+# Regexp to match valid Python (2) identifiers. See also sluggify() in
+# lib/two/interp.py.
+re_valididentifier = re.compile('^[a-zA-Z_][a-zA-Z0-9_]*$')
+    
 class BuildLocHandler(BuildBaseHandler):
     @tornado.gen.coroutine
     def get(self, locid):
@@ -625,6 +630,9 @@ class BuildSetPropHandler(BuildBaseHandler):
                                      { '_id':locid })
                 if not loc:
                     raise Exception('No such location')
+
+            if not re_valididentifier.match(key):
+                raise Exception('Invalid key name')
 
             # Construct the new property, except for the value
             if loc == '$player':
