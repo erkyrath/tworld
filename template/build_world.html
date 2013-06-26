@@ -39,27 +39,22 @@ var xsrf_token = "{{ xsrf_token }}";
 <span class="BuildBarItem"><a id="build_location_menu" href="#"><span style="color: #884">&#x25BE;</span> (select location)</a></span>
 </div>
 
-<h3 class="BuildSectionHead">Realm properties</h3>
-
 <div class="BuildPropTableBox">
  <table id="build_world_properties" class="BuildPropTable" cellspacing="0">
- <colgroup><col width="30%"><col width="70%"></colgroup>
  </table>
 </div>
-
-<h3 class="BuildSectionHead">Default player properties</h3>
 
 <div class="BuildPropTableBox">
  <table id="build_player_properties" class="BuildPropTable" cellspacing="0">
- <colgroup><col width="30%"><col width="70%"></colgroup>
  </table>
 </div>
-
-<h3 class="BuildSectionHead">Locations</h3>
 
 <div class="BuildPropTableBox">
  <table class="BuildPropTable" cellspacing="0">
  <colgroup><col width="30%"><col width="70%"></colgroup>
+ <tr>
+  <th colspan="2">Locations</th>
+ </tr>
  {% for loc in locations %}
   <tr>
    <td><a href="/build/loc/{{ loc['_id'] }}">{{ loc['key'] }}</a></td>
