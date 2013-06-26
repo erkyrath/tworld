@@ -550,6 +550,8 @@ class BuildWorldHandler(BuildBaseHandler):
 
         self.render('build_world.html',
                     wid=str(wid), worldname=worldname,
+                    worldcopyable=json.dumps(world.get('copyable', False)),
+                    worldinstancing=json.dumps(world.get('instancing', 'standard')),
                     locarray=json.dumps(locarray), locations=locations,
                     worldproparray=worldproparray, playerproparray=playerproparray)
 
@@ -598,7 +600,8 @@ class BuildLocHandler(BuildBaseHandler):
         self.render('build_loc.html',
                     wid=str(wid), worldname=worldname,
                     locarray=json.dumps(locarray), locations=locations,
-                    locname=locname, locid=str(locid), lockey=json.dumps(lockey),
+                    locname=locname, locnamejs=json.dumps(locname),
+                    locid=str(locid), lockey=json.dumps(lockey),
                     proparray=proparray)
 
 class BuildSetPropHandler(BuildBaseHandler):
@@ -679,6 +682,8 @@ class BuildSetPropHandler(BuildBaseHandler):
                 return
 
             newval = self.get_argument('val')
+            if len(newval) > 4000:
+                raise Exception('Property value is too long')
             newval = json.loads(newval)
             newval = self.import_property(newval)
             prop['val'] = newval

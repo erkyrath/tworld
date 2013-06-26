@@ -41,30 +41,31 @@
 
 .BuildPropTableBox {
   margin-top: 1.5em;
-  border-top: 1px solid #CCB;
   padding-left: 20px;
   padding-right: 20px;
   background: #F8F8E8;
+  border-top: 1px solid #CCB;
+  border-bottom: 1px solid #CCB;
 }
 
 .BuildPropTable {
   font-family: Helvetica, Arial, sans-serif;
   width: 100%;
-  border-bottom: 1px solid #CCB;
 }
 
 .BuildPropTable th {
-  text-align: right;
+  text-align: left;
   font-weight: normal;
   font-style: italic;
+  color: #887;
   padding-top: 2px;
-  padding-bottom: 2px;
+  padding-bottom: 4px;
 }
 
 .BuildPropTable td {
   padding-top: 2px;
   padding-bottom: 2px;
-  border-top: 1px solid #CCB;
+  border-top: 1px solid #D8D8C8;
 }
 
 .BuildPropDirty {
