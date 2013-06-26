@@ -18,7 +18,7 @@
    - val: as handed over by the server
    - valtype: 'text', 'code', 'value', etc
    - rowel: jQuery ref to the <tr> element
-   - keyel: jQuery ref to the <span> element containing the key name
+   - keyel: jQuery ref to the <input> element containing the key name
    - cellvalel: jQuery ref to the second-col <td> element
    - areamap: maps subpane keys to <textarea> elements
    - buttonsel: jQuery ref to the <div> containing buttons
@@ -152,7 +152,7 @@ function update_prop(tableref, prop, nocopy) {
            to do is update the subpane contents. */
         if (!nocopy)
             propref.val = prop;
-        propref.keyel.text(prop.key);
+        propref.keyel.prop('value', prop.key);
         var areamap = propref.areamap;
         for (var ix=0; ix<editls.length; ix++) {
             var subpane = editls[ix];
@@ -169,7 +169,7 @@ function update_prop(tableref, prop, nocopy) {
            need to clean out the second-column cell and rebuild it. */
         if (!nocopy)
             propref.val = prop;
-        propref.keyel.text(prop.key);
+        propref.keyel.prop('value', prop.key);
         propref.selectel.prop('value', valtype);
         propref.cellvalel.empty();
         propref.valtype = valtype;
@@ -187,7 +187,11 @@ function update_prop(tableref, prop, nocopy) {
 
         rowel.data('key', prop.key);
     
-        var keyel = $('<span>', { 'class':'BuildPropKey' }).text(prop.key);
+        var keyel = $('<input>', { 'class':'BuildPropKey', autocapitalize:'off' });
+        keyel.prop('value', prop.key);
+        keyel.data('id', prop.id);
+        keyel.data('tablekey', tableref.tablekey);
+        keyel.on('input', evhan_input_keyinput);
         cellkeyel.append(keyel);
         var selectel = $('<select>', { 'class':'BuildPropTypeSelect' });
         for (var ix=0; ix<property_type_selectors.length; ix++) {
@@ -345,6 +349,26 @@ function evhan_input_textarea(ev) {
     }
 }
 
+/* Callback invoked whenever the user edits the contents of a (key name)
+   input line.
+*/
+function evhan_input_keyinput(ev) {
+    var el = $(ev.target);
+    var tablekey = el.data('tablekey');
+    var id = el.data('id');
+
+    var tableref = tables[tablekey];
+    if (!tableref)
+        return;
+    var propref = tableref.propmap[id];
+    if (!propref) {
+        console.log('No such property entry: ' + tablekey + ':' + id + ':' + subkey);
+    }
+    if (!propref.dirty) {
+        prop_set_dirty(tableref, propref, true);
+    }
+}
+
 function evhan_button_revert(ev) {
     ev.preventDefault();
     var tablekey = ev.data.tablekey;
@@ -385,7 +409,8 @@ function evhan_button_save(ev) {
             valobj[subkey] = val;
         });
     
-    msg = { id:propref.id, key:propref.key, val:JSON.stringify(valobj),
+    var newkey = jQuery.trim(propref.keyel.prop('value'));
+    msg = { id:propref.id, key:newkey, val:JSON.stringify(valobj),
             world:pageworldid,
             _xsrf: xsrf_token };
     if (pageid == 'loc') {
@@ -496,9 +521,10 @@ function evhan_prop_type_change(ev) {
     }
 
     var valtype = $(ev.target).prop('value');
+    var newkey = jQuery.trim(propref.keyel.prop('value'));
     /* Construct an empty property structure of the given type. We
        could get fancy with default values, but we won't. */
-    update_prop(tableref, { id:propref.id, key:propref.key, val:{ type:valtype } }, true);
+    update_prop(tableref, { id:propref.id, key:newkey, val:{ type:valtype } }, true);
     prop_set_dirty(tableref, propref, (valtype == 'delete' ? 'delete' : true));
 }
 

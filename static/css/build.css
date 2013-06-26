@@ -77,10 +77,6 @@
   color: #D00;
 }
 
-.BuildPropKey {
-  font-size: 1.1em;
-}
-
 .BuildPropTypeSelect {
   float: right;
   margin-right: 10px;
@@ -94,6 +90,13 @@
   text-align: right;
 }
 
+.BuildPropKey {
+  font-family: Helvetica, Arial, sans-serif;
+  background: none;
+  border: 0px;
+  font-size: 1em;
+}
+
 .BuildPropSubpane {
   font-family: Helvetica, Arial, sans-serif;
   background: none;
@@ -103,7 +106,6 @@
   border: 0px;
   padding: 4px 4px;
   font-size: 1em;
-  border-radius: 3px;
 }
 
 .BuildPropButtons {
