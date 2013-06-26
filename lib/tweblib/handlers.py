@@ -653,8 +653,23 @@ class BuildSetPropHandler(BuildBaseHandler):
                 if oprop:
                     ### push into trash queue
                     pass ###
-            
-                ### delete the damn thing
+
+                # And now we delete it.
+                if loc == '$player':
+                    yield motor.Op(self.application.mongodb.wplayerprop.remove,
+                                   { 'wid':wid, 'uid':None, 'key':key })
+                    dependency = ('wplayerprop', wid, None, key)
+                else:
+                    yield motor.Op(self.application.mongodb.worldprop.remove,
+                                   { 'wid':wid, 'locid':locid, 'key':key })
+                    dependency = ('worldprop', wid, locid, key)
+
+                # Send dependency key to tworld
+                try:
+                    depmsg = { 'cmd':'logplayerconntable', 'change':dependency }
+                    self.application.twservermgr.tworld_write(0, depmsg)
+                except Exception as ex:
+                    self.application.twlog.warning('Unable to notify tworld of data change: %s', ex)
 
                 # We have to return all the property information (except for
                 # the value) so the client knows what row to delete.
@@ -676,7 +691,22 @@ class BuildSetPropHandler(BuildBaseHandler):
                 ### push into trash queue
                 pass ###
             
-            ### write the damn thing
+            # And now we write it.
+            if loc == '$player':
+                yield motor.Op(self.application.mongodb.wplayerprop.update,
+                               { '_id':propid }, prop, upsert=True)
+                dependency = ('wplayerprop', wid, None, key)
+            else:
+                yield motor.Op(self.application.mongodb.worldprop.update,
+                               { '_id':propid }, prop, upsert=True)
+                dependency = ('worldprop', wid, locid, key)
+
+            # Send dependency key to tworld
+            try:
+                depmsg = { 'cmd':'logplayerconntable', 'change':dependency }
+                self.application.twservermgr.tworld_write(0, depmsg)
+            except Exception as ex:
+                self.application.twlog.warning('Unable to notify tworld of data change: %s', ex)
 
             # Converting the value for the javascript client goes through
             # this array-based call, because I am sloppy like that.
