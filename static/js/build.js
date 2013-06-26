@@ -75,17 +75,17 @@ function build_proptable(tableel, proplist, tablekey, title) {
     tableel.empty();
 
     /* Add a colgroup, defining the column widths. */
-    tableel.append($('<colgroup><col width="30%"></col><col width="70%"></col></colgroup>'));
+    tableel.append($('<colgroup><col width="20%"><col width="5%"></col><col width="70%"></col></colgroup>'));
 
     var rowel = $('<tr>');
-    var cellel = $('<th>', { colspan:2 });
+    var cellel = $('<th>', { colspan:3 });
     cellel.text(title);
     rowel.append(cellel);
     tableel.append(rowel);
 
     /* Add a "add new" row (which will stick at the bottom) */
     var rowel = $('<tr>');
-    var cellel = $('<td>', { colspan:2 });
+    var cellel = $('<td>', { colspan:3 });
     var buttonsel = $('<div>', { 'class':'BuildPropButtons' });
     var buttonel = $('<input>', { 'class':'BuildPropButtonLarge', type:'submit', value:'Add New' });
     cellel.append(buttonsel);
@@ -182,6 +182,7 @@ function update_prop(tableref, prop, nocopy) {
         /* Property is not in table. Add a row. */
         var rowel = $('<tr>', { valign:'top' });
         var cellkeyel = $('<td>');
+        var celltypeel = $('<td>');
         var cellvalel = $('<td>');
 
         rowel.data('key', prop.key);
@@ -195,11 +196,12 @@ function update_prop(tableref, prop, nocopy) {
         }
         selectel.prop('value', valtype);
         selectel.on('change', { tablekey:tableref.tablekey, id:prop.id }, evhan_prop_type_change);
-        cellkeyel.append(selectel);
+        celltypeel.append(selectel);
 
         var buildres = build_value_cell(cellvalel, tableref.tablekey, prop.key, prop.id, editls);
     
         rowel.append(cellkeyel);
+        rowel.append(celltypeel);
         rowel.append(cellvalel);
         tableel.find('tr').filter(':last').before(rowel);
 
