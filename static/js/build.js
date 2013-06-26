@@ -285,7 +285,6 @@ function build_value_cell(cellvalel, tablekey, propkey, propid, editls) {
    to say that.
 */
 function prop_set_dirty(tableref, propref, dirty) {
-    console.log('### set_dirty ' + dirty);
     if (dirty) {
         propref.dirty = true;
         propref.rowel.addClass('BuildPropDirty');
