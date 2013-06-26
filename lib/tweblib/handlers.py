@@ -666,7 +666,8 @@ class BuildSetPropHandler(BuildBaseHandler):
 
                 # Send dependency key to tworld
                 try:
-                    depmsg = { 'cmd':'logplayerconntable', 'change':dependency }
+                    encoder = JSONEncoderExtra()
+                    depmsg = encoder.encode({ 'cmd':'notifydatachange', 'change':dependency })
                     self.application.twservermgr.tworld_write(0, depmsg)
                 except Exception as ex:
                     self.application.twlog.warning('Unable to notify tworld of data change: %s', ex)
@@ -703,7 +704,8 @@ class BuildSetPropHandler(BuildBaseHandler):
 
             # Send dependency key to tworld
             try:
-                depmsg = { 'cmd':'logplayerconntable', 'change':dependency }
+                encoder = JSONEncoderExtra()
+                depmsg = encoder.encode({ 'cmd':'notifydatachange', 'change':dependency })
                 self.application.twservermgr.tworld_write(0, depmsg)
             except Exception as ex:
                 self.application.twlog.warning('Unable to notify tworld of data change: %s', ex)

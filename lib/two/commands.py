@@ -312,6 +312,21 @@ def define_commands():
                 map[strid] = desc
         conn.write({'cmd':'updateplist', 'clear': True, 'map':map})
         
+    @command('notifydatachange', isserver=True, doeswrite=True)
+    def cmd_notifydatachange(app, task, cmd, stream):
+        ls = cmd.change
+        # We may need to handle other data-key formats eventually. But
+        # right now, it's all [db, wid, locid/uid, key] where db is
+        # 'worldprop' or 'wplayerprop' and the id values may be None
+        # or ObjectId.
+        if type(ls[1]) is str:
+            ls[1] = ObjectId(ls[1])
+        if type(ls[2]) is str:
+            ls[2] = ObjectId(ls[2])
+        key = tuple(ls)
+        app.log.info('Build change notification: %s', key)
+        task.set_data_change(key)
+        
     @command('playeropen', noneedmongo=True, preconnection=True)
     def cmd_playeropen(app, task, cmd, conn):
         assert conn is None, 'playeropen command with connection not None'
