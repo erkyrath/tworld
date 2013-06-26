@@ -657,11 +657,11 @@ class BuildSetPropHandler(BuildBaseHandler):
                 # And now we delete it.
                 if loc == '$player':
                     yield motor.Op(self.application.mongodb.wplayerprop.remove,
-                                   { 'wid':wid, 'uid':None, 'key':key })
+                                   { '_id':propid })
                     dependency = ('wplayerprop', wid, None, key)
                 else:
                     yield motor.Op(self.application.mongodb.worldprop.remove,
-                                   { 'wid':wid, 'locid':locid, 'key':key })
+                                   { '_id':propid })
                     dependency = ('worldprop', wid, locid, key)
 
                 # Send dependency key to tworld
