@@ -60,6 +60,9 @@ function setup_event_handlers() {
     $('textarea').on('input', evhan_input_textarea);
 }
 
+/* Construct the contents of a property table. This is called at page-load
+   time.
+*/
 function build_proptable(tableel, proplist, tablekey) {
     var tableref = tables[tablekey];
     if (tableref === undefined) {
@@ -226,6 +229,13 @@ function delete_prop(tableref, prop, nocopy) {
     }
 }
 
+/* Construct the contents of a property value cell (the second column
+   of the table). The cell must be initially empty.
+
+   Returns an object containing references to some of the constructed
+   DOM elements: the row of buttons, the warning line, and the map
+   of textareas.
+*/
 function build_value_cell(cellvalel, tablekey, propkey, propid, editls) {
     var areamap = {};
     
@@ -270,10 +280,17 @@ function build_value_cell(cellvalel, tablekey, propkey, propid, editls) {
     return { areamap:areamap, buttonsel:buttonsel, warningel:warningel };
 }
 
+/* Make the revert/save buttons appear or disappear on a table row.
+   Special case: if dirty is the string 'delete', change the 'save' button
+   to say that.
+*/
 function prop_set_dirty(tableref, propref, dirty) {
+    console.log('### set_dirty ' + dirty);
     if (dirty) {
         propref.dirty = true;
         propref.rowel.addClass('BuildPropDirty');
+        var newlabel = (dirty == 'delete') ? 'Delete' : 'Save';
+        propref.buttonsel.children('input').filter(':last').prop('value', newlabel);
         propref.buttonsel.filter(":hidden").slideDown(200);
     }
     else {
@@ -283,6 +300,9 @@ function prop_set_dirty(tableref, propref, dirty) {
     }
 }
 
+/* Make the red "you screwed up" warning line appear or disappear on
+   a table row.
+*/
 function prop_set_warning(tableref, propref, message) {
     if (message) {
         propref.warningel.text(message);
@@ -295,6 +315,8 @@ function prop_set_warning(tableref, propref, message) {
     }
 }
 
+/* Callback invoked whenever the user edits the contents of a textarea.
+*/
 function evhan_input_textarea(ev) {
     var el = $(ev.target);
     var tablekey = el.data('tablekey');
@@ -467,7 +489,7 @@ function evhan_prop_type_change(ev) {
     /* Construct an empty property structure of the given type. We
        could get fancy with default values, but we won't. */
     update_prop(tableref, { id:propref.id, key:propref.key, val:{ type:valtype } }, true);
-    prop_set_dirty(tableref, propref, true);
+    prop_set_dirty(tableref, propref, (valtype == 'delete' ? 'delete' : true));
 }
 
 /* The page-ready handler. Like onload(), but better, I'm told. */

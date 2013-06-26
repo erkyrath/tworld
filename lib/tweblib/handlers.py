@@ -5,6 +5,7 @@ All the URI request handlers used by Tweb.
 import datetime
 import traceback
 import unicodedata
+import random
 import json
 import ast
 import re
@@ -760,6 +761,9 @@ class BuildAddPropHandler(BuildBaseHandler):
                 if not oprop:
                     break
                 counter = counter+1
+                if counter >= 5:
+                    # Getting trapped in a linear loop is dumb.
+                    counter = counter + random.randrange(50)
 
             # Construct the new property, with a boring default value
             if loc == '$player':
