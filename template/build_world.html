@@ -17,6 +17,7 @@ Building: {{ worldname }}
 /* Which page is this? Cheap way of telling build.js. */
 var pageid = 'world';
 var pageworldid = "{{wid}}";
+var pageworldname = {% raw worldnamejs %};
 var pagelocid = null;
 /* World information. */
 var worldcopyable = {% raw worldcopyable %};
@@ -37,16 +38,32 @@ var xsrf_token = "{{ xsrf_token }}";
 <div class="BuildBar">
 <span class="BuildBarItem"><a href="/build">Worlds</a></span>
 <span class="BuildBarSep">&#x2013;</span>
-<span class="BuildBarItem"><a href="/build/world/{{wid}}">{{ worldname }}</a></span>
+<span class="BuildBarItem"><a id="build_world_name" href="/build/world/{{wid}}">{{ worldname }}</a></span>
 <span class="BuildBarSep">&#x2013;</span>
 <span class="BuildBarItem"><a id="build_location_menu" href="#"><span style="color: #884">&#x25BE;</span> (select location)</a></span>
 </div>
 
-<ul>
-<li>name: {{ worldname }}
-<li>copyable: {{ worldcopyable }}
-<li>instancing: {{ worldinstancing }}
-</ul>
+
+<div class="BuildPropTableBox">
+ <table class="BuildPropTable" cellspacing="0">
+ <colgroup><col width="30%"><col width="70%"></colgroup>
+ <tr>
+  <th colspan="2">World</th>
+ </tr>
+ <tr valign="top">
+  <td><em>name</em></td>
+  <td id="build_world_name_cell">XXX</td>
+ </tr>
+ <tr valign="top">
+  <td><em>copyable</em></td>
+  <td id="build_world_copyable_cell">XXX</td>
+ </tr>
+ <tr valign="top">
+  <td><em>instancing</em></td>
+  <td id="build_world_instancing_cell">XXX</td>
+ </tr>
+ </table>
+</div>
 
 <div class="BuildPropTableBox">
  <table id="build_world_properties" class="BuildPropTable" cellspacing="0">

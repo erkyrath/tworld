@@ -886,6 +886,7 @@ class BuildSetDataHandler(BuildBaseHandler):
                 yield motor.Op(self.application.mongodb.locations.update,
                                { '_id':locid },
                                { '$set':{'name':value} })
+                ### dependency change for location name?
                 self.write( { 'val':value } )
                 return
 

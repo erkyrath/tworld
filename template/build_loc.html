@@ -34,9 +34,9 @@ var xsrf_token = "{{ xsrf_token }}";
 <div class="BuildBar">
 <span class="BuildBarItem"><a href="/build">Worlds</a></span>
 <span class="BuildBarSep">&#x2013;</span>
-<span class="BuildBarItem"><a href="/build/world/{{wid}}">{{ worldname }}</a></span>
+<span class="BuildBarItem"><a id="build_world_name" href="/build/world/{{wid}}">{{ worldname }}</a></span>
 <span class="BuildBarSep">&#x2013;</span>
-<span class="BuildBarItem"><a id="build_location_menu" href="#"><span style="color: #884">&#x25BE;</span> {{ locname }}</a></span>
+<span class="BuildBarItem"><a id="build_location_menu" href="#"><span style="color: #884">&#x25BE;</span> <span id="build_location_name">{{ locname }}</span></a></span>
 </div>
 
 <div class="BuildPropTableBox">
@@ -52,6 +52,20 @@ var xsrf_token = "{{ xsrf_token }}";
  <tr valign="top">
   <td><em>key</em></td>
   <td id="build_loc_key_cell">XXX</td>
+ </tr>
+ <tr>
+  <td colspan="2">
+   <div class="BuildPropButtons">
+    <input id="button_delete_location" class="BuildPropButtonLarge" type="submit" value="Delete This Location">
+   </div>
+   <div id="button_delete_confirm" class="BuildPropButtons" style="display:none;">
+    <div class="BuildPropWarning">
+     Are you sure? This will delete this location and all properties on this page.
+    </div>
+    <input id="button_delete_cancel" type="submit" value="Cancel">
+    <input id="button_delete_delete" type="submit" value="Delete">
+   </div>
+  </td>
  </tr>
  </table>
 </div>
