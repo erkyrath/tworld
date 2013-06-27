@@ -55,7 +55,9 @@ function setup_event_handlers() {
 
     initial_setup_done = true;
 
-    /* Give all the textareas the magic autosizing behavior. */
+    /* Give all the textareas the magic autosizing behavior, and also the
+       on-edit trigger. (Not <input> elements; those are handled
+       case-by-case.) */
     $('textarea').autosize();
     $('textarea').on('input', evhan_input_textarea);
 }
@@ -87,7 +89,7 @@ function build_proptable(tableel, proplist, tablekey, title) {
     var rowel = $('<tr>');
     var cellel = $('<td>', { colspan:3 });
     var buttonsel = $('<div>', { 'class':'BuildPropButtons' });
-    var buttonel = $('<input>', { 'class':'BuildPropButtonLarge', type:'submit', value:'Add New' });
+    var buttonel = $('<input>', { 'class':'BuildPropButtonLarge', type:'submit', value:'New Property' });
     cellel.append(buttonsel);
     buttonsel.append(buttonel);
     rowel.append(cellel);
@@ -329,6 +331,43 @@ function prop_set_warning(tableref, propref, message) {
     }
 }
 
+function build_location_fields() {
+    var cellel = $('#build_loc_name_cell');
+    cellel.data('origvalue', pagelocname);
+    cellel.empty();
+    var inputel = $('<input>', { 'class':'BuildPropKey', autocapitalize:'off' });
+    inputel.prop('value', pagelocname);
+    inputel.on('input', { cell:cellel }, evhan_input_geninput);
+    cellel.append(inputel);
+
+    var buttonsel = $('<div>', { 'class':'BuildPropButtons', style:'display: none;' });
+    var buttonel = $('<input>', { type:'submit', value:'Revert' });
+    buttonel.on('click', { cell:cellel }, evhan_button_geninput_revert);
+    buttonsel.append(buttonel);
+    var buttonel = $('<input>', { type:'submit', value:'Save' });
+    //buttonel.on('click', { tablekey:tablekey, id:propid }, evhan_button_save);
+    buttonsel.append(buttonel);
+    cellel.append(buttonsel);
+    
+
+    var cellel = $('#build_loc_key_cell');
+    cellel.data('origvalue', pagelockey);
+    cellel.empty();
+    var inputel = $('<input>', { 'class':'BuildPropKey', autocapitalize:'off' });
+    inputel.prop('value', pagelockey);
+    inputel.on('input', { cell:cellel }, evhan_input_geninput);
+    cellel.append(inputel);
+
+    var buttonsel = $('<div>', { 'class':'BuildPropButtons', style:'display: none;' });
+    var buttonel = $('<input>', { type:'submit', value:'Revert' });
+    buttonel.on('click', { cell:cellel }, evhan_button_geninput_revert);
+    buttonsel.append(buttonel);
+    var buttonel = $('<input>', { type:'submit', value:'Save' });
+    //buttonel.on('click', { tablekey:tablekey, id:propid }, evhan_button_save);
+    buttonsel.append(buttonel);
+    cellel.append(buttonsel);
+}
+
 /* Callback invoked whenever the user edits the contents of a textarea.
 */
 function evhan_input_textarea(ev) {
@@ -528,11 +567,48 @@ function evhan_prop_type_change(ev) {
     prop_set_dirty(tableref, propref, (valtype == 'delete' ? 'delete' : true));
 }
 
+/* Callback for editing a generic field input line. 
+*/
+function evhan_input_geninput(ev) {
+    var cellel = ev.data.cell;
+    if (!cellel)
+        return;
+
+    if (!cellel.data('dirty'))
+        generic_set_dirty(cellel, true);
+}
+
+function evhan_button_geninput_revert(ev) {
+    var cellel = ev.data.cell;
+    if (!cellel)
+        return;
+
+    var origval = cellel.data('origvalue');
+    cellel.find('input.BuildPropKey').prop('value', origval);
+    generic_set_dirty(cellel, false);
+}
+
+function generic_set_dirty(cellel, dirty) {
+    if (dirty) {
+        cellel.data('dirty', true);
+        cellel.parent().addClass('BuildPropDirty');
+        cellel.find('.BuildPropButtons').filter(":hidden").slideDown(200);
+    }
+    else {
+        cellel.data('dirty', false);
+        cellel.parent().removeClass('BuildPropDirty');
+        cellel.find('.BuildPropButtons').filter(":visible").slideUp(200);
+    }
+    
+}
+
+
 /* The page-ready handler. Like onload(), but better, I'm told. */
 $(document).ready(function() {
     /*### install UI prefs to match play page? */
     if (pageid == 'loc') {
         build_proptable($('#build_loc_properties'), db_props, pagelockey, 'Location properties');
+        build_location_fields();
     }
     if (pageid == 'world') {
         build_proptable($('#build_world_properties'), db_world_props, '$realm', 'Realm properties');
