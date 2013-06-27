@@ -896,6 +896,16 @@ class BuildSetDataHandler(BuildBaseHandler):
                                { '$set':{'name':value} })
                 self.write( { 'val':value } )
                 return
+            
+            if name == 'copyportal':
+                if not locid:
+                    raise Exception('No location declared')
+                uid = self.twsession['uid']
+                msg = { 'cmd':'buildcopyportal', 'uid':str(uid), 'locid':str(locid), 'wid':str(wid) }
+                # The server will have to figure out scope.
+                self.application.twservermgr.tworld_write(0, msg)
+                self.write( { 'ok':True } )
+                return
 
             raise Exception('Data not recognized: %s' % (name,))
         except Exception as ex:

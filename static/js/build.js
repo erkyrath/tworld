@@ -348,6 +348,14 @@ function build_location_fields() {
     var cellel = $('#build_loc_key_cell');
     build_geninput_cell(cellel, pagelockey, 'lockey');
 
+    $('#button_copyportal_location').on('click', function() {
+            $('#button_copyportal_confirm').filter(":hidden").slideDown(200);
+        });
+    $('#button_copyportal_cancel').on('click', function() {
+            $('#button_copyportal_confirm').filter(":visible").slideUp(200);
+        });
+    $('#button_copyportal_copyportal').on('click', evhan_button_copyportal);
+
     $('#button_delete_location').on('click', function() {
             $('#button_delete_confirm').filter(":hidden").slideDown(200);
         });
@@ -671,9 +679,9 @@ function evhan_button_geninput_save(ev) {
     var newval = cellel.find('input.BuildPropKey').prop('value');
     newval = jQuery.trim(newval);
 
-    msg = { world:pageworldid,
-            name:name, val:newval,
-            _xsrf: xsrf_token };
+    var msg = { world:pageworldid,
+                name:name, val:newval,
+                _xsrf: xsrf_token };
     if (pageid == 'loc') {
         msg.loc = pagelocid;
     }
@@ -701,6 +709,32 @@ function evhan_button_geninput_save(ev) {
                 console.log('### ajax failure: ' + status + '; ' + error);
                 generic_set_warning(cellel, error);
                 generic_set_dirty(cellel, true);
+            },
+            dataType: 'json'
+        });
+}
+
+function evhan_button_copyportal(ev) {
+    var msg = { world:pageworldid,
+                name:'copyportal', val:'dummy',
+                _xsrf: xsrf_token };
+    if (pageid == 'loc') {
+        msg.loc = pagelocid;
+    }
+
+    jQuery.ajax({
+            url: '/build/setdata',
+            type: 'POST',
+            data: msg,
+            success: function(data, status, jqhxr) {
+                console.log('### ajax success: ' + JSON.stringify(data));
+                if (data.error) {
+                    return;
+                }
+                $('#button_copyportal_confirm').filter(":visible").slideUp(200);
+            },
+            error: function(jqxhr, status, error) {
+                console.log('### ajax failure: ' + status + '; ' + error);
             },
             dataType: 'json'
         });
