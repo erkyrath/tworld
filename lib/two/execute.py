@@ -459,6 +459,7 @@ def portal_description(app, portal, uid, uidiid=None, location=False, short=Fals
     strings. Returns None if a problem arises.
 
     The argument may be a portal object or an ObjectId referring to one.
+    The uidiid argument is optional (it's looked up if not provided).
     If location is true, include the location name. If short is true,
     use a shorter form of the scope label.
     """
@@ -563,6 +564,51 @@ def portal_description(app, portal, uid, uidiid=None, location=False, short=Fals
     except Exception as ex:
         app.log.warning('portal_description failed: %s', ex, exc_info=app.debugstacktraces)
         return None
+
+@tornado.gen.coroutine
+def create_portal_for_player(app, uid, plistid, newwid, newscid, newlocid):
+    """Create a new portal in the player's portal list. This does not check
+    legality or access; the caller must do that.
+    Raises a MessageException if the player already has this portal.
+    """
+            
+    newportal = { 'plistid':plistid,
+                  'wid':newwid, 'scid':newscid, 'locid':newlocid,
+                  }
+    res = yield motor.Op(app.mongodb.portals.find_one,
+                         newportal)
+    if res:
+        raise MessageException(app.localize('message.copy_already_have')) # 'This portal is already in your collection.'
+
+    # Look through the player's list and find the entry with the
+    # highest listpos.
+    res = yield motor.Op(app.mongodb.portals.aggregate, [
+            {'$match': {'plistid':plistid}},
+            {'$sort': {'listpos':-1}},
+            {'$limit': 1},
+            ])
+    listpos = 0.0
+    if res and res['result']:
+        listpos = res['result'][0].get('listpos', 0.0)
+        
+    newportal['listpos'] = listpos + 1.0
+    newportid = yield motor.Op(app.mongodb.portals.insert, newportal)
+    newportal['_id'] = newportid
+
+    # Refresh the displayed plist of the player (if connected).
+    try:
+        portaldesc = yield portal_description(app, newportal, uid, location=True, short=True)
+        if portaldesc:
+            strid = str(newportid)
+            portaldesc['portid'] = strid
+            portaldesc['listpos'] = newportal['listpos']
+            map = { strid: portaldesc }
+            subls = app.playconns.get_for_uid(uid)
+            if subls:
+                for subconn in subls:
+                    subconn.write({'cmd':'updateplist', 'map':map})
+    except Exception as ex:
+        app.log.warning('Unable to notify player of new portal: %s', ex, exc_info=app.debugstacktraces)
 
 @tornado.gen.coroutine
 def render_focus(task, loctx, conn, focusobj):
@@ -864,39 +910,7 @@ def perform_action(task, cmd, conn, target):
                                     {'plistid':1})
             plistid = player['plistid']
 
-            newportal = { 'plistid':plistid,
-                          'wid':newwid, 'scid':newscid, 'locid':newlocid,
-                          }
-            res = yield motor.Op(app.mongodb.portals.find_one,
-                                 newportal)
-            if res:
-                raise MessageException(app.localize('message.copy_already_have')) # 'This portal is already in your collection.'
-
-            # Look through the player's list and find the entry with the
-            # highest listpos.
-            res = yield motor.Op(app.mongodb.portals.aggregate, [
-                    {'$match': {'plistid':plistid}},
-                    {'$sort': {'listpos':-1}},
-                    {'$limit': 1},
-                    ])
-            listpos = 0.0
-            if res and res['result']:
-                listpos = res['result'][0].get('listpos', 0.0)
-                
-            newportal['listpos'] = listpos + 1.0
-            newportid = yield motor.Op(app.mongodb.portals.insert, newportal)
-            newportal['_id'] = newportid
-
-            portaldesc = yield portal_description(app, portal, uid, uidiid=loctx.iid, location=True, short=True)
-            if portaldesc:
-                strid = str(newportid)
-                portaldesc['portid'] = strid
-                portaldesc['listpos'] = newportal['listpos']
-                map = { strid: portaldesc }
-                subls = app.playconns.get_for_uid(uid)
-                if subls:
-                    for subconn in subls:
-                        subconn.write({'cmd':'updateplist', 'map':map})
+            yield create_portal_for_player(app, uid, plistid, newwid, newscid, newlocid)
 
             conn.write({'cmd':'message', 'text':app.localize('message.copy_ok')}) # 'You copy the portal to your collection.'
             return
