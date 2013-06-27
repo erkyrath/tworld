@@ -343,6 +343,14 @@ function build_location_fields() {
    
     var cellel = $('#build_loc_key_cell');
     build_geninput_cell(cellel, pagelockey, 'lockey');
+
+    $('#button_delete_location').on('click', function() {
+            $('#button_delete_confirm').filter(":hidden").slideDown(200);
+        });
+    $('#button_delete_cancel').on('click', function() {
+            $('#button_delete_confirm').filter(":visible").slideUp(200);
+        });
+    $('#button_delete_delete').on('click', evhan_button_dellocation);
 }
 
 function build_world_fields() {
@@ -575,6 +583,31 @@ function evhan_button_addlocation(ev) {
                     return;
                 }
                 window.location = '/build/loc/' + data.id;
+            },
+            error: function(jqxhr, status, error) {
+                console.log('### ajax failure: ' + status + '; ' + error);
+            },
+            dataType: 'json'
+        });
+}
+
+function evhan_button_dellocation(ev) {
+    ev.preventDefault();
+
+    msg = { world:pageworldid, loc:pagelocid,
+            _xsrf: xsrf_token };
+
+    jQuery.ajax({
+            url: '/build/delloc',
+            type: 'POST',
+            data: msg,
+            success: function(data, status, jqhxr) {
+                console.log('### ajax success: ' + JSON.stringify(data));
+                if (data.error) {
+                    console.log('### error: ' + data.error);
+                    return;
+                }
+                window.location = '/build/world/' + pageworldid;
             },
             error: function(jqxhr, status, error) {
                 console.log('### ajax failure: ' + status + '; ' + error);

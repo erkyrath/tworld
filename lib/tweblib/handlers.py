@@ -468,6 +468,34 @@ class BuildBaseHandler(MyRequestHandler):
 
         return (world, locations)
 
+    @tornado.gen.coroutine
+    def check_world_arguments(self, wid, locid, playerok=False):
+        """Given a world ObjectId (and optional location too), look
+        them up and make sure this player is the creator. This is similar
+        to find_build_world, but tuned for the AJAX POST handlers rather
+        than full pages.
+        """
+        world = yield motor.Op(self.application.mongodb.worlds.find_one,
+                               { '_id':wid })
+        if not world:
+            raise Exception('No such world')
+        if world['creator'] != self.twsession['uid'] and not self.twisadmin:
+            raise tornado.web.HTTPError(403, 'You did not create this world.')
+        
+        if locid is None:
+            loc = None
+        elif locid == '$player':
+            if not playerok:
+                raise Exception('Player property not permitted')
+            loc = locid
+        else:
+            loc = yield motor.Op(self.application.mongodb.locations.find_one,
+                                 { '_id':locid })
+            if not loc:
+                raise Exception('No such location')
+
+        return (world, loc)
+
     def export_prop_array(self, ls):
         """Given an array of property values (from the db), return an array
         suitable for handing over to the client for editing. This means
@@ -621,20 +649,7 @@ class BuildSetPropHandler(BuildBaseHandler):
             else:
                 locid = ObjectId(locid)
     
-            # Check the heck out of the arguments.
-            world = yield motor.Op(self.application.mongodb.worlds.find_one,
-                                   { '_id':wid })
-            if not world:
-                raise Exception('No such world')
-            if world['creator'] != self.twsession['uid'] and not self.twisadmin:
-                raise tornado.web.HTTPError(403, 'You did not create this world.')
-            if locid in (None, '$player'):
-                loc = locid
-            else:
-                loc = yield motor.Op(self.application.mongodb.locations.find_one,
-                                     { '_id':locid })
-                if not loc:
-                    raise Exception('No such location')
+            (world, loc) = yield self.check_world_arguments(wid, locid, playerok=True)
 
             if not re_valididentifier.match(key):
                 raise Exception('Invalid key name')
@@ -739,20 +754,7 @@ class BuildAddPropHandler(BuildBaseHandler):
             else:
                 locid = ObjectId(locid)
     
-            # Check the heck out of the arguments.
-            world = yield motor.Op(self.application.mongodb.worlds.find_one,
-                                   { '_id':wid })
-            if not world:
-                raise Exception('No such world')
-            if world['creator'] != self.twsession['uid'] and not self.twisadmin:
-                raise tornado.web.HTTPError(403, 'You did not create this world.')
-            if locid in (None, '$player'):
-                loc = locid
-            else:
-                loc = yield motor.Op(self.application.mongodb.locations.find_one,
-                                     { '_id':locid })
-                if not loc:
-                    raise Exception('No such location')
+            (world, loc) = yield self.check_world_arguments(wid, locid, playerok=True)
 
             # Now we have to invent a fresh new prop key. This is kind
             # of a nuisance.
@@ -817,13 +819,8 @@ class BuildAddLocHandler(BuildBaseHandler):
         try:
             wid = ObjectId(self.get_argument('world'))
     
-            # Check the heck out of the arguments.
-            world = yield motor.Op(self.application.mongodb.worlds.find_one,
-                                   { '_id':wid })
-            if not world:
-                raise Exception('No such world')
-            if world['creator'] != self.twsession['uid'] and not self.twisadmin:
-                raise tornado.web.HTTPError(403, 'You did not create this world.')
+            (world, dummy) = yield self.check_world_arguments(wid, None)
+
             # Now we have to invent a fresh new loc key. This is kind
             # of a nuisance.
             counter = 0
@@ -866,20 +863,7 @@ class BuildSetDataHandler(BuildBaseHandler):
             if locid:
                 locid = ObjectId(locid)
     
-            # Check the heck out of the arguments.
-            world = yield motor.Op(self.application.mongodb.worlds.find_one,
-                                   { '_id':wid })
-            if not world:
-                raise Exception('No such world')
-            if world['creator'] != self.twsession['uid'] and not self.twisadmin:
-                raise tornado.web.HTTPError(403, 'You did not create this world.')
-            if locid is None:
-                loc = locid
-            else:
-                loc = yield motor.Op(self.application.mongodb.locations.find_one,
-                                     { '_id':locid })
-                if not loc:
-                    raise Exception('No such location')
+            (world, loc) = yield self.check_world_arguments(wid, locid)
 
             if name == 'lockey':
                 if not locid:
@@ -913,6 +897,24 @@ class BuildSetDataHandler(BuildBaseHandler):
                 return
 
             raise Exception('Data not recognized: %s' % (name,))
+        except Exception as ex:
+            # Any exception that occurs, return as an error message.
+            self.application.twlog.warning('Caught exception (setting data): %s', ex)
+            self.write( { 'error': str(ex) } )
+
+class BuildDelLocHandler(BuildBaseHandler):
+    @tornado.gen.coroutine
+    def post(self):
+        try:
+            wid = ObjectId(self.get_argument('world'))
+            locid = self.get_argument('loc', None)
+            if locid:
+                locid = ObjectId(locid)
+
+            (world, loc) = yield self.check_world_arguments(wid, locid)
+            
+
+            raise Exception('### not implemented')
         except Exception as ex:
             # Any exception that occurs, return as an error message.
             self.application.twlog.warning('Caught exception (setting data): %s', ex)
