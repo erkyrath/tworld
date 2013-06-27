@@ -18,6 +18,9 @@ Building: {{ worldname }}
 var pageid = 'world';
 var pageworldid = "{{wid}}";
 var pagelocid = null;
+/* World information. */
+var worldcopyable = {% raw worldcopyable %};
+var worldinstancing = {% raw worldinstancing %};
 /* List of locations in this world. */
 var db_locations = {% raw locarray %};
 /* List of default realm-level properties. */
@@ -38,6 +41,12 @@ var xsrf_token = "{{ xsrf_token }}";
 <span class="BuildBarSep">&#x2013;</span>
 <span class="BuildBarItem"><a id="build_location_menu" href="#"><span style="color: #884">&#x25BE;</span> (select location)</a></span>
 </div>
+
+<ul>
+<li>name: {{ worldname }}
+<li>copyable: {{ worldcopyable }}
+<li>instancing: {{ worldinstancing }}
+</ul>
 
 <div class="BuildPropTableBox">
  <table id="build_world_properties" class="BuildPropTable" cellspacing="0">
@@ -61,6 +70,13 @@ var xsrf_token = "{{ xsrf_token }}";
    <td><a href="/build/loc/{{ loc['_id'] }}">{{ loc['name'] }}</a></td>
   </tr>
  {% end %}
+ <tr>
+  <td colspan="2">
+   <div class="BuildPropButtons">
+    <input id="button_add_new_location" class="BuildPropButtonLarge" type="submit" value="New Location">
+   </div>
+  </td>
+ </tr>
  </table>
 </div>
 

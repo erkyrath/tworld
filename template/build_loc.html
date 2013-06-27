@@ -19,6 +19,7 @@ var pageid = 'loc';
 var pageworldid = "{{wid}}";
 var pagelocid = "{{locid}}";
 var pagelockey = {% raw lockey %};
+var pagelocname = {% raw locnamejs %};
 /* List of locations in this world. */
 var db_locations = {% raw locarray %};
 /* List of properties in the location. */
@@ -37,6 +38,24 @@ var xsrf_token = "{{ xsrf_token }}";
 <span class="BuildBarSep">&#x2013;</span>
 <span class="BuildBarItem"><a id="build_location_menu" href="#"><span style="color: #884">&#x25BE;</span> {{ locname }}</a></span>
 </div>
+
+<div class="BuildPropTableBox">
+ <table class="BuildPropTable" cellspacing="0">
+ <colgroup><col width="30%"><col width="70%"></colgroup>
+ <tr>
+  <th colspan="2">Location</th>
+ </tr>
+ <tr valign="top">
+  <td><em>name</em></td>
+  <td id="build_loc_name_cell">XXX</td>
+ </tr>
+ <tr valign="top">
+  <td><em>key</em></td>
+  <td id="build_loc_key_cell">XXX</td>
+ </tr>
+ </table>
+</div>
+
 
 <div class="BuildPropTableBox">
  <table id="build_loc_properties" class="BuildPropTable" cellspacing="0">
