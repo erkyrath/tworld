@@ -148,8 +148,11 @@ function update_prop(tableref, prop, nocopy) {
         editls = [];
     }
     else {
+        /* ### This is really not right at all. We should default to the
+           *Python* repr() of the typed dict. Which means we need to do
+           it on the Python side, obviously. */
         valtype = 'value';
-        editls = [ { key:'value', val:'"???"' } ];
+        editls = [ { key:'value', val:JSON.stringify(prop.val) } ];
     }
 
     var propref = tableref.propmap[prop.id];
