@@ -341,6 +341,7 @@ function prop_set_warning(tableref, propref, message) {
 function build_location_fields() {
     var cellel = $('#build_loc_name_cell');
     build_geninput_cell(cellel, pagelocname, 'locname', function (val) {
+            /* ### Should update the pop-up location menu, too */
             $('#build_location_name').text(val);
         });
    

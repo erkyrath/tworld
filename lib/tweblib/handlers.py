@@ -912,9 +912,24 @@ class BuildDelLocHandler(BuildBaseHandler):
                 locid = ObjectId(locid)
 
             (world, loc) = yield self.check_world_arguments(wid, locid)
-            
 
-            raise Exception('### not implemented')
+            if not locid:
+                raise Exception('No location declared')
+
+            ### Have not tested how this affects portals that link to the
+            ### location. Or people in the location!
+
+            # First delete all world properties in this location.
+            yield motor.Op(self.application.mongodb.worldprop.remove,
+                           { 'wid':wid, 'locid':locid })
+
+            # Then the location itself.
+            yield motor.Op(self.application.mongodb.locations.remove,
+                           { '_id':locid })
+
+            # The result value isn't used for anything.
+            self.write( { 'ok':True } )
+            
         except Exception as ex:
             # Any exception that occurs, return as an error message.
             self.application.twlog.warning('Caught exception (setting data): %s', ex)
