@@ -406,6 +406,19 @@ class TopPageHandler(MyRequestHandler):
         self.render('top_%s.html' % (self.page,))
 
 
+# Utility class for JSON-encoding objects that contain ObjectIds.
+# I still need to think about datetime objects.
+class JSONEncoderExtra(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, ObjectId):
+            return str(obj)
+        return super().default(obj)
+
+# Regexp to match valid Python (2) identifiers. See also sluggify() in
+# lib/two/interp.py.
+re_valididentifier = re.compile('^[a-zA-Z_][a-zA-Z0-9_]*$')
+    
+
 class BuildBaseHandler(MyRequestHandler):
     """Base class for the handlers for build pages. This has some common
     functionality.
@@ -555,18 +568,6 @@ class BuildWorldHandler(BuildBaseHandler):
                     locarray=json.dumps(locarray), locations=locations,
                     worldproparray=worldproparray, playerproparray=playerproparray)
 
-### Put elsewhere?
-### Necessary at all? I may be pushing all JSONable values now. Although I need to think about datetime objects.
-class JSONEncoderExtra(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, ObjectId):
-            return str(obj)
-        return super().default(obj)
-
-# Regexp to match valid Python (2) identifiers. See also sluggify() in
-# lib/two/interp.py.
-re_valididentifier = re.compile('^[a-zA-Z_][a-zA-Z0-9_]*$')
-    
 class BuildLocHandler(BuildBaseHandler):
     @tornado.gen.coroutine
     def get(self, locid):
@@ -806,7 +807,63 @@ class BuildAddPropHandler(BuildBaseHandler):
             
         except Exception as ex:
             # Any exception that occurs, return as an error message.
-            self.application.twlog.warning('Caught exception (setting property): %s', ex)
+            self.application.twlog.warning('Caught exception (adding property): %s', ex)
+            self.write( { 'error': str(ex) } )
+
+class BuildSetDataHandler(BuildBaseHandler):
+    @tornado.gen.coroutine
+    def post(self):
+        try:
+            name = self.get_argument('name')
+            value = self.get_argument('val')
+            wid = ObjectId(self.get_argument('world'))
+            locid = self.get_argument('loc', None)
+            if locid:
+                locid = ObjectId(locid)
+    
+            # Check the heck out of the arguments.
+            world = yield motor.Op(self.application.mongodb.worlds.find_one,
+                                   { '_id':wid })
+            if not world:
+                raise Exception('No such world')
+            if world['creator'] != self.twsession['uid'] and not self.twisadmin:
+                raise tornado.web.HTTPError(403, 'You did not create this world.')
+            if locid is None:
+                loc = locid
+            else:
+                loc = yield motor.Op(self.application.mongodb.locations.find_one,
+                                     { '_id':locid })
+                if not loc:
+                    raise Exception('No such location')
+
+            if name == 'lockey':
+                if not locid:
+                    raise Exception('No location declared')
+                if not re_valididentifier.match(value):
+                    raise Exception('Invalid key name')
+                oloc = yield motor.Op(self.application.mongodb.locations.find_one,
+                                     { 'wid':wid, 'key':value })
+                if oloc and oloc['_id'] != locid:
+                    raise Exception('A location with this key already exists.')
+                yield motor.Op(self.application.mongodb.locations.update,
+                               { '_id':locid },
+                               { '$set':{'key':value} })
+                self.write( { 'val':value } )
+                return
+
+            if name == 'locname':
+                if not locid:
+                    raise Exception('No location declared')
+                yield motor.Op(self.application.mongodb.locations.update,
+                               { '_id':locid },
+                               { '$set':{'name':value} })
+                self.write( { 'val':value } )
+                return
+
+            raise Exception('Data not recognized: %s' % (name,))
+        except Exception as ex:
+            # Any exception that occurs, return as an error message.
+            self.application.twlog.warning('Caught exception (setting data): %s', ex)
             self.write( { 'error': str(ex) } )
 
 

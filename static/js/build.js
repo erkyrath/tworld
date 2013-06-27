@@ -333,37 +333,29 @@ function prop_set_warning(tableref, propref, message) {
 
 function build_location_fields() {
     var cellel = $('#build_loc_name_cell');
-    cellel.data('origvalue', pagelocname);
-    cellel.empty();
-    var inputel = $('<input>', { 'class':'BuildPropKey', autocapitalize:'off' });
-    inputel.prop('value', pagelocname);
-    inputel.on('input', { cell:cellel }, evhan_input_geninput);
-    cellel.append(inputel);
-
-    var buttonsel = $('<div>', { 'class':'BuildPropButtons', style:'display: none;' });
-    var buttonel = $('<input>', { type:'submit', value:'Revert' });
-    buttonel.on('click', { cell:cellel }, evhan_button_geninput_revert);
-    buttonsel.append(buttonel);
-    var buttonel = $('<input>', { type:'submit', value:'Save' });
-    //buttonel.on('click', { tablekey:tablekey, id:propid }, evhan_button_save);
-    buttonsel.append(buttonel);
-    cellel.append(buttonsel);
-    
-
+    build_geninput_cell(cellel, pagelocname, 'locname');
+   
     var cellel = $('#build_loc_key_cell');
-    cellel.data('origvalue', pagelockey);
+    build_geninput_cell(cellel, pagelockey, 'lockey');
+}
+
+function build_geninput_cell(cellel, origvalue, name) {
+    cellel.data('origvalue', origvalue);
     cellel.empty();
     var inputel = $('<input>', { 'class':'BuildPropKey', autocapitalize:'off' });
-    inputel.prop('value', pagelockey);
+    inputel.prop('value', origvalue);
     inputel.on('input', { cell:cellel }, evhan_input_geninput);
     cellel.append(inputel);
 
+    var warningel = $('<div>', { 'class':'BuildPropWarning', style:'display: none;' });
+    cellel.append(warningel);
+    
     var buttonsel = $('<div>', { 'class':'BuildPropButtons', style:'display: none;' });
     var buttonel = $('<input>', { type:'submit', value:'Revert' });
     buttonel.on('click', { cell:cellel }, evhan_button_geninput_revert);
     buttonsel.append(buttonel);
     var buttonel = $('<input>', { type:'submit', value:'Save' });
-    //buttonel.on('click', { tablekey:tablekey, id:propid }, evhan_button_save);
+    buttonel.on('click', { cell:cellel, name:name }, evhan_button_geninput_save);
     buttonsel.append(buttonel);
     cellel.append(buttonsel);
 }
@@ -586,6 +578,47 @@ function evhan_button_geninput_revert(ev) {
     var origval = cellel.data('origvalue');
     cellel.find('input.BuildPropKey').prop('value', origval);
     generic_set_dirty(cellel, false);
+    generic_set_warning(cellel, null);
+}
+
+function evhan_button_geninput_save(ev) {
+    var cellel = ev.data.cell;
+    if (!cellel)
+        return;
+    var name = ev.data.name;
+    var newval = cellel.find('input.BuildPropKey').prop('value');
+    newval = jQuery.trim(newval);
+
+    msg = { world:pageworldid,
+            name:name, val:newval,
+            _xsrf: xsrf_token };
+    if (pageid == 'loc') {
+        msg.loc = pagelocid;
+    }
+
+    jQuery.ajax({
+            url: '/build/setdata',
+            type: 'POST',
+            data: msg,
+            success: function(data, status, jqhxr) {
+                console.log('### ajax success: ' + JSON.stringify(data));
+                if (data.error) {
+                    generic_set_warning(cellel, data.error);
+                    generic_set_dirty(cellel, true);
+                    return;
+                }
+                cellel.find('input.BuildPropKey').prop('value', data.val);
+                cellel.data('origvalue', data.val);
+                generic_set_warning(cellel, null);
+                generic_set_dirty(cellel, false);
+            },
+            error: function(jqxhr, status, error) {
+                console.log('### ajax failure: ' + status + '; ' + error);
+                generic_set_warning(cellel, error);
+                generic_set_dirty(cellel, true);
+            },
+            dataType: 'json'
+        });
 }
 
 function generic_set_dirty(cellel, dirty) {
@@ -599,7 +632,20 @@ function generic_set_dirty(cellel, dirty) {
         cellel.parent().removeClass('BuildPropDirty');
         cellel.find('.BuildPropButtons').filter(":visible").slideUp(200);
     }
-    
+}
+
+function generic_set_warning(cellel, message) {
+    var warningel = cellel.find('div.BuildPropWarning');
+
+    if (message) {
+        warningel.text(message);
+        warningel.filter(":hidden").slideDown(200);
+    }
+    else {
+        warningel.filter(":visible").slideUp(200, function() {
+                warningel.empty();
+            });
+    }
 }
 
 

@@ -133,6 +133,7 @@ handlers = [
     (r'/build/loc/([0-9a-f]+)', tweblib.handlers.BuildLocHandler),
     (r'/build/addprop', tweblib.handlers.BuildAddPropHandler),
     (r'/build/setprop', tweblib.handlers.BuildSetPropHandler),
+    (r'/build/setdata', tweblib.handlers.BuildSetDataHandler),
     (r'/admin', tweblib.handlers.AdminMainHandler),
     (r'/websocket', tweblib.handlers.PlayWebSocketHandler),
     ]
