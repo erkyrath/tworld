@@ -60,6 +60,10 @@ function setup_event_handlers() {
        case-by-case.) */
     $('textarea').autosize();
     $('textarea').on('input', evhan_input_textarea);
+
+    if (pageid == 'world') {
+        $('#button_add_new_location').on('click', evhan_button_addlocation);
+    }
 }
 
 /* Construct the contents of a property table. This is called at page-load
@@ -530,6 +534,31 @@ function evhan_button_addnew(ev) {
                     return;
                 }
                 update_prop(tableref, data.prop);
+            },
+            error: function(jqxhr, status, error) {
+                console.log('### ajax failure: ' + status + '; ' + error);
+            },
+            dataType: 'json'
+        });
+}
+
+function evhan_button_addlocation(ev) {
+    ev.preventDefault();
+
+    msg = { world:pageworldid,
+            _xsrf: xsrf_token };
+
+    jQuery.ajax({
+            url: '/build/addloc',
+            type: 'POST',
+            data: msg,
+            success: function(data, status, jqhxr) {
+                console.log('### ajax success: ' + JSON.stringify(data));
+                if (data.error) {
+                    console.log('### error: ' + data.error);
+                    return;
+                }
+                window.location = '/build/loc/' + data.id;
             },
             error: function(jqxhr, status, error) {
                 console.log('### ajax failure: ' + status + '; ' + error);

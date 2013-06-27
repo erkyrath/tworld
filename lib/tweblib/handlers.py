@@ -810,6 +810,45 @@ class BuildAddPropHandler(BuildBaseHandler):
             self.application.twlog.warning('Caught exception (adding property): %s', ex)
             self.write( { 'error': str(ex) } )
 
+class BuildAddLocHandler(BuildBaseHandler):
+    @tornado.gen.coroutine
+    def post(self):
+        try:
+            wid = ObjectId(self.get_argument('world'))
+    
+            # Check the heck out of the arguments.
+            world = yield motor.Op(self.application.mongodb.worlds.find_one,
+                                   { '_id':wid })
+            if not world:
+                raise Exception('No such world')
+            if world['creator'] != self.twsession['uid'] and not self.twisadmin:
+                raise tornado.web.HTTPError(403, 'You did not create this world.')
+            # Now we have to invent a fresh new loc key. This is kind
+            # of a nuisance.
+            counter = 0
+            while True:
+                key = 'loc_%d' % (counter,)
+                oloc = yield motor.Op(self.application.mongodb.locations.find_one,
+                                      { 'wid':wid, 'key':key })
+                if not oloc:
+                    break
+                counter = counter+1
+                if counter >= 5:
+                    # Getting trapped in a linear loop is dumb.
+                    counter = counter + random.randrange(50)
+
+            loc = { 'key':key, 'wid':wid, 'name':'New Location' }
+            
+            locid = yield motor.Op(self.application.mongodb.locations.insert,
+                                   loc)
+
+            self.write( { 'id':str(locid) } )
+            
+        except Exception as ex:
+            # Any exception that occurs, return as an error message.
+            self.application.twlog.warning('Caught exception (adding property): %s', ex)
+            self.write( { 'error': str(ex) } )
+
 class BuildSetDataHandler(BuildBaseHandler):
     @tornado.gen.coroutine
     def post(self):

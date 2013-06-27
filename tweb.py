@@ -131,6 +131,7 @@ handlers = [
     (r'/build', tweblib.handlers.BuildMainHandler),
     (r'/build/world/([0-9a-f]+)', tweblib.handlers.BuildWorldHandler),
     (r'/build/loc/([0-9a-f]+)', tweblib.handlers.BuildLocHandler),
+    (r'/build/addloc', tweblib.handlers.BuildAddLocHandler),
     (r'/build/addprop', tweblib.handlers.BuildAddPropHandler),
     (r'/build/setprop', tweblib.handlers.BuildSetPropHandler),
     (r'/build/setdata', tweblib.handlers.BuildSetDataHandler),
