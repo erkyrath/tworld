@@ -839,15 +839,20 @@ class BuildAddLocHandler(BuildBaseHandler):
                     counter = counter + random.randrange(50)
 
             loc = { 'key':key, 'wid':wid, 'name':'New Location' }
-            
             locid = yield motor.Op(self.application.mongodb.locations.insert,
                                    loc)
+
+            # Also set up a desc property. Every location should have one.
+            prop = { 'wid':wid, 'locid':locid, 'key':'desc',
+                     'val':{ 'type':'text', 'text':'You are here.' } }
+            propid = yield motor.Op(self.application.mongodb.worldprop.insert,
+                                    prop)
 
             self.write( { 'id':str(locid) } )
             
         except Exception as ex:
             # Any exception that occurs, return as an error message.
-            self.application.twlog.warning('Caught exception (adding property): %s', ex)
+            self.application.twlog.warning('Caught exception (adding location): %s', ex)
             self.write( { 'error': str(ex) } )
 
 class BuildSetDataHandler(BuildBaseHandler):
