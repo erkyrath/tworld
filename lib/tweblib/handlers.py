@@ -563,6 +563,7 @@ class BuildWorldHandler(BuildBaseHandler):
 
         self.render('build_world.html',
                     wid=str(wid), worldname=worldname,
+                    worldnamejs=json.dumps(worldname),
                     worldcopyable=json.dumps(world.get('copyable', False)),
                     worldinstancing=json.dumps(world.get('instancing', 'standard')),
                     locarray=json.dumps(locarray), locations=locations,
@@ -895,6 +896,13 @@ class BuildSetDataHandler(BuildBaseHandler):
                     raise Exception('No location declared')
                 yield motor.Op(self.application.mongodb.locations.update,
                                { '_id':locid },
+                               { '$set':{'name':value} })
+                self.write( { 'val':value } )
+                return
+
+            if name == 'worldname':
+                yield motor.Op(self.application.mongodb.worlds.update,
+                               { '_id':wid },
                                { '$set':{'name':value} })
                 self.write( { 'val':value } )
                 return

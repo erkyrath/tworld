@@ -337,14 +337,30 @@ function prop_set_warning(tableref, propref, message) {
 
 function build_location_fields() {
     var cellel = $('#build_loc_name_cell');
-    build_geninput_cell(cellel, pagelocname, 'locname');
+    build_geninput_cell(cellel, pagelocname, 'locname', function (val) {
+            $('#build_location_name').text(val);
+        });
    
     var cellel = $('#build_loc_key_cell');
     build_geninput_cell(cellel, pagelockey, 'lockey');
 }
 
-function build_geninput_cell(cellel, origvalue, name) {
+function build_world_fields() {
+    var cellel = $('#build_world_name_cell');
+    build_geninput_cell(cellel, pageworldname, 'worldname', function (val) {
+            $('#build_world_name').text(val);
+        });
+
+    var cellel = $('#build_world_copyable_cell');
+    cellel.text(''+worldcopyable);
+
+    var cellel = $('#build_world_instancing_cell');
+    cellel.text(''+worldinstancing);
+}
+
+function build_geninput_cell(cellel, origvalue, name, successfunc) {
     cellel.data('origvalue', origvalue);
+    cellel.data('success', successfunc);
     cellel.empty();
     var inputel = $('<input>', { 'class':'BuildPropKey', autocapitalize:'off' });
     inputel.prop('value', origvalue);
@@ -638,6 +654,9 @@ function evhan_button_geninput_save(ev) {
                 }
                 cellel.find('input.BuildPropKey').prop('value', data.val);
                 cellel.data('origvalue', data.val);
+                var successfunc = cellel.data('success');
+                if (successfunc)
+                    successfunc(data.val);
                 generic_set_warning(cellel, null);
                 generic_set_dirty(cellel, false);
             },
@@ -688,6 +707,7 @@ $(document).ready(function() {
     if (pageid == 'world') {
         build_proptable($('#build_world_properties'), db_world_props, '$realm', 'Realm properties');
         build_proptable($('#build_player_properties'), db_player_props, '$player', 'Player default properties');
+        build_world_fields();
     }
     setup_event_handlers();
 });
