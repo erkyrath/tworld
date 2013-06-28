@@ -34,22 +34,28 @@ LEVEL_RAW = 0
 # the accum buffer of the EvalPropContext.
 Accumulated = twcommon.misc.SuiGeneris('Accumulated')
 
-class EvalPropContext(object):
+class EvalPropFrame:
+    """One stack frame in the EvalPropContext.
+
+    We add a stack frame for every function call, {code} invocation, and
+    {text} interpolation. Nested sub-contexts have their own stack
+    list, so we don't create a frame in that case, but the sub-context
+    parentdepth field will be one higher than our total depth.
     """
-    EvalPropContext is a context for evaluating one symbol, piece of code,
+    def __init__(self, depth):
+        self.depth = depth
+        # Probably foolish optimization: don't allocate an empty locals
+        # map unless one is specifically requested.
+        self.locals = None
+
+class EvalPropContext(object):
+    """EvalPropContext is a context for evaluating one symbol, piece of code,
     or piece of marked-up text, during a task.
 
     When setting up an EvalPropContext you must provide a LocContext, which
     is the identity and location of the player who is the center of the
     action. (Sorry about all the "context"s.) Or you can provide an existing
     EvalPropContext to clone.
-
-    The execution of a snippet of TworldPy code involves a lot of methods
-    on this object, all calling each other. The construction is somewhat
-    rickety, for which I apologize. The worst rigging is the "depth"
-    variable (roughly the call stack depth, tracked to catch infinite
-    recursions). This is passed everywhere as an argument, never stored.
-    There's gotta be a better way.
     """
 
     # We'll push contexts on here as we nest them. (It is occasionally
@@ -73,7 +79,12 @@ class EvalPropContext(object):
         EvalPropContext.link_code_counter = EvalPropContext.link_code_counter + 1
         return str(EvalPropContext.link_code_counter) + hex(random.getrandbits(32))[2:]
     
-    def __init__(self, task, parent=None, loctx=None, depth=0, level=LEVEL_MESSAGE):
+    def __init__(self, task, parent=None, loctx=None, parentdepth=0, level=LEVEL_MESSAGE):
+        """Caller must provide either parent (an EvalPropContext) or
+        a loctx and parentdepth. If there is an effective parent context,
+        parentdepth should be ctx.parentdepth+ctx.depth+1. If not, leave
+        it as zero.
+        """
         self.task = task
         self.app = self.task.app
 
@@ -82,18 +93,32 @@ class EvalPropContext(object):
         
         if parent is not None:
             assert self.task == parent.task
+            self.parentdepth = parent.parentdepth + parent.depth + 1
             self.loctx = parent.loctx
             self.uid = parent.uid
         elif loctx is not None:
+            self.parentdepth = parentdepth
             self.loctx = loctx
             self.uid = loctx.uid
-            
+
+        # What kind of evaluation is going on.
         self.level = level
-        self.depthatcall = None
-        #### Do something with depth argument, which really should be totaldepthsofar or some such
+
+        self.frame = None
+        self.frames = None
         self.accum = None
         self.linktargets = None
         self.dependencies = None
+
+    @property
+    def depth(self):
+        """Shortcut implementation of ctx.depth.
+        """
+        assert self.frame.depth + 1 == len(self.frames)
+        return self.frame.depth
+    @depth.setter
+    def depth(self, val):
+        raise Exception('EvalPropContext.depth is immutable')
 
     def updateacdepends(self, ctx):
         """Merge in the actions and dependencies from a subcontext.        
@@ -106,8 +131,7 @@ class EvalPropContext(object):
 
     @tornado.gen.coroutine
     def eval(self, key, evaltype=EVALTYPE_SYMBOL):
-        """
-        Look up and return a symbol, in this context. If EVALTYPE_TEXT,
+        """Look up and return a symbol, in this context. If EVALTYPE_TEXT,
         the argument is treated as an already-looked-up {text} value
         (a string with interpolations). If EVALTYPE_CODE, the argument
         is treated as a snippet of {code}. If EVALTYPE_RAW, the argument
@@ -144,10 +168,16 @@ class EvalPropContext(object):
         self.dependencies = set()
         self.wasspecial = False
 
+        # The self.frame will always be the current stack frame, which is
+        # the last entry of self.frames.
+        self.frame = EvalPropFrame(0)
+        self.frames = [ self.frame ]
+
         try:
             EvalPropContext.context_stack.append(self)
             res = yield self.evalobj(key, evaltype=evaltype)
         finally:
+            assert self.depth == 0, 'EvalPropContext did not pop all the way!'
             assert (EvalPropContext.context_stack[-1] is self), 'EvalPropContext.context_stack did not nest properly!'
             EvalPropContext.context_stack.pop()
 
@@ -180,9 +210,8 @@ class EvalPropContext(object):
         raise Exception('unrecognized eval level: %d' % (self.level,))
         
     @tornado.gen.coroutine
-    def evalobj(self, key, depth=0, evaltype=EVALTYPE_SYMBOL):
-        """
-        Look up a symbol, adding it to the accumulated content. If the
+    def evalobj(self, key, evaltype=EVALTYPE_SYMBOL):
+        """Look up a symbol, adding it to the accumulated content. If the
         result contains interpolated strings, this calls itself recursively.
 
         Returns an object, or the special ref Accumulated to indicate a
@@ -213,19 +242,19 @@ class EvalPropContext(object):
         if type(res) is dict:
             objtype = res.get('type', None)
 
-        if depth == 0 and objtype:
+        if self.depth == 0 and objtype:
             assert self.accum is None, 'EvalPropContext.accum should be None at depth zero'
             self.accum = []
             self.linktargets = {}
         
-        if depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'selfdesc':
+        if self.depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'selfdesc':
             assert self.accum is not None, 'EvalPropContext.accum should not be None here'
             try:
                 extratext = None
                 val = res.get('text', None)
                 if val:
                     # Look up the extra text in a separate context.
-                    ctx = EvalPropContext(self.task, parent=self, depth=1, level=LEVEL_DISPLAY)
+                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_DISPLAY)
                     extratext = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                     self.updateacdepends(ctx)
                 player = yield motor.Op(self.app.mongodb.players.find_one,
@@ -244,20 +273,20 @@ class EvalPropContext(object):
                 self.task.log.warning('Caught exception (selfdesc): %s', ex, exc_info=self.app.debugstacktraces)
                 return '[Exception: %s]' % (ex,)
                 
-        if depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'editstr':
+        if self.depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'editstr':
             assert self.accum is not None, 'EvalPropContext.accum should not be None here'
             try:
                 extratext = None
                 val = res.get('label', None)
                 if val:
                     # Look up the extra text in a separate context.
-                    ctx = EvalPropContext(self.task, parent=self, depth=1, level=LEVEL_DISPLAY)
+                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_DISPLAY)
                     extratext = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                     self.updateacdepends(ctx)
                 # Look up the current symbol value.
                 editkey = 'editstr' + EvalPropContext.build_action_key()
                 self.linktargets[editkey] = ('editstr', res['key'], res.get('text', None), res.get('otext', None))
-                ctx = EvalPropContext(self.task, parent=self, depth=1, level=LEVEL_FLAT)
+                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_FLAT)
                 curvalue = yield ctx.eval(res['key'])
                 specres = ['editstr',
                            editkey,
@@ -269,8 +298,9 @@ class EvalPropContext(object):
                 self.task.log.warning('Caught exception (editstr): %s', ex, exc_info=self.app.debugstacktraces)
                 return '[Exception: %s]' % (ex,)
                 
-        if depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'portal':
+        if self.depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'portal':
             assert self.accum is not None, 'EvalPropContext.accum should not be None here'
+            assert self.parentdepth == 0, 'EvalPropContext.parentdepth should be zero if depth is zero'
             try:
                 portid = res.get('portid', None)
                 backkey = None
@@ -282,7 +312,7 @@ class EvalPropContext(object):
                 val = res.get('text', None)
                 if val:
                     # Look up the extra text in a separate context.
-                    ctx = EvalPropContext(self.task, parent=self, depth=1, level=LEVEL_DISPLAY)
+                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_DISPLAY)
                     extratext = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                     self.updateacdepends(ctx)
                 portal = yield motor.Op(self.app.mongodb.portals.find_one,
@@ -297,8 +327,9 @@ class EvalPropContext(object):
                     self.linktargets[copykey] = ('copyportal', portid)
                     portalobj['copyable'] = copykey
                 # Look up the destination portaldesc in a separate context.
+                # Note that self.depth+self.parentdepth is zero.
                 altloctx = two.task.LocContext(None, wid=portal['wid'], locid=portal['locid'])
-                ctx = EvalPropContext(self.task, loctx=altloctx, depth=1, level=LEVEL_FLAT)
+                ctx = EvalPropContext(self.task, loctx=altloctx, parentdepth=1, level=LEVEL_FLAT)
                 try:
                     desttext = yield ctx.eval('portaldesc')
                     self.updateacdepends(ctx)
@@ -314,7 +345,7 @@ class EvalPropContext(object):
                 self.task.log.warning('Caught exception (portal): %s', ex, exc_info=self.app.debugstacktraces)
                 return '[Exception: %s]' % (ex,)
 
-        if depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'portlist':
+        if self.depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'portlist':
             assert self.accum is not None, 'EvalPropContext.accum should not be None here'
             try:
                 plistid = res.get('plistid', None)
@@ -322,7 +353,7 @@ class EvalPropContext(object):
                 val = res.get('text', None)
                 if val:
                     # Look up the extra text in a separate context.
-                    ctx = EvalPropContext(self.task, parent=self, depth=1, level=LEVEL_DISPLAY)
+                    ctx = EvalPropContext(self.task, parent=self, level=LEVEL_DISPLAY)
                     extratext = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                     self.updateacdepends(ctx)
                 portlist = yield motor.Op(self.app.mongodb.portlists.find_one,
@@ -706,13 +737,13 @@ class EvalPropContext(object):
             # Display an event.
             val = res.get('text', None)
             if val:
-                ctx = EvalPropContext(self.task, parent=self, depth=depth+1, level=LEVEL_MESSAGE)
+                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
                 newval = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                 self.task.write_event(uid, newval)
             val = res.get('otext', None)
             if val:
                 others = yield self.task.find_locale_players(notself=True)
-                ctx = EvalPropContext(self.task, parent=self, depth=depth+1, level=LEVEL_MESSAGE)
+                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
                 newval = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
                 self.task.write_event(others, newval)
             self.app.queue_command({'cmd':'tovoid', 'uid':uid, 'portin':True})
@@ -907,7 +938,7 @@ class EvalPropContext(object):
             raise Exception('Events may only occur in action code')
         if text:
             if texteval:
-                ctx = EvalPropContext(self.task, parent=self, depth=depth+1, level=LEVEL_MESSAGE)
+                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
                 val = yield ctx.eval(text, evaltype=EVALTYPE_TEXT)
             else:
                 val = text
@@ -915,7 +946,7 @@ class EvalPropContext(object):
         if otext:
             others = yield self.task.find_locale_players(notself=True)
             if otexteval:
-                ctx = EvalPropContext(self.task, parent=self, depth=depth+1, level=LEVEL_MESSAGE)
+                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
                 val = yield ctx.eval(otext, evaltype=EVALTYPE_TEXT)
             else:
                 val = otext
@@ -935,7 +966,7 @@ class EvalPropContext(object):
         if msg is None:
             msg = self.app.localize('action.oleave') % (playername,) # '%s leaves.'
         elif oleaveeval:
-            ctx = EvalPropContext(self.task, parent=self, depth=depth+1, level=LEVEL_MESSAGE)
+            ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
             msg = yield ctx.eval(msg, evaltype=EVALTYPE_TEXT)
         if msg:
             others = yield self.task.find_locale_players(notself=True)
@@ -965,7 +996,7 @@ class EvalPropContext(object):
         if msg is None:
             msg = self.app.localize('action.oarrive') % (playername,) # '%s arrives.'
         elif oarriveeval:
-            ctx = EvalPropContext(self.task, parent=self, depth=depth+1, level=LEVEL_MESSAGE)
+            ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
             msg = yield ctx.eval(msg, evaltype=EVALTYPE_TEXT)
         if msg:
             # others is already set
@@ -975,7 +1006,7 @@ class EvalPropContext(object):
         msg = text
         if msg:
             if texteval:
-                ctx = EvalPropContext(self.task, parent=self, depth=depth+1, level=LEVEL_MESSAGE)
+                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
                 msg = yield ctx.eval(msg, evaltype=EVALTYPE_TEXT)
             self.task.write_event(self.uid, msg)
 

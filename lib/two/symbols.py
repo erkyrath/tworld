@@ -239,7 +239,7 @@ def define_globals():
             
         if is_typed_dict(all, 'text'):
             all = all.get('text', None)
-            subctx = EvalPropContext(ctx.task, parent=ctx, depth=depth+1, level=LEVEL_MESSAGE)
+            subctx = EvalPropContext(ctx.task, parent=ctx, level=LEVEL_MESSAGE)
             val = yield subctx.eval(all, evaltype=EVALTYPE_TEXT)
         else:
             val = str(all)
