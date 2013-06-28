@@ -324,8 +324,7 @@ class BoundNameProxy(object):
         
     @tornado.gen.coroutine
     def load(self, ctx, loctx):
-        ### locals?
-        res = yield two.symbols.find_symbol(ctx.app, loctx, self.key, dependencies=ctx.dependencies)
+        res = yield two.symbols.find_symbol(ctx.app, loctx, self.key, locals=ctx.frame.locals, dependencies=ctx.dependencies)
         return res
     
     @tornado.gen.coroutine

@@ -84,6 +84,8 @@ class EvalPropContext(object):
         a loctx and parentdepth. If there is an effective parent context,
         parentdepth should be ctx.parentdepth+ctx.depth+1. If not, leave
         it as zero.
+
+        ### A way to pass in argument bindings?
         """
         self.task = task
         self.app = self.task.app
@@ -707,7 +709,7 @@ class EvalPropContext(object):
     @tornado.gen.coroutine
     def execcode_name(self, nod, baresymbol=False):
         symbol = nod.id
-        res = yield two.symbols.find_symbol(self.app, self.loctx, symbol, dependencies=self.dependencies)
+        res = yield two.symbols.find_symbol(self.app, self.loctx, symbol, locals=self.frame.locals, dependencies=self.dependencies)
         
         if not baresymbol:
             return res
