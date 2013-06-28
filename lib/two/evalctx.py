@@ -35,7 +35,7 @@ LEVEL_RAW = 0
 Accumulated = twcommon.misc.SuiGeneris('Accumulated')
 
 class EvalPropFrame:
-    """One stack frame in the EvalPropContext.
+    """One stack frame in the EvalPropContext. Note that depth starts at 1.
 
     We add a stack frame for every function call, {code} invocation, and
     {text} interpolation. Nested sub-contexts have their own stack
@@ -114,8 +114,11 @@ class EvalPropContext(object):
     def depth(self):
         """Shortcut implementation of ctx.depth.
         """
-        assert self.frame.depth + 1 == len(self.frames)
-        return self.frame.depth
+        if self.frame:
+            assert len(self.frames) == self.frame.depth
+        else:
+            assert len(self.frames) == 0
+        return len(self.frames)
     @depth.setter
     def depth(self, val):
         raise Exception('EvalPropContext.depth is immutable')
@@ -168,16 +171,17 @@ class EvalPropContext(object):
         self.dependencies = set()
         self.wasspecial = False
 
-        # The self.frame will always be the current stack frame, which is
-        # the last entry of self.frames.
-        self.frame = EvalPropFrame(0)
-        self.frames = [ self.frame ]
+        # We start with no frames and a depth of zero. (When we add frames,
+        # the self.frame will always be the current stack frame, which is
+        # the last entry of self.frames.)
+        self.frame = None
+        self.frames = []
 
         try:
             EvalPropContext.context_stack.append(self)
             res = yield self.evalobj(key, evaltype=evaltype)
         finally:
-            assert self.depth == 0, 'EvalPropContext did not pop all the way!'
+            assert (self.depth == 0) and (self.frame is None), 'EvalPropContext did not pop all the way!'
             assert (EvalPropContext.context_stack[-1] is self), 'EvalPropContext.context_stack did not nest properly!'
             EvalPropContext.context_stack.pop()
 
@@ -399,6 +403,9 @@ class EvalPropContext(object):
             # We prefer to catch interpolation errors as low as possible,
             # so that they will appear inline in a logical spot.
             try:
+                origframe = self.frame  # may be None
+                self.frame = EvalPropFrame(self.depth+1)
+                self.frames.append(self.frame)
                 yield self.interpolate_text(res.get('text', ''), depth=depth)
                 return Accumulated
             except ExecRunawayException:
@@ -406,10 +413,20 @@ class EvalPropContext(object):
             except Exception as ex:
                 self.task.log.warning('Caught exception (interpolating): %s', ex, exc_info=self.app.debugstacktraces)
                 return '[Exception: %s]' % (ex,)
+            finally:
+                self.frames.pop()
+                self.frame = origframe
         elif objtype == 'code':
             # We let execution errors bubble up to the top level.
-            newres = yield self.execute_code(res.get('text', ''), originlabel=key, depth=depth)
-            return newres
+            try:
+                origframe = self.frame  # may be None
+                self.frame = EvalPropFrame(self.depth+1)
+                self.frames.append(self.frame)
+                newres = yield self.execute_code(res.get('text', ''), originlabel=key, depth=depth)
+                return newres
+            finally:
+                self.frames.pop()
+                self.frame = origframe
         else:
             return '[Unhandled object type: %s]' % (objtype,)
 
@@ -700,13 +717,13 @@ class EvalPropContext(object):
                 val = res.get('text', None)
                 if not val:
                     raise ErrorMessageException('Text object lacks text')
-                newval = yield self.evalobj(val, evaltype=EVALTYPE_TEXT, depth=depth+1)
+                newval = yield self.evalobj(val, evaltype=EVALTYPE_TEXT)
                 return newval
             if restype == 'code':
                 val = res.get('text', None)
                 if not val:
                     raise ErrorMessageException('Code object lacks text')
-                newval = yield self.evalobj(val, evaltype=EVALTYPE_CODE, depth=depth+1)
+                newval = yield self.evalobj(val, evaltype=EVALTYPE_CODE)
                 return newval
             # All other special objects are returned as-is.
             return res
@@ -725,7 +742,7 @@ class EvalPropContext(object):
             val = res.get('text', None)
             if not val:
                 raise ErrorMessageException('Code object lacks text')
-            newval = yield self.evalobj(val, evaltype=EVALTYPE_CODE, depth=depth+1)
+            newval = yield self.evalobj(val, evaltype=EVALTYPE_CODE)
             return newval
 
         if restype == 'event':
@@ -827,7 +844,7 @@ class EvalPropContext(object):
                     suppstack.append(0)
                     continue
                 try:
-                    ifval = yield self.evalobj(nod.expr, evaltype=EVALTYPE_CODE, depth=depth+1)
+                    ifval = yield self.evalobj(nod.expr, evaltype=EVALTYPE_CODE)
                 except LookupError: # includes SymbolError
                     ifval = None
                 except AttributeError:
@@ -853,7 +870,7 @@ class EvalPropContext(object):
                     continue
                 # We follow an unsuccessful "if". Maybe suppress.
                 try:
-                    ifval = yield self.evalobj(nod.expr, evaltype=EVALTYPE_CODE, depth=depth+1)
+                    ifval = yield self.evalobj(nod.expr, evaltype=EVALTYPE_CODE)
                 except LookupError: # includes SymbolError
                     ifval = None
                 except AttributeError:
@@ -902,7 +919,7 @@ class EvalPropContext(object):
             
             if nodkey == 'Interpolate':
                 try:
-                    subres = yield self.evalobj(nod.expr, evaltype=EVALTYPE_CODE, depth=depth+1)
+                    subres = yield self.evalobj(nod.expr, evaltype=EVALTYPE_CODE)
                 except LookupError: # includes SymbolError:
                     continue
                 except AttributeError:
