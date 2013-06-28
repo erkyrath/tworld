@@ -459,32 +459,32 @@ class EvalPropContext(object):
 
         res = None
         for nod in tree.body:
-            res = yield self.execcode_statement(nod, depth)
+            res = yield self.execcode_statement(nod)
         return res
 
     @tornado.gen.coroutine
-    def execcode_statement(self, nod, depth):
+    def execcode_statement(self, nod):
         self.task.tick()
         nodtyp = type(nod)
         ### This should be a faster lookup table
         if nodtyp is ast.Expr:
-            res = yield self.execcode_expr(nod.value, depth, baresymbol=True)
+            res = yield self.execcode_expr(nod.value, baresymbol=True)
             return res
         if nodtyp is ast.Assign:
-            res = yield self.execcode_assign(nod, depth)
+            res = yield self.execcode_assign(nod)
             return res
         if nodtyp is ast.Delete:
-            res = yield self.execcode_delete(nod, depth)
+            res = yield self.execcode_delete(nod)
             return res
         if nodtyp is ast.If:
-            res = yield self.execcode_if(nod, depth)
+            res = yield self.execcode_if(nod)
             return None
         if nodtyp is ast.Pass:
             return None
         raise NotImplementedError('Script statement type not implemented: %s' % (nodtyp.__name__,))
 
     @tornado.gen.coroutine
-    def execcode_expr_store(self, nod, depth):
+    def execcode_expr_store(self, nod):
         """Does not evaluate a complete expression. Instead, returns a
         wrapper object with store() and delete() methods.
         (The nod.ctx lets us know whether store or delete is coming up,
@@ -495,7 +495,7 @@ class EvalPropContext(object):
         if nodtyp is ast.Name:
             return two.execute.BoundNameProxy(nod.id)
         if nodtyp is ast.Attribute:
-            argument = yield self.execcode_expr(nod.value, depth)
+            argument = yield self.execcode_expr(nod.value)
             key = nod.attr
             if isinstance(argument, two.execute.PropertyProxyMixin):
                 return two.execute.BoundPropertyProxy(argument, key)
@@ -504,59 +504,59 @@ class EvalPropContext(object):
         
         
     @tornado.gen.coroutine
-    def execcode_expr(self, nod, depth, baresymbol=False):
+    def execcode_expr(self, nod, baresymbol=False):
         self.task.tick()
         nodtyp = type(nod)
         ### This should be a faster lookup table
         if nodtyp is ast.Name:
-            res = yield self.execcode_name(nod, depth, baresymbol=baresymbol)
+            res = yield self.execcode_name(nod, baresymbol=baresymbol)
             return res
         if nodtyp is ast.Str:
             return nod.s
         if nodtyp is ast.Num:
             return nod.n  # covers floats and ints
         if nodtyp is ast.List:
-            res = yield self.execcode_list(nod, depth)
+            res = yield self.execcode_list(nod)
             return res
         if nodtyp is ast.Tuple:
-            res = yield self.execcode_tuple(nod, depth)
+            res = yield self.execcode_tuple(nod)
             return res
         if nodtyp is ast.UnaryOp:
-            res = yield self.execcode_unaryop(nod, depth)
+            res = yield self.execcode_unaryop(nod)
             return res
         if nodtyp is ast.BinOp:
-            res = yield self.execcode_binop(nod, depth)
+            res = yield self.execcode_binop(nod)
             return res
         if nodtyp is ast.BoolOp:
-            res = yield self.execcode_boolop(nod, depth)
+            res = yield self.execcode_boolop(nod)
             return res
         if nodtyp is ast.Compare:
-            res = yield self.execcode_compare(nod, depth)
+            res = yield self.execcode_compare(nod)
             return res
         if nodtyp is ast.Attribute:
-            res = yield self.execcode_attribute(nod, depth)
+            res = yield self.execcode_attribute(nod)
             return res
         if nodtyp is ast.Subscript:
-            res = yield self.execcode_subscript(nod, depth)
+            res = yield self.execcode_subscript(nod)
             return res
         if nodtyp is ast.Call:
-            res = yield self.execcode_call(nod, depth)
+            res = yield self.execcode_call(nod)
             return res
         raise NotImplementedError('Script expression type not implemented: %s' % (nodtyp.__name__,))
 
     @tornado.gen.coroutine
-    def execcode_list(self, nod, depth):
+    def execcode_list(self, nod):
         ls = []
         for subnod in nod.elts:
-            val = yield self.execcode_expr(subnod, depth)
+            val = yield self.execcode_expr(subnod)
             ls.append(val)
         return ls
 
     @tornado.gen.coroutine
-    def execcode_tuple(self, nod, depth):
+    def execcode_tuple(self, nod):
         ls = []
         for subnod in nod.elts:
-            val = yield self.execcode_expr(subnod, depth)
+            val = yield self.execcode_expr(subnod)
             ls.append(val)
         return tuple(ls)
 
@@ -567,9 +567,9 @@ class EvalPropContext(object):
         }
         
     @tornado.gen.coroutine
-    def execcode_unaryop(self, nod, depth):
+    def execcode_unaryop(self, nod):
         optyp = type(nod.op)
-        argval = yield self.execcode_expr(nod.operand, depth)
+        argval = yield self.execcode_expr(nod.operand)
         opfunc = self.map_unaryop_operators.get(optyp, None)
         if not opfunc:
             raise NotImplementedError('Script unaryop type not implemented: %s' % (optyp.__name__,))
@@ -586,28 +586,28 @@ class EvalPropContext(object):
         }
         
     @tornado.gen.coroutine
-    def execcode_binop(self, nod, depth):
+    def execcode_binop(self, nod):
         optyp = type(nod.op)
-        leftval = yield self.execcode_expr(nod.left, depth)
-        rightval = yield self.execcode_expr(nod.right, depth)
+        leftval = yield self.execcode_expr(nod.left)
+        rightval = yield self.execcode_expr(nod.right)
         opfunc = self.map_binop_operators.get(optyp, None)
         if not opfunc:
             raise NotImplementedError('Script binop type not implemented: %s' % (optyp.__name__,))
         return opfunc(leftval, rightval)
         
     @tornado.gen.coroutine
-    def execcode_boolop(self, nod, depth):
+    def execcode_boolop(self, nod):
         optyp = type(nod.op)
         assert len(nod.values) > 0
         if optyp is ast.And:
             for subnod in nod.values:
-                val = yield self.execcode_expr(subnod, depth)
+                val = yield self.execcode_expr(subnod)
                 if not val:
                     return val
             return val
         if optyp is ast.Or:
             for subnod in nod.values:
-                val = yield self.execcode_expr(subnod, depth)
+                val = yield self.execcode_expr(subnod)
                 if val:
                     return val
             return val
@@ -631,10 +631,10 @@ class EvalPropContext(object):
         }
     
     @tornado.gen.coroutine
-    def execcode_compare(self, nod, depth):
-        leftval = yield self.execcode_expr(nod.left, depth)
+    def execcode_compare(self, nod):
+        leftval = yield self.execcode_expr(nod.left)
         for (op, subnod) in zip(nod.ops, nod.comparators):
-            rightval = yield self.execcode_expr(subnod, depth)
+            rightval = yield self.execcode_expr(subnod)
             optyp = type(op)
             opfunc = self.map_compare_operators.get(optyp, None)
             if not opfunc:
@@ -646,8 +646,8 @@ class EvalPropContext(object):
         return True
         
     @tornado.gen.coroutine
-    def execcode_attribute(self, nod, depth):
-        argument = yield self.execcode_expr(nod.value, depth)
+    def execcode_attribute(self, nod):
+        argument = yield self.execcode_expr(nod.value)
         key = nod.attr
         # The real getattr() is way too powerful to offer up.
         if isinstance(argument, two.symbols.ScriptNamespace):
@@ -664,12 +664,12 @@ class EvalPropContext(object):
         raise ExecSandboxException('%s.%s: getattr not allowed' % (typarg.__name__, key))
 
     @tornado.gen.coroutine
-    def execcode_subscript(self, nod, depth):
-        argument = yield self.execcode_expr(nod.value, depth)
+    def execcode_subscript(self, nod):
+        argument = yield self.execcode_expr(nod.value)
         slice = nod.slice
         if type(slice) is not ast.Index:
             raise NotImplementedError('Subscript slices are not supported')
-        subscript = yield self.execcode_expr(slice.value, depth)
+        subscript = yield self.execcode_expr(slice.value)
         if isinstance(argument, two.execute.PropertyProxyMixin):
             # Special case: property proxies can be accessed by subscript.
             res = yield argument.getprop(self, self.loctx, subscript)
@@ -677,26 +677,24 @@ class EvalPropContext(object):
         return argument[subscript]
 
     @tornado.gen.coroutine
-    def execcode_call(self, nod, depth):
-        funcval = yield self.execcode_expr(nod.func, depth)
+    def execcode_call(self, nod):
+        funcval = yield self.execcode_expr(nod.func)
         args = []
         for subnod in nod.args:
-            val = yield self.execcode_expr(subnod, depth)
+            val = yield self.execcode_expr(subnod)
             args.append(val)
         if nod.starargs:
-            starargs = yield self.execcode_expr(nod.starargs, depth)
+            starargs = yield self.execcode_expr(nod.starargs)
             args.extend(starargs)
         kwargs = {}
         for subnod in nod.keywords:
-            val = yield self.execcode_expr(subnod.value, depth)
+            val = yield self.execcode_expr(subnod.value)
             kwargs[subnod.arg] = val
         if nod.kwargs:
-            starargs = yield self.execcode_expr(nod.kwargs, depth)
+            starargs = yield self.execcode_expr(nod.kwargs)
             # Python semantics say we should reject duplicate kwargs here
             kwargs.extend(starargs)
         if isinstance(funcval, two.symbols.ScriptFunc):
-            # A terrible hack to get the depth value into a ScriptFunc.
-            self.depthatcall = depth ### +1?
             if not funcval.yieldy:
                 return funcval.func(*args, **kwargs)
             else:
@@ -707,7 +705,7 @@ class EvalPropContext(object):
         return funcval(*args, **kwargs)
         
     @tornado.gen.coroutine
-    def execcode_name(self, nod, depth, baresymbol=False):
+    def execcode_name(self, nod, baresymbol=False):
         symbol = nod.id
         res = yield two.symbols.find_symbol(self.app, self.loctx, symbol, dependencies=self.dependencies)
         
@@ -789,31 +787,31 @@ class EvalPropContext(object):
         raise ErrorMessageException('Code invoked unsupported property type: %s' % (restype,))
 
     @tornado.gen.coroutine
-    def execcode_if(self, nod, depth):
-        testval = yield self.execcode_expr(nod.test, depth)
+    def execcode_if(self, nod):
+        testval = yield self.execcode_expr(nod.test)
         if testval:
             body = nod.body
         else:
             body = nod.orelse
         res = None
         for nod in body:
-            res = yield self.execcode_statement(nod, depth)
+            res = yield self.execcode_statement(nod)
         return res
         
     @tornado.gen.coroutine
-    def execcode_assign(self, nod, depth):
+    def execcode_assign(self, nod):
         if len(nod.targets) != 1:
             raise NotImplementedError('Script assignment has more than one target')
-        target = yield self.execcode_expr_store(nod.targets[0], depth)
-        val = yield self.execcode_expr(nod.value, depth)
+        target = yield self.execcode_expr_store(nod.targets[0])
+        val = yield self.execcode_expr(nod.value)
 
         yield target.store(self, self.loctx, val)
         return None
 
     @tornado.gen.coroutine
-    def execcode_delete(self, nod, depth):
+    def execcode_delete(self, nod):
         for subnod in nod.targets:
-            target = yield self.execcode_expr_store(subnod, depth)
+            target = yield self.execcode_expr_store(subnod)
             yield target.delete(self, self.loctx)
         return None
 
