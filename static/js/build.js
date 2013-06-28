@@ -41,7 +41,7 @@ var initial_setup_done = false;
 function setup_event_handlers() {
     var el = $('#build_location_menu');
 
-    if (el) {
+    if (el.length) {
         var ls = jQuery.map(db_locations, function(loc, index) {
                 return { text:loc.name, click:function() { window.location = '/build/loc/' + loc.id; } };
             });
@@ -58,8 +58,11 @@ function setup_event_handlers() {
     /* Give all the textareas the magic autosizing behavior, and also the
        on-edit trigger. (Not <input> elements; those are handled
        case-by-case.) */
-    $('textarea').autosize();
-    $('textarea').on('input', evhan_input_textarea);
+    var textareas = $('textarea');
+    if (textareas.length) {
+        textareas.autosize();
+        textareas.on('input', evhan_input_textarea);
+    }
 
     if (pageid == 'world') {
         $('#button_add_new_location').on('click', evhan_button_addlocation);
@@ -336,6 +339,16 @@ function prop_set_warning(tableref, propref, message) {
                 propref.warningel.empty();
             });
     }
+}
+
+function build_main_fields() {
+    $('#button_addworld_location').on('click', function() {
+            $('#button_addworld_confirm').filter(":hidden").slideDown(200);
+        });
+    $('#button_addworld_cancel').on('click', function() {
+            $('#button_addworld_confirm').filter(":visible").slideUp(200);
+        });
+    $('#button_addworld_addworld').on('click', evhan_button_addworld);
 }
 
 function build_location_fields() {
@@ -628,6 +641,30 @@ function evhan_button_dellocation(ev) {
         });
 }
 
+function evhan_button_addworld(ev) {
+    ev.preventDefault();
+
+    msg = { _xsrf: xsrf_token };
+
+    jQuery.ajax({
+            url: '/build/addworld',
+            type: 'POST',
+            data: msg,
+            success: function(data, status, jqhxr) {
+                console.log('### ajax success: ' + JSON.stringify(data));
+                if (data.error) {
+                    console.log('### error: ' + data.error);
+                    return;
+                }
+                window.location = '/build/world/' + data.id;
+            },
+            error: function(jqxhr, status, error) {
+                console.log('### ajax failure: ' + status + '; ' + error);
+            },
+            dataType: 'json'
+        });
+}
+
 function evhan_prop_type_change(ev) {
     ev.preventDefault();
     var tablekey = ev.data.tablekey;
@@ -771,6 +808,9 @@ function generic_set_warning(cellel, message) {
 /* The page-ready handler. Like onload(), but better, I'm told. */
 $(document).ready(function() {
     /*### install UI prefs to match play page? */
+    if (pageid == 'main') {
+        build_main_fields();
+    }
     if (pageid == 'loc') {
         build_proptable($('#build_loc_properties'), db_props, pagelockey, 'Location properties');
         build_location_fields();

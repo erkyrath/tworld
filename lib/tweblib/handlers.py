@@ -949,6 +949,24 @@ class BuildDelLocHandler(BuildBaseHandler):
             self.write( { 'error': str(ex) } )
 
 
+class BuildAddWorldHandler(BuildBaseHandler):
+    @tornado.gen.coroutine
+    def post(self):
+        try:
+            uid = self.twsession['uid']
+            world = { 'creator':uid, 'name':'New World',
+                      'copyable':True, 'instancing':'standard' }
+
+            wid = yield motor.Op(self.application.mongodb.worlds.insert,
+                                 world)
+            self.write( { 'id':str(wid) } )
+        
+        except Exception as ex:
+            # Any exception that occurs, return as an error message.
+            self.application.twlog.warning('Caught exception (setting data): %s', ex)
+            self.write( { 'error': str(ex) } )
+
+
 
 class AdminMainHandler(MyRequestHandler):
     """Handler for the Admin page, which is rudimentary and not worth much
