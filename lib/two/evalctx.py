@@ -15,6 +15,7 @@ import motor
 import twcommon.misc
 from twcommon.excepts import MessageException, ErrorMessageException
 from twcommon.excepts import SymbolError, ExecRunawayException, ExecSandboxException
+from twcommon.excepts import ReturnException
 from two import interp
 import two.task
 
@@ -416,6 +417,9 @@ class EvalPropContext(object):
                     raise ExecRunawayException('Script ran too deep; aborting!')
                 yield self.interpolate_text(res.get('text', ''))
                 return Accumulated
+            except ReturnException as ex:
+                ### use ex.returnvalue?
+                return Accumulated
             except ExecRunawayException:
                 raise  # Let this through
             except Exception as ex:
@@ -434,6 +438,8 @@ class EvalPropContext(object):
                     raise ExecRunawayException('Script ran too deep; aborting!')
                 newres = yield self.execute_code(res.get('text', ''), originlabel=key)
                 return newres
+            except ReturnException as ex:
+                return ex.returnvalue
             finally:
                 self.frames.pop()
                 self.frame = origframe
@@ -480,7 +486,10 @@ class EvalPropContext(object):
             return res
         if nodtyp is ast.If:
             res = yield self.execcode_if(nod)
-            return None
+            return res
+        if nodtyp is ast.Return:
+            res = yield self.execcode_return(nod)
+            assert False, 'Should not get here'
         if nodtyp is ast.Pass:
             return None
         raise NotImplementedError('Script statement type not implemented: %s' % (nodtyp.__name__,))
@@ -799,6 +808,14 @@ class EvalPropContext(object):
         for nod in body:
             res = yield self.execcode_statement(nod)
         return res
+        
+    @tornado.gen.coroutine
+    def execcode_return(self, nod):
+        if nod.value is None:
+            val = None
+        else:
+            val = yield self.execcode_expr(nod.value)
+        raise ReturnException(returnvalue=val)
         
     @tornado.gen.coroutine
     def execcode_assign(self, nod):

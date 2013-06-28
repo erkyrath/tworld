@@ -36,7 +36,8 @@ class ExecutionException(Exception):
     pass
 
 class ReturnException(ExecutionException):
-    pass
+    def __init__(self, returnvalue):
+        self.returnvalue = returnvalue
 
 class LoopBodyException(ExecutionException):
     pass
