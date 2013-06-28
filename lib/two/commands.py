@@ -744,7 +744,7 @@ def define_commands():
             raise ErrorMessageException('No such location: %s' % (lockey,))
         ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
 
-        yield ctx.perform_move(location['_id'], 'Your location changes.', False, None, False, None, False, 0)
+        yield ctx.perform_move(location['_id'], 'Your location changes.', False, None, False, None, False)
         
     @command('meta_holler', restrict='admin')
     def cmd_meta_holler(app, task, cmd, conn):

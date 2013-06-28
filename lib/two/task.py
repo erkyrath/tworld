@@ -59,6 +59,9 @@ class Task(object):
     # (The task is actually run is several phases; this is the limit
     # per phase.)
     CPU_TICK_LIMIT = 500
+
+    # Limit on how deep the eval stack can get.
+    STACK_DEPTH_LIMIT = 4
     
     def __init__(self, app, cmdobj, connid, twwcid, queuetime):
         self.app = app

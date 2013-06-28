@@ -224,6 +224,10 @@ class EvalPropContext(object):
 
         The top-level call to evalobj() may set up the description accumulator
         and linktargets. Lower-level calls use the existing ones.
+
+        A call to here will increment the stack depth *if* it goes into a
+        code/text interpolation. For static data values, nothing recursive
+        happens and the stack is left alone.
         """
         self.task.tick()
         
@@ -406,7 +410,9 @@ class EvalPropContext(object):
                 origframe = self.frame  # may be None
                 self.frame = EvalPropFrame(self.depth+1)
                 self.frames.append(self.frame)
-                yield self.interpolate_text(res.get('text', ''), depth=depth)
+                if self.depth > self.task.STACK_DEPTH_LIMIT:
+                    raise ExecRunawayException('Script ran too deep; aborting!')
+                yield self.interpolate_text(res.get('text', ''))
                 return Accumulated
             except ExecRunawayException:
                 raise  # Let this through
@@ -422,7 +428,9 @@ class EvalPropContext(object):
                 origframe = self.frame  # may be None
                 self.frame = EvalPropFrame(self.depth+1)
                 self.frames.append(self.frame)
-                newres = yield self.execute_code(res.get('text', ''), originlabel=key, depth=depth)
+                if self.depth > self.task.STACK_DEPTH_LIMIT:
+                    raise ExecRunawayException('Script ran too deep; aborting!')
+                newres = yield self.execute_code(res.get('text', ''), originlabel=key)
                 return newres
             finally:
                 self.frames.pop()
@@ -431,7 +439,7 @@ class EvalPropContext(object):
             return '[Unhandled object type: %s]' % (objtype,)
 
     @tornado.gen.coroutine
-    def execute_code(self, text, depth, originlabel=None):
+    def execute_code(self, text, originlabel=None):
         """Execute a pile of (already-looked-up) script code.
         """
         self.task.tick()
@@ -747,7 +755,7 @@ class EvalPropContext(object):
 
         if restype == 'event':
             # Display an event.
-            yield self.perform_event(res.get('text', None), True, res.get('otext', None), True, depth=depth)
+            yield self.perform_event(res.get('text', None), True, res.get('otext', None), True)
             return None
 
         if restype == 'panic':
@@ -775,7 +783,7 @@ class EvalPropContext(object):
             if not location:
                 raise KeyError('No such location: %s' % (lockey,))
 
-            yield self.perform_move(location['_id'], res.get('text', None), True, res.get('oleave', None), True, res.get('oarrive', None), True, depth=depth)
+            yield self.perform_move(location['_id'], res.get('text', None), True, res.get('oleave', None), True, res.get('oarrive', None), True)
             return None
 
         raise ErrorMessageException('Code invoked unsupported property type: %s' % (restype,))
@@ -810,7 +818,7 @@ class EvalPropContext(object):
         return None
 
     @tornado.gen.coroutine
-    def interpolate_text(self, text, depth):
+    def interpolate_text(self, text):
         """Evaluate a bunch of (already-looked-up) interpolation markup.
         """
         self.task.tick()
@@ -950,7 +958,7 @@ class EvalPropContext(object):
             self.accum.append('[$if without matching $end]')
 
     @tornado.gen.coroutine
-    def perform_event(self, text, texteval, otext, otexteval, depth):
+    def perform_event(self, text, texteval, otext, otexteval):
         if self.level != LEVEL_EXECUTE:
             raise Exception('Events may only occur in action code')
         if text:
@@ -970,7 +978,7 @@ class EvalPropContext(object):
             self.task.write_event(others, val)
 
     @tornado.gen.coroutine
-    def perform_move(self, locid, text, texteval, oleave, oleaveeval, oarrive, oarriveeval, depth):
+    def perform_move(self, locid, text, texteval, oleave, oleaveeval, oarrive, oarriveeval):
         if self.level != LEVEL_EXECUTE:
             raise Exception('Moves may only occur in action code')
 

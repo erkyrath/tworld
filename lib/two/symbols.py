@@ -194,7 +194,6 @@ def define_globals():
         argument goes to other players in the same location.
         """
         ctx = EvalPropContext.get_current_context()
-        depth = ctx.depthatcall
         
         youeval = False
         otherseval = False
@@ -211,7 +210,7 @@ def define_globals():
             else:
                 others = str(others)
                 
-        yield ctx.perform_event(you, youeval, others, otherseval, depth=depth)
+        yield ctx.perform_event(you, youeval, others, otherseval)
 
     @scriptfunc('eventloc', group='_', yieldy=True)
     def global_eventloc(loc, all):
@@ -219,7 +218,6 @@ def define_globals():
         (Location or key.)
         """
         ctx = EvalPropContext.get_current_context()
-        depth = ctx.depthatcall
         iid = ctx.loctx.iid
         
         if isinstance(loc, two.execute.LocationProxy):
@@ -255,7 +253,6 @@ def define_globals():
         for the player and other players.
         """
         ctx = EvalPropContext.get_current_context()
-        depth = ctx.depthatcall
         
         if isinstance(dest, two.execute.LocationProxy):
             res = yield motor.Op(ctx.app.mongodb.locations.find_one,
@@ -294,7 +291,7 @@ def define_globals():
             else:
                 oarrive = str(oarrive)
                 
-        yield ctx.perform_move(locid, you, youeval, oleave, oleaveeval, oarrive, oarriveeval, depth=depth)
+        yield ctx.perform_move(locid, you, youeval, oleave, oleaveeval, oarrive, oarriveeval)
         
     @scriptfunc('location', group='_', yieldy=True)
     def global_location(obj=None):
