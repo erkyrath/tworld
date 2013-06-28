@@ -901,9 +901,11 @@ class BuildSetDataHandler(BuildBaseHandler):
                 if not locid:
                     raise Exception('No location declared')
                 uid = self.twsession['uid']
-                msg = { 'cmd':'buildcopyportal', 'uid':str(uid), 'locid':str(locid), 'wid':str(wid) }
                 # The server will have to figure out scope.
+                msg = { 'cmd':'buildcopyportal', 'uid':str(uid), 'locid':str(locid), 'wid':str(wid) }
                 self.application.twservermgr.tworld_write(0, msg)
+                # Any failure in this request will not be returned to the
+                # client. Oh well.
                 self.write( { 'ok':True } )
                 return
 

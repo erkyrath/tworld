@@ -312,6 +312,42 @@ def define_commands():
                 map[strid] = desc
         conn.write({'cmd':'updateplist', 'clear': True, 'map':map})
         
+    @command('buildcopyportal', isserver=True, doeswrite=True)
+    def cmd_buildcopyportal(app, task, cmd, stream):
+        uid = ObjectId(cmd.uid)
+        wid = ObjectId(cmd.wid)
+        locid = ObjectId(cmd.locid)
+        
+        world = yield motor.Op(app.mongodb.worlds.find_one,
+                                {'_id':wid})
+        if not world:
+            raise ErrorMessageException('buildcopyportal: no such world: %s' % (wid,))
+        if world['creator'] != uid:
+            raise ErrorMessageException('buildcopyportal: world not owned by player: %s' % (wid,))
+
+        loc = yield motor.Op(app.mongodb.locations.find_one,
+                             {'_id':locid})
+        if not loc:
+            raise ErrorMessageException('buildcopyportal: no such location: %s' % (locid,))
+
+        player = yield motor.Op(app.mongodb.players.find_one,
+                                {'_id':uid},
+                                {'scid':1, 'plistid':1})
+        plistid = player['plistid']
+        
+        # This command comes from the build interface; the player is creating
+        # a new link to his own world. We go with a personal-scope link,
+        # unless the world is global-only.
+        if world['instancing'] == 'shared':
+            config = yield motor.Op(app.mongodb.config.find_one,
+                                    {'key':'globalscopeid'})
+            scid = config['val']
+        else:
+            scid = player['scid']
+
+        portid = yield two.execute.create_portal_for_player(app, uid, plistid, wid, scid, locid)
+        app.log.info('Build portal created: %s', portid)
+        
     @command('notifydatachange', isserver=True, doeswrite=True)
     def cmd_notifydatachange(app, task, cmd, stream):
         ls = cmd.change

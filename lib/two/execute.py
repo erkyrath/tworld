@@ -610,6 +610,8 @@ def create_portal_for_player(app, uid, plistid, newwid, newscid, newlocid):
     except Exception as ex:
         app.log.warning('Unable to notify player of new portal: %s', ex, exc_info=app.debugstacktraces)
 
+    return newportid
+
 @tornado.gen.coroutine
 def render_focus(task, loctx, conn, focusobj):
     """The part of generate_update() that deals with focus.

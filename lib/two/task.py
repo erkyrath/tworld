@@ -303,7 +303,7 @@ class Task(object):
             except ErrorMessageException as ex:
                 self.log.warning('Error message running "%s": %s', cmdname, str(ex))
             except MessageException as ex:
-                pass
+                self.log.info('Message running "%s": %s', cmdname, str(ex))
 
             # End of connid==0 case.
             return 
