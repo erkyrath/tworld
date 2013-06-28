@@ -6,6 +6,17 @@ Building
 
 {% block head_ext %}
 <link rel="stylesheet" href="{{ static_url('css/build.css') }}" type="text/css">
+<link rel="stylesheet" href="{{ static_url('css/jquery-ui.css') }}" type="text/css">
+<script src="{{ static_url('js/jquery-1.9.1.js') }}" type="text/javascript"></script>
+<script src="{{ static_url('js/ui/1.10.3/jquery-ui.js') }}" type="text/javascript"></script>
+<script src="{{ static_url('js/build.js') }}" type="text/javascript"></script>
+
+<script type="text/javascript">
+/* Which page is this? Cheap way of telling build.js. */
+var pageid = 'main';
+/* Form verification token. (Tornado checks this against a cookie.) */
+var xsrf_token = "{{ xsrf_token }}";
+</script>
 {% end %}
 
 {% block body %}
@@ -24,6 +35,20 @@ Building
    <td><a href="/build/world/{{ world['id'] }}">{{ world['name'] }}</a>
   </tr>
  {% end %}
+ <tr>
+  <td colspan="2">
+   <div class="BuildPropButtons">
+    <input id="button_addworld_location" class="BuildPropButtonLarge" type="submit" value="Create New World">
+   </div>
+   <div id="button_addworld_confirm" class="BuildPropButtons" style="display:none;">
+    <div class="BuildPropWarning">
+     Create a brand-new world?
+    </div>
+    <input id="button_addworld_cancel" type="submit" value="Cancel">
+    <input id="button_addworld_addworld" type="submit" value="Create">
+   </div>
+  </td>
+ </tr>
  </table>
 </div>
 
