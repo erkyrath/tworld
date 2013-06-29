@@ -109,6 +109,7 @@ class Task(object):
     def tick(self, val=1):
         self.cputicks = self.cputicks + 1
         if (self.cputicks > self.CPU_TICK_LIMIT):
+            self.log.error('ExecRunawayException: User script exceeded tick limit!')
             raise ExecRunawayException('Script ran too long; aborting!')
 
     def resetticks(self):

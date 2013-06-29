@@ -416,6 +416,7 @@ class EvalPropContext(object):
                 self.frame = EvalPropFrame(self.depth+1)
                 self.frames.append(self.frame)
                 if self.parentdepth+self.depth > self.task.STACK_DEPTH_LIMIT:
+                    self.task.log.error('ExecRunawayException: User script exceeded depth limit!')
                     raise ExecRunawayException('Script ran too deep; aborting!')
                 yield self.interpolate_text(res.get('text', ''))
                 return Accumulated
@@ -437,6 +438,7 @@ class EvalPropContext(object):
                 self.frame = EvalPropFrame(self.depth+1)
                 self.frames.append(self.frame)
                 if self.parentdepth+self.depth > self.task.STACK_DEPTH_LIMIT:
+                    self.task.log.error('ExecRunawayException: User script exceeded depth limit!')
                     raise ExecRunawayException('Script ran too deep; aborting!')
                 newres = yield self.execute_code(res.get('text', ''), originlabel=key)
                 return newres
