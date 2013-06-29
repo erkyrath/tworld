@@ -1009,7 +1009,15 @@ def perform_action(task, cmd, conn, target):
                 raise ErrorMessageException('Destination location not found.')
             newlocid = location['_id']
 
-            newscid = yield portal_resolve_scope(app, portal, uid, loctx.scid, world)
+            # Figure out the destination scope. This may come from the portal,
+            # or the player may have selected an alternate.
+            altscid = getattr(cmd, 'scid', None)
+            if not altscid:
+                newscid = yield portal_resolve_scope(app, portal, uid, loctx.scid, world)
+            else:
+                newscid = ObjectId(altscid)
+                # Check validity of the player's chosen scope.
+                yield portal_alt_scope_accessible(app, newscid, uid, world)
 
             # Load up the instance, but only to check minaccess.
             instance = yield motor.Op(app.mongodb.instances.find_one,
