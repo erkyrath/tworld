@@ -48,6 +48,8 @@ class EvalPropFrame:
         # Probably foolish optimization: don't allocate an empty locals
         # map unless one is specifically requested.
         self.locals = None
+    def __repr__(self):
+        return '<EvalPropFrame depth=%d>' % (self.depth,)
 
 class EvalPropContext(object):
     """EvalPropContext is a context for evaluating one symbol, piece of code,
@@ -413,7 +415,7 @@ class EvalPropContext(object):
                 origframe = self.frame  # may be None
                 self.frame = EvalPropFrame(self.depth+1)
                 self.frames.append(self.frame)
-                if self.depth > self.task.STACK_DEPTH_LIMIT:
+                if self.parentdepth+self.depth > self.task.STACK_DEPTH_LIMIT:
                     raise ExecRunawayException('Script ran too deep; aborting!')
                 yield self.interpolate_text(res.get('text', ''))
                 return Accumulated
@@ -434,7 +436,7 @@ class EvalPropContext(object):
                 origframe = self.frame  # may be None
                 self.frame = EvalPropFrame(self.depth+1)
                 self.frames.append(self.frame)
-                if self.depth > self.task.STACK_DEPTH_LIMIT:
+                if self.parentdepth+self.depth > self.task.STACK_DEPTH_LIMIT:
                     raise ExecRunawayException('Script ran too deep; aborting!')
                 newres = yield self.execute_code(res.get('text', ''), originlabel=key)
                 return newres
