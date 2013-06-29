@@ -252,6 +252,7 @@ default_localize_entries = """
 
 +client.tool.menu.return_to_start: Return to Start
 +client.tool.menu.set_panic_portal: Set as Panic Portal
++client.tool.menu.delete_own_portal: Remove Portal from List
 
 +client.label.copy_portal: Copy this portal to your collection
 +client.label.not_copyable: This portal cannot be copied
@@ -283,6 +284,7 @@ message.panic_portal_set: Panic portal set to %s, %s.
 message.no_portaldesc: The destination is hazy.
 message.copy_already_have: This portal is already in your collection.
 message.copy_ok: You copy the portal to your collection.
+message.delete_own_portal_ok: You remove the portal from your collection.
 
 """
 

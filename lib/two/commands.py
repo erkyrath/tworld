@@ -849,6 +849,25 @@ def define_commands():
         desc = yield two.execute.portal_description(app, portal, conn.uid, location=True)
         raise MessageException(app.localize('message.panic_portal_set') % (desc['world'], desc['location'])) # 'Panic portal set to %s, %s.'
         
+    @command('deleteownportal', doeswrite=True)
+    def cmd_deleteownportal(app, task, cmd, conn):
+        player = yield motor.Op(app.mongodb.players.find_one,
+                                {'_id':conn.uid},
+                                {'plistid':1})
+        portal = yield motor.Op(app.mongodb.portals.find_one,
+                                {'_id':ObjectId(cmd.portid), 'plistid':player['plistid']})
+        if not portal:
+            raise ErrorMessageException('No such portal in your collection.')
+        yield motor.Op(app.mongodb.portals.remove,
+                       {'_id':portal['_id']})
+        map = { str(portal['_id']):False }
+        conn.write({'cmd':'updateplist', 'map':map})
+        conn.write({'cmd':'message', 'text':app.localize('message.delete_own_portal_ok')}) # 'You remove the portal from your collection.'
+        yield motor.Op(app.mongodb.playstate.update,
+                       {'_id':conn.uid},
+                       {'$set':{'focus':None}})
+        task.set_dirty(conn.uid, DIRTY_FOCUS)
+        
     @command('selfdesc', doeswrite=True)
     def cmd_selfdesc(app, task, cmd, conn):
         if getattr(cmd, 'pronoun', None):

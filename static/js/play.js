@@ -392,6 +392,15 @@ function toolpane_fill_pane_plist(seg) {
                     click: function() {
                     websocket_send_json({ cmd:'portstart' });
                 } },
+            { text:localize('client.tool.menu.delete_own_portal'),
+                    enableHook: function() { return toolsegments['plist'].selection; },
+                    click: function() {
+                    var seg = toolsegments['plist'];
+                    var portal = seg.map[seg.selection];
+                    if (portal) {
+                        websocket_send_json({ cmd:'deleteownportal', portid:portal.portid });
+                    }
+                } },
             { text:localize('client.tool.menu.set_panic_portal'),
                     enableHook: function() { return toolsegments['plist'].selection; },
                     click: function() {
