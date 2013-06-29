@@ -435,9 +435,13 @@ class BuildBaseHandler(MyRequestHandler):
             raise tornado.web.HTTPError(403, 'You are not signed in.')
         res = yield motor.Op(self.application.mongodb.players.find_one,
                              { '_id':self.twsession['uid'] })
+        if not res:
+            raise tornado.web.HTTPError(403, 'You do not exist.')
         self.twisadmin = res.get('admin', False)
-        if not res or not (self.twisadmin or res.get('build', False)):
-            raise tornado.web.HTTPError(403, 'You do not have build access.')
+        self.twisbuild = (self.twisadmin or res.get('build', False))
+        if not self.twisbuild:
+            self.redirect('/nobuild')
+            return
 
     def extend_template_namespace(self, map):
         map = super().extend_template_namespace(map)
@@ -455,6 +459,8 @@ class BuildBaseHandler(MyRequestHandler):
                                { '_id':wid })
         if not world:
             raise Exception('No such world')
+        if not self.twisbuild:
+            raise tornado.web.HTTPError(403, 'You do not have build access.')
         if world['creator'] != self.twsession['uid'] and not self.twisadmin:
             raise tornado.web.HTTPError(403, 'You did not create this world.')
         
@@ -479,6 +485,8 @@ class BuildBaseHandler(MyRequestHandler):
                                { '_id':wid })
         if not world:
             raise Exception('No such world')
+        if not self.twisbuild:
+            raise tornado.web.HTTPError(403, 'You do not have build access.')
         if world['creator'] != self.twsession['uid'] and not self.twisadmin:
             raise tornado.web.HTTPError(403, 'You did not create this world.')
         
