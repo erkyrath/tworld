@@ -276,6 +276,7 @@ def define_commands():
             return
         task.set_dirty(conn, DIRTY_ALL)
         app.queue_command({'cmd':'connupdateplist', 'connid':cmd.connid})
+        app.queue_command({'cmd':'connupdatescopes', 'connid':cmd.connid})
         ### probably queue a connupdatefriends, too
     
     @command('connupdateplist', isserver=True)
@@ -311,7 +312,45 @@ def define_commands():
                 desc['listpos'] = portal.get('listpos', 0.0)
                 map[strid] = desc
         conn.write({'cmd':'updateplist', 'clear': True, 'map':map})
-        
+
+    @command('connupdatescopes', isserver=True)
+    def cmd_connupdatescopes(app, task, cmd, stream):
+        # Re-send the player's available scope list to one connection.
+        conn = app.playconns.get(cmd.connid)
+        if not conn:
+            return
+        player = yield motor.Op(app.mongodb.players.find_one,
+                                {'_id':conn.uid},
+                                {'plistid':1, 'scid':1, 'name':1})
+        if not player:
+            return
+
+        map = {}
+        config = yield motor.Op(app.mongodb.config.find_one,
+                                {'key':'globalscopeid'})
+        scope = yield motor.Op(app.mongodb.scopes.find_one,
+                               {'_id':config['val']})
+        if scope:
+            strid = str(scope['_id'])
+            del scope['_id']
+            scope['id'] = strid
+            map[strid] = scope
+
+        scope = yield motor.Op(app.mongodb.scopes.find_one,
+                               {'_id':player['scid']})
+        if scope:
+            strid = str(scope['_id'])
+            del scope['_id']
+            del scope['uid']
+            scope['id'] = strid
+            scope['playername'] = player['name']
+            map[strid] = scope
+
+        ### And any personal scopes you have access to
+        ### And any group scopes you have access to
+
+        conn.write({'cmd':'updatescopes', 'clear':True, 'map':map})
+
     @command('buildcopyportal', isserver=True, doeswrite=True)
     def cmd_buildcopyportal(app, task, cmd, stream):
         uid = ObjectId(cmd.uid)

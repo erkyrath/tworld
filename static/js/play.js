@@ -1033,6 +1033,25 @@ function cmd_updateplist(obj) {
     toolpane_plist_update();
 }
 
+var availscopemap = {};
+
+function cmd_updatescopes(obj) {
+    if (obj.clear) {
+        availscopemap = {};
+    }
+
+    if (obj.map) {
+        jQuery.each(obj.map, function(scid, scope) {
+                if (scope === false) {
+                    delete availscopemap[scid];
+                }
+                else {
+                    availscopemap[scid] = scope;
+                }
+            });
+    }
+}
+
 function cmd_clearfocus(obj) {
     /* Same as update { focus:false }, really */
     focuspane_special_val = [];
@@ -1065,6 +1084,7 @@ var command_table = {
     event: cmd_event,
     update: cmd_update,
     updateplist: cmd_updateplist,
+    updatescopes: cmd_updatescopes,
     clearfocus: cmd_clearfocus,
     message: cmd_message,
     error: cmd_error,
