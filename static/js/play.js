@@ -555,7 +555,13 @@ function toolpane_fill_pane_portal(seg) {
             ev.preventDefault();
             var portal = focuspane_current_special_portal();
             if (portal) {
-                websocket_send_json({ cmd:'action', action:portal.copyable });
+                var msg = { cmd:'action', action:portal.copyable };
+                if (toolsegments['portal']) {
+                    var scid = toolsegments['portal'].flexselectel.prop('value');
+                    if (scid != portal.scid) 
+                        msg.scid = scid;
+                }
+                websocket_send_json(msg);
             }
         });
 
@@ -599,14 +605,14 @@ function toolpane_portal_update() {
     if (portal.instancing == 'standard') {
         seg.flexselectel.empty();
         if (availscopemap[portal.scid] === undefined) {
-            var optel = $('<option>', { value:portal.scid }).text('Original *');
+            var optel = $('<option>', { value:portal.scid }).text('*Original');
             seg.flexselectel.append(optel);
         }
         for (var ix=0; ix<availscopelist.length; ix++) {
             scope = availscopelist[ix];
             var optel = $('<option>', { value:scope.id }).text(scope.name);
             if (scope.id == portal.scid)
-                optel.append(' (*)');
+                optel.prepend('*');
             seg.flexselectel.append(optel);
         }
         seg.flexselectel.prop('value', portal.scid);
@@ -821,7 +827,16 @@ function focuspane_set_special(ls) {
             extrals.push(el);
             var ael = $('<a>', {href:'#'+target});
             ael.text(localize('client.label.enter_portal'));
-            ael.on('click', {target:target}, evhan_click_action);
+            ael.on('click', {target:target, scid:portalobj.scid}, function(ev) {
+                    ev.preventDefault();
+                    var msg = { cmd:'action', action:ev.data.target };
+                    if (toolsegments['portal']) {
+                        var scid = toolsegments['portal'].flexselectel.prop('value');
+                        if (scid != ev.data.scid) 
+                            msg.scid = scid;
+                    }
+                    websocket_send_json(msg);
+                });
             el = $('<p>');
             el.append(ael);
             extrals.push(el);
