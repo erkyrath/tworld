@@ -416,6 +416,37 @@ def portal_in_reach(app, portal, uid, wid):
         raise ErrorMessageException('Portal does not have a placement.')
 
 @tornado.gen.coroutine
+def portal_alt_scope_accessible(app, scid, uid, world):
+    """Check that a given scope is accessible to the player *as an alternate
+    selection*, that is, using the "link instead to..." selector.
+    Raises an exception if not available.
+    """
+    if (world['instancing'] != 'standard'):
+        raise ErrorMessageException('The instance of this portal may not be changed.')
+
+    scope = yield motor.Op(app.mongodb.scopes.find_one,
+                            {'_id':scid})
+    if not scope:
+        raise ErrorMessageException('No such scope!')
+
+    if scope['type'] == 'glob':
+        # Global scope is always okay
+        return
+    if scope['type'] == 'pers':
+        player = yield motor.Op(app.mongodb.players.find_one,
+                                {'_id':uid},
+                                {'scid':1})
+        if scid == player['scid']:
+            # Your personal scope is always okay
+            return
+        ### check access level
+        raise ErrorMessageException('You do not have permission to reach this personal scope.')
+    if scope['type'] == 'grp':
+        ### check access level
+        raise ErrorMessageException('You do not have permission to reach this group scope.')
+    raise ErrorMessageException('Scope type not recognized.')
+    
+@tornado.gen.coroutine
 def portal_resolve_scope(app, portal, uid, scid, world):
     """Figure out what scope we are porting to. The portal scid
     value may be a special value such as 'personal', 'global',
@@ -935,9 +966,16 @@ def perform_action(task, cmd, conn, target):
             if not location:
                 raise ErrorMessageException('Destination location not found.')
             newlocid = location['_id']
-            
-            newscid = yield portal_resolve_scope(app, portal, uid, loctx.scid, world)
 
+            # Figure out the destination scope. This may come from the portal,
+            # or the player may have selected an alternate.
+            altscid = getattr(cmd, 'scid', None)
+            if not altscid:
+                newscid = yield portal_resolve_scope(app, portal, uid, loctx.scid, world)
+            else:
+                newscid = ObjectId(altscid)
+                # Check validity of the player's chosen scope.
+                yield portal_alt_scope_accessible(app, newscid, uid, world)
             
             player = yield motor.Op(app.mongodb.players.find_one,
                                     {'_id':uid},
