@@ -451,7 +451,37 @@ def portal_resolve_scope(app, portal, uid, scid, world):
         newscid = reqscid
     assert isinstance(newscid, ObjectId), 'newscid is not ObjectId'
     return newscid
+
+@tornado.gen.coroutine
+def scope_description(app, scid, uid):
+    """Return a (JSONable) object describing a scope in human-readable
+    strings. Returns None if a problem arises.
+    """
+    scope = yield motor.Op(app.mongodb.scopes.find_one,
+                           {'_id':scid})
+    if not scope:
+        return None
+
+    scopetype = scope['type']
+    res = { 'id':str(scope['_id']), 'type':scopetype }
+
+    if scopetype == 'glob':
+        res['name'] = 'Global'
+    elif scopetype == 'grp':
+        res['name'] = 'Group: %s' % (scope['group'],)
+    elif scopetype == 'pers' and scope['uid'] == uid:
+        res['name'] = 'Personal'
+        res['you'] = True
+    elif scopetype == 'pers':
+        player = yield motor.Op(app.mongodb.players.find_one,
+                                {'_id':scope['uid']},
+                                {'name':1})
+        res['name'] = 'Personal: %s' % (player['name'],)
+    else:
+        res['name'] = '???'
     
+    return res
+
 @tornado.gen.coroutine
 def portal_description(app, portal, uid, uidiid=None, location=False, short=False):
     """Return a (JSONable) object describing a portal in human-readable
@@ -545,6 +575,8 @@ def portal_description(app, portal, uid, uidiid=None, location=False, short=Fals
 
         if world.get('copyable', False):
             res['copyable'] = True
+
+        res['instancing'] = world.get('instancing', 'standard')
 
         if portal.get('preferred', False):
             res['preferred'] = True

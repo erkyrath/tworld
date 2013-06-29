@@ -536,6 +536,14 @@ function toolpane_fill_pane_portal(seg) {
     listel = $('<ul>', {'class':'ToolList'});
     seg.bodyel.append(listel);
 
+    var noflexel = $('<li>', {'class':'StyleEmph'});
+    listel.append(noflexel);
+    var flexel =  $('<li>', {'class':'StyleEmph'}).text('### Link instead to');
+    flexel.append(' ');
+    var flexselectel = $('<select>');
+    flexel.append(flexselectel);
+    listel.append(flexel);
+
     var copyel = $('<li>');
     el = $('<a>', {href:'#'}).text(localize('client.label.copy_portal'));
     copyel.append(el);
@@ -557,6 +565,9 @@ function toolpane_fill_pane_portal(seg) {
     seg.creatorel = creatorel;
     seg.copyel = copyel;
     seg.nocopyel = nocopyel;
+    seg.flexel = flexel;
+    seg.noflexel = noflexel;
+    seg.flexselectel = flexselectel;
 
     toolpane_portal_update();
 }
@@ -584,6 +595,16 @@ function toolpane_portal_update() {
     else {
         seg.nocopyel.show();
         seg.copyel.hide();
+    }
+    if (portal.instancing == 'standard') {
+        /*### update seg.flexselectel */
+        seg.flexel.show();
+        seg.noflexel.hide();
+    }
+    else {
+        seg.noflexel.text('### This link is only ' + portal.instancing + '.');
+        seg.noflexel.show();
+        seg.flexel.hide();
     }
 }
 
@@ -1034,6 +1055,7 @@ function cmd_updateplist(obj) {
 }
 
 var availscopemap = {};
+var availscopelist = [];
 
 function cmd_updatescopes(obj) {
     if (obj.clear) {
@@ -1047,9 +1069,32 @@ function cmd_updatescopes(obj) {
                 }
                 else {
                     availscopemap[scid] = scope;
+                    /* Add a hacky sorting key */
+                    if (scope.type == 'glob')
+                        scope.sortkey = '0_';
+                    else if (scope.type == 'pers' && scope.you)
+                        scope.sortkey = '1_';
+                    else if (scope.type == 'pers')
+                        scope.sortkey = '2_' + scope.id;
+                    else
+                        scope.sortkey = '3_' + scope.id;
                 }
             });
     }
+
+    /* Rebuild the list, regardless. */
+    availscopelist.length = 0;
+    jQuery.each(availscopemap, function(scid, scope) {
+            availscopelist.push(scope);
+        });
+
+    availscopelist.sort(function(p1, p2) {
+            if (p1.sortkey < p2.sortkey)
+                return -1;
+            if (p1.sortkey > p2.sortkey)
+                return 1;
+            return 0;
+        });
 }
 
 function cmd_clearfocus(obj) {

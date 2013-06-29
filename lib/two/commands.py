@@ -321,31 +321,21 @@ def define_commands():
             return
         player = yield motor.Op(app.mongodb.players.find_one,
                                 {'_id':conn.uid},
-                                {'plistid':1, 'scid':1, 'name':1})
+                                {'plistid':1, 'scid':1})
         if not player:
             return
 
         map = {}
         config = yield motor.Op(app.mongodb.config.find_one,
                                 {'key':'globalscopeid'})
-        scope = yield motor.Op(app.mongodb.scopes.find_one,
-                               {'_id':config['val']})
+        scope = yield two.execute.scope_description(app, config['val'], conn.uid)
         if scope:
-            strid = str(scope['_id'])
-            del scope['_id']
-            scope['id'] = strid
-            map[strid] = scope
+            map[scope['id']] = scope
 
-        scope = yield motor.Op(app.mongodb.scopes.find_one,
-                               {'_id':player['scid']})
+        scope = yield two.execute.scope_description(app, player['scid'], conn.uid)
         if scope:
-            strid = str(scope['_id'])
-            del scope['_id']
-            del scope['uid']
-            scope['id'] = strid
-            scope['playername'] = player['name']
-            map[strid] = scope
-
+            map[scope['id']] = scope
+            
         ### And any personal scopes you have access to
         ### And any group scopes you have access to
 
