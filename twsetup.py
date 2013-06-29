@@ -255,6 +255,9 @@ default_localize_entries = """
 
 +client.label.copy_portal: Copy this portal to your collection
 +client.label.not_copyable: This portal cannot be copied
++client.label.only_solo: Only your personal instance is available
++client.label.only_shared: Only the global instance is available
++client.label.flexible: Travel instead to...
 +client.label.back_to_plist: (Back to the collection)
 +client.label.enter_portal: Enter the portal.
 +client.label.plist_is_empty: The collection is empty.
@@ -305,10 +308,12 @@ def parse_localization(fl):
         res.append( (key, lang, clientflag, val) )
     return res
 
+force_localize = False
 if opts.localize:
     fl = open(opts.localize)
     locls = parse_localization(fl)
     fl.close()
+    force_localize = True
 else:
     locls = parse_localization(default_localize_entries.split('\n'))
 
@@ -316,6 +321,10 @@ for (key, lang, client, val) in locls:
     obj = { 'key':key, 'lang':lang, 'val':val }
     if client:
         obj['client'] = True
+    if not force_localize:
+        res = db.localize.find_one({ 'key':key, 'lang':lang })
+        if res:
+            continue
     db.localize.update({ 'key':key, 'lang':lang },
                        obj, upsert=True)
     

@@ -538,9 +538,9 @@ function toolpane_fill_pane_portal(seg) {
 
     var noflexel = $('<li>', {'class':'StyleEmph'});
     listel.append(noflexel);
-    var flexel =  $('<li>', {'class':'StyleEmph'}).text('### Link instead to');
+    var flexel =  $('<li>', {'class':'StyleEmph'}).text(localize('client.label.flexible'));
     flexel.append(' ');
-    var flexselectel = $('<select>');
+    var flexselectel = $('<select>', {'class':'FocusSelect'});
     flexel.append(flexselectel);
     listel.append(flexel);
 
@@ -597,12 +597,27 @@ function toolpane_portal_update() {
         seg.copyel.hide();
     }
     if (portal.instancing == 'standard') {
-        /*### update seg.flexselectel */
+        seg.flexselectel.empty();
+        if (availscopemap[portal.scid] === undefined) {
+            var optel = $('<option>', { value:portal.scid }).text('Original *');
+            seg.flexselectel.append(optel);
+        }
+        for (var ix=0; ix<availscopelist.length; ix++) {
+            scope = availscopelist[ix];
+            var optel = $('<option>', { value:scope.id }).text(scope.name);
+            if (scope.id == portal.scid)
+                optel.append(' (*)');
+            seg.flexselectel.append(optel);
+        }
+        seg.flexselectel.prop('value', portal.scid);
         seg.flexel.show();
         seg.noflexel.hide();
     }
     else {
-        seg.noflexel.text('### This link is only ' + portal.instancing + '.');
+        if (portal.instancing == 'solo')
+            seg.noflexel.text(localize('client.label.only_solo'));
+        else
+            seg.noflexel.text(localize('client.label.only_shared'));
         seg.noflexel.show();
         seg.flexel.hide();
     }
@@ -1095,6 +1110,11 @@ function cmd_updatescopes(obj) {
                 return 1;
             return 0;
         });
+
+    /* Adjust the open tool pane, if necessary. */
+    if (toolsegments['portal']) {
+        toolpane_portal_update();
+    }
 }
 
 function cmd_clearfocus(obj) {

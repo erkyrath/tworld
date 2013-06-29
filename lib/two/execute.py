@@ -571,7 +571,8 @@ def portal_description(app, portal, uid, uidiid=None, location=False, short=Fals
         else:
             scopename = '???'
 
-        res = {'world':worldname, 'scope':scopename, 'creator':creatorname}
+        res = {'world':worldname, 'scope':scopename, 'scid':str(scope['_id']),
+               'creator':creatorname}
 
         if world.get('copyable', False):
             res['copyable'] = True
