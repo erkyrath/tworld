@@ -792,9 +792,12 @@ def generate_update(task, conn, dirty):
     if dirty & DIRTY_LOCALE:
         conn.localeactions.clear()
         conn.localedependencies.clear()
-        
-        ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_DISPLAY)
-        localedesc = yield ctx.eval('desc')
+
+        try:
+            ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_DISPLAY)
+            localedesc = yield ctx.eval('desc')
+        except Exception as ex:
+            localedesc = '[Exception: %s]' % (str(ex),)
         
         if ctx.linktargets:
             conn.localeactions.update(ctx.linktargets)
@@ -867,8 +870,12 @@ def generate_update(task, conn, dirty):
         conn.focusactions.clear()
         conn.focusdependencies.clear()
 
-        focusobj = playstate.get('focus', None)
-        (focusdesc, focusspecial) = yield render_focus(task, loctx, conn, focusobj)
+        try:
+            focusobj = playstate.get('focus', None)
+            (focusdesc, focusspecial) = yield render_focus(task, loctx, conn, focusobj)
+        except Exception as ex:
+            focusdesc = '[Exception: %s]' % (str(ex),)
+            focusspecial = False
 
         msg['focus'] = focusdesc
         if focusspecial:
