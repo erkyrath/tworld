@@ -20,7 +20,7 @@ import motor
 
 import twcommon.misc
 from twcommon.excepts import MessageException
-from two.interp import sluggify
+from twcommon.misc import sluggify
 
 class SessionMgr(object):
     """

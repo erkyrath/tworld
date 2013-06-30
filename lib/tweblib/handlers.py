@@ -415,7 +415,7 @@ class JSONEncoderExtra(json.JSONEncoder):
         return super().default(obj)
 
 # Regexp to match valid Python (2) identifiers. See also sluggify() in
-# lib/two/interp.py.
+# lib/twcommon/misc.py.
 re_valididentifier = re.compile('^[a-zA-Z_][a-zA-Z0-9_]*$')
     
 

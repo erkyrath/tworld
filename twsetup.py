@@ -61,7 +61,7 @@ opts = tornado.options.options
 if opts.python_path:
     sys.path.insert(0, opts.python_path)
 
-from two.interp import sluggify
+from twcommon.misc import sluggify
 
 
 # Open the client connection.

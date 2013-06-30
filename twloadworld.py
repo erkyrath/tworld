@@ -81,7 +81,7 @@ if opts.python_path:
     sys.path.insert(0, opts.python_path)
 
 import two.interp
-from two.interp import sluggify
+from twcommon.misc import sluggify
 
 if not args:
     print('usage: twloadworld.py worldfile [ room ... or room.prop ... ]')
