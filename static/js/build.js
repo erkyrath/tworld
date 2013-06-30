@@ -45,6 +45,9 @@ function setup_event_handlers() {
         var ls = jQuery.map(db_locations, function(loc, index) {
                 return { text:loc.name, click:function() { window.location = '/build/loc/' + loc.id; } };
             });
+        if (ls.length == 0) {
+            ls.push({ text:'(no locations)', enableHook: function(){}, click:function(){} });
+        }
         el.contextMenu('popup_menu',
             ls,
             { 
