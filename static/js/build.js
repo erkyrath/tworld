@@ -268,6 +268,7 @@ function delete_prop(tableref, prop, nocopy) {
 */
 function build_value_cell(cellvalel, tablekey, propkey, propid, editls) {
     var areamap = {};
+    var arealist = [];
     
     for (var ix=0; ix<editls.length; ix++) {
         var subpane = editls[ix];
@@ -289,10 +290,21 @@ function build_value_cell(cellvalel, tablekey, propkey, propid, editls) {
         subpanel.data('id', propid);
         subpanel.data('subkey', subpane.key);
 
-        if (initial_setup_done) {
-            subpanel.autosize();
-            subpanel.on('input', evhan_input_textarea);
-        }
+        arealist.push(subpanel);
+    }
+
+    if (initial_setup_done && arealist.length) {
+        /* If we added new textareas, we need to give them magic autosizing
+           and event handlers. But the autosizing extension doesn't work
+           right if the row hasn't been added to the DOM yet. So we defer
+           until the event cycle has settled down. */
+        defer_func(function() {
+                for (var ix=0; ix<arealist.length; ix++) {
+                    var subpanel = arealist[ix];
+                    subpanel.autosize();
+                    subpanel.on('input', evhan_input_textarea);
+                }
+            });
     }
 
     var warningel = $('<div>', { 'class':'BuildPropWarning', style:'display: none;' });
@@ -805,6 +817,11 @@ function generic_set_warning(cellel, message) {
                 warningel.empty();
             });
     }
+}
+
+/* Run a function (no arguments) "soon". */
+function defer_func(func) {
+    return window.setTimeout(func, 0.01*1000);
 }
 
 
