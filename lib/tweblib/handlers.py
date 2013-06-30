@@ -659,6 +659,7 @@ class BuildSetPropHandler(BuildBaseHandler):
     
             (world, loc) = yield self.check_world_arguments(wid, locid, playerok=True)
 
+            key = key.lower()
             if not re_valididentifier.match(key):
                 raise Exception('Invalid key name')
 
@@ -876,6 +877,7 @@ class BuildSetDataHandler(BuildBaseHandler):
             if name == 'lockey':
                 if not locid:
                     raise Exception('No location declared')
+                value = value.lower()
                 if not re_valididentifier.match(value):
                     raise Exception('Invalid key name')
                 oloc = yield motor.Op(self.application.mongodb.locations.find_one,
