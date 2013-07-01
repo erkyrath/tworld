@@ -348,7 +348,7 @@ class EvalPropContext(object):
                 ctx = EvalPropContext(self.task, loctx=altloctx, parentdepth=1, level=LEVEL_FLAT)
                 try:
                     desttext = yield ctx.eval('portaldesc')
-                    self.updateacdepends(ctx)
+                    self.updateacdepends(ctx) ###bug 29?
                 except:
                     desttext = None
                 if not desttext:
