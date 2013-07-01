@@ -153,7 +153,8 @@ class EvalPropContext(object):
         The result type depends on the level:
 
         RAW: Python object direct from Mongo.
-        FLAT: A string.
+        FLAT: A string. ({text} objects produce strings directly, without
+        interpolation or interpretation.)
         MESSAGE: A string. ({text} objects produce strings from the flattened,
         de-styled, de-linked description.)
         DISPLAY: A string or, for {text} objects, a description.
@@ -196,6 +197,8 @@ class EvalPropContext(object):
         if (self.level == LEVEL_RAW):
             return res
         if (self.level == LEVEL_FLAT):
+            if twcommon.misc.is_typed_dict(res, 'text'):
+                res = res.get('text', '')
             return str_or_null(res)
         if (self.level == LEVEL_MESSAGE):
             if res is Accumulated:
