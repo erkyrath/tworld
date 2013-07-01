@@ -342,7 +342,7 @@ class Task(object):
                 # (Or an admin, anywhere.)
                 player = yield motor.Op(self.app.mongodb.players.find_one,
                                         {'_id':conn.uid},
-                                        {'admin':1})
+                                        {'admin':1, 'build':1})
                 if not player:
                     raise ErrorMessageException('Player not found!')
                 if (player.get('admin', False)):
