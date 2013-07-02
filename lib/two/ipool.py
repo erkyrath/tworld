@@ -25,6 +25,7 @@ The scheduling queue for script events is based on these principles:
 import datetime
 
 import twcommon.misc
+from twcommon.excepts import ExecRunawayException
 
 class InstancePool:
 
@@ -128,7 +129,8 @@ class Instance:
                 raise Exception('sched(): repeating delay must be at least %d seconds' % (InstancePool.MIN_SCHED_REPEAT_DELAY.total_seconds(),))
 
         if len(self.timers) >= InstancePool.MAX_SCHED_EVENTS:
-            raise Exception('sched(): limit of %d events at a time' % (InstancePool.MAX_SCHED_EVENTS,))
+            self.app.log.error('ExecRunawayException: User script exceeded timer event limit!')
+            raise ExecRunawayException('sched(): limit of %d events at a time' % (InstancePool.MAX_SCHED_EVENTS,))
 
         # Add the event.
         timer = TimerEvent(delta, func, repeat=repeat, cancel=cancel)
