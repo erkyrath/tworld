@@ -13,7 +13,11 @@ Admin: Player "{{ playername }}"
 <li>name: {{ player['name'] }}
 <li>namekey: {{ player['namekey'] }}
 {% if isadmin %}<li>ADMINISTRATOR{% end %}
-{% if isbuild %}<li>builder{% end %}
+<li>{% if isbuild %}builder{% else %}not builder{% end %}
+ <form method="post" action="#">
+  {% module xsrf_form_html() %}
+  <input name="playerbuildflag" type="submit" value="Change">
+ </form>
 <li>email: {{ player['email'] }}
 <li>createtime: {{ player['createtime'] }}
 <li>pronoun: {{ player['pronoun'] }}
