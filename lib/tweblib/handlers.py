@@ -490,6 +490,21 @@ class AdminPlayerHandler(AdminBaseHandler):
                     isadmin=player.get('admin', False),
                     isbuild=player.get('build', False),
                     worldname=worldname, scopetype=scopetype, locname=locname)
+
+    @tornado.gen.coroutine
+    def post(self, uid):
+        uid = ObjectId(uid)
+        player = yield motor.Op(self.application.mongodb.players.find_one,
+                                { '_id':uid })
+        if (self.get_argument('playerbuildflag', None)):
+            newflag = not player.get('build', False)
+            yield motor.Op(self.application.mongodb.players.update,
+                           { '_id':uid },
+                           { '$set':{'build':newflag} })
+        
+            self.redirect(self.request.path)
+            
+        raise Exception('Unknown form type')
         
 class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
     """Handler for the websocket URI.
