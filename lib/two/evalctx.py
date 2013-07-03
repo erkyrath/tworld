@@ -348,9 +348,11 @@ class EvalPropContext(object):
                 ctx = EvalPropContext(self.task, loctx=altloctx, parentdepth=1, level=LEVEL_FLAT)
                 try:
                     desttext = yield ctx.eval('portaldesc')
-                    self.updateacdepends(ctx) ###bug 29?
                 except:
                     desttext = None
+                # This is a dependency on 'portaldesc', whether or not the
+                # property was found.
+                self.updateacdepends(ctx)
                 if not desttext:
                     desttext = self.app.localize('message.no_portaldesc') # 'The destination is hazy.'
                 portalobj['view'] = desttext;
