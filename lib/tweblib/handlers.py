@@ -407,10 +407,9 @@ class TopPageHandler(MyRequestHandler):
 
 
 
-
-class AdminMainHandler(MyRequestHandler):
-    """Handler for the Admin page, which is rudimentary and not worth much
-    right now.
+class AdminBaseHandler(MyRequestHandler):
+    """Base class for the handlers for admin pages. This has some common
+    functionality.
     """
     @tornado.gen.coroutine
     def prepare(self):
@@ -426,7 +425,11 @@ class AdminMainHandler(MyRequestHandler):
                              { '_id':self.twsession['uid'] })
         if not res or not res.get('admin', False):
             raise tornado.web.HTTPError(403, 'You do not have admin access.')
-    
+
+class AdminMainHandler(AdminBaseHandler):
+    """Handler for the Admin page, which is rudimentary and not worth much
+    right now.
+    """
     @tornado.gen.coroutine
     def get(self):
         self.render('admin.html',
@@ -441,6 +444,53 @@ class AdminMainHandler(MyRequestHandler):
             self.application.twservermgr.tworld_write(0, msg)
         self.redirect('/admin')
 
+class AdminPlayerHandler(AdminBaseHandler):
+    @tornado.gen.coroutine
+    def get(self, uid):
+        uid = ObjectId(uid)
+        player = yield motor.Op(self.application.mongodb.players.find_one,
+                                { '_id':uid })
+        if not player:
+            raise tornado.web.HTTPError(404, 'Player not found.')
+
+        loc = None
+        instance = None
+        scope = None
+        world = None
+        
+        playstate = yield motor.Op(self.application.mongodb.playstate.find_one,
+                                   { '_id':uid })
+        if playstate:
+            if playstate['locid']:
+                loc = yield motor.Op(self.application.mongodb.locations.find_one,
+                                     { '_id':playstate['locid'] })
+            if playstate['iid']:
+                instance = yield motor.Op(self.application.mongodb.instances.find_one,
+                                          { '_id':playstate['iid'] })
+            if instance:
+                scope = yield motor.Op(self.application.mongodb.scopes.find_one,
+                                       { '_id':instance['scid'] })
+                world = yield motor.Op(self.application.mongodb.worlds.find_one,
+                                       { '_id':instance['wid'] })
+
+        locname = '(none)'
+        if loc:
+            locname = loc.get('name', '???')
+        worldname = '(none)'
+        if world:
+            worldname = world.get('name', '???')
+        scopetype = '(none)'
+        if scope:
+            scopetype = scope.get('type', '???')
+
+        playername = player.get('name', '???')
+        self.render('admin_player.html',
+                    player=player, playername=playername,
+                    playstate=playstate,
+                    isadmin=player.get('admin', False),
+                    isbuild=player.get('build', False),
+                    worldname=worldname, scopetype=scopetype, locname=locname)
+        
 class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
     """Handler for the websocket URI.
 

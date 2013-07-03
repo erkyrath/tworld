@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block page_title %}
+Admin: Player "{{ playername }}"
+{% end %}
+
+{% block body %}
+
+<h2><a href="/admin">Admin</a>: Player "{{ playername }}"</h2>
+
+<ul>
+<li>uid: {{ player['_id'] }}
+<li>name: {{ player['name'] }}
+<li>namekey: {{ player['namekey'] }}
+{% if isadmin %}<li>ADMINISTRATOR{% end %}
+{% if isbuild %}<li>builder{% end %}
+<li>email: {{ player['email'] }}
+<li>createtime: {{ player['createtime'] }}
+<li>pronoun: {{ player['pronoun'] }}
+<li>desc: {{ player['desc'] }}
+
+<li>playstate:
+ <ul>
+ <li>world: {{ worldname }}
+ <li>scope: {{ scopetype }}
+ <li>location: {{ locname }}
+ </ul>
+
+</ul>
+
+{% end %}
