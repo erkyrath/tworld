@@ -740,13 +740,13 @@ class EvalPropContext(object):
             if restype == 'text':
                 val = res.get('text', None)
                 if not val:
-                    raise ErrorMessageException('Text object lacks text')
+                    return ''
                 newval = yield self.evalobj(val, evaltype=EVALTYPE_TEXT)
                 return newval
             if restype == 'code':
                 val = res.get('text', None)
                 if not val:
-                    raise ErrorMessageException('Code object lacks text')
+                    return None
                 newval = yield self.evalobj(val, evaltype=EVALTYPE_CODE)
                 return newval
             # All other special objects are returned as-is.
@@ -765,7 +765,7 @@ class EvalPropContext(object):
         if restype == 'code':
             val = res.get('text', None)
             if not val:
-                raise ErrorMessageException('Code object lacks text')
+                return None
             newval = yield self.evalobj(val, evaltype=EVALTYPE_CODE)
             return newval
 
