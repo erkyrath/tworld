@@ -106,6 +106,7 @@ import twcommon.localize
 import twcommon.autoreload
 import tweblib.session
 import tweblib.handlers
+import tweblib.bhandlers
 import tweblib.connections
 import tweblib.servers
 
@@ -128,15 +129,15 @@ handlers = [
     (r'/recover', tweblib.handlers.RecoverHandler),
     (r'/logout', tweblib.handlers.LogOutHandler),
     (r'/play', tweblib.handlers.PlayHandler),
-    (r'/build', tweblib.handlers.BuildMainHandler),
-    (r'/build/world/([0-9a-f]+)', tweblib.handlers.BuildWorldHandler),
-    (r'/build/loc/([0-9a-f]+)', tweblib.handlers.BuildLocHandler),
-    (r'/build/addworld', tweblib.handlers.BuildAddWorldHandler),
-    (r'/build/addloc', tweblib.handlers.BuildAddLocHandler),
-    (r'/build/delloc', tweblib.handlers.BuildDelLocHandler),
-    (r'/build/addprop', tweblib.handlers.BuildAddPropHandler),
-    (r'/build/setprop', tweblib.handlers.BuildSetPropHandler),
-    (r'/build/setdata', tweblib.handlers.BuildSetDataHandler),
+    (r'/build', tweblib.bhandlers.BuildMainHandler),
+    (r'/build/world/([0-9a-f]+)', tweblib.bhandlers.BuildWorldHandler),
+    (r'/build/loc/([0-9a-f]+)', tweblib.bhandlers.BuildLocHandler),
+    (r'/build/addworld', tweblib.bhandlers.BuildAddWorldHandler),
+    (r'/build/addloc', tweblib.bhandlers.BuildAddLocHandler),
+    (r'/build/delloc', tweblib.bhandlers.BuildDelLocHandler),
+    (r'/build/addprop', tweblib.bhandlers.BuildAddPropHandler),
+    (r'/build/setprop', tweblib.bhandlers.BuildSetPropHandler),
+    (r'/build/setdata', tweblib.bhandlers.BuildSetDataHandler),
     (r'/admin', tweblib.handlers.AdminMainHandler),
     (r'/websocket', tweblib.handlers.PlayWebSocketHandler),
     ]
