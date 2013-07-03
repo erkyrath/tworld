@@ -149,15 +149,30 @@ interp_node_table = {
     '$elif': lambda val: ElIf(val),
     '$else': (Else,),
     '$end': (End,),
+    
     '$name': (PlayerRef, 'name'),  ### val may be an expression
-    '$Name': (PlayerRef, 'name'),  ### val may be an expression
+    '$Name': (PlayerRef, 'name'),  ### ditto below
     '$we': (PlayerRef, 'we'),
+    '$they': (PlayerRef, 'we'),
     '$us': (PlayerRef, 'us'),
+    '$them': (PlayerRef, 'us'),
     '$our': (PlayerRef, 'our'),
+    '$their': (PlayerRef, 'our'),
     '$ours': (PlayerRef, 'ours'),
+    '$theirs': (PlayerRef, 'ours'),
     '$ourself': (PlayerRef, 'ourself'),
+    '$themself': (PlayerRef, 'ourself'),
     '$We': (PlayerRef, 'We'),
+    '$They': (PlayerRef, 'We'),
+    '$Us': (PlayerRef, 'Us'),
+    '$Them': (PlayerRef, 'Us'),
     '$Our': (PlayerRef, 'Our'),
+    '$Their': (PlayerRef, 'Our'),
+    '$Ours': (PlayerRef, 'Ours'),
+    '$Theirs': (PlayerRef, 'Ours'),
+    '$Ourself': (PlayerRef, 'Ourself'),
+    '$Themself': (PlayerRef, 'Ourself'),
+    
     '$em': (Style, 'emph'),
     '$/em': (EndStyle, 'emph'),
     '$fixed': (Style, 'fixed'),
@@ -320,13 +335,7 @@ pronoun_map_we = {
     'they': 'they',
     'name': '', # suffix
     }
-pronoun_map_We = {
-    'he': 'He',
-    'she': 'She',
-    'it': 'It',
-    'they': 'They',
-    'name': '', # suffix
-    }
+pronoun_map_We = { key:val.capitalize() for (key, val) in pronoun_map_we.items() }
 pronoun_map_us = {
     'he': 'him',
     'she': 'her',
@@ -334,6 +343,7 @@ pronoun_map_us = {
     'they': 'them',
     'name': '', # suffix
     }
+pronoun_map_Us = { key:val.capitalize() for (key, val) in pronoun_map_us.items() }
 pronoun_map_our = {
     'he': 'his',
     'she': 'her',
@@ -341,13 +351,7 @@ pronoun_map_our = {
     'they': 'their',
     'name': "'s", # suffix
     }
-pronoun_map_Our = {
-    'he': 'His',
-    'she': 'Her',
-    'it': 'Its',
-    'they': 'Their',
-    'name': "'s", # suffix
-    }
+pronoun_map_Our = { key:val.capitalize() for (key, val) in pronoun_map_our.items() }
 pronoun_map_ours = {
     'he': 'his',
     'she': 'hers',
@@ -355,6 +359,7 @@ pronoun_map_ours = {
     'they': 'theirs',
     'name': "'s", # suffix
     }
+pronoun_map_Ours = { key:val.capitalize() for (key, val) in pronoun_map_ours.items() }
 pronoun_map_ourself = {
     'he': 'himself',
     'she': 'herself',
@@ -362,14 +367,19 @@ pronoun_map_ourself = {
     'they': 'themself',
     'name': '', # suffix
     }
+pronoun_map_Ourself = { key:val.capitalize() for (key, val) in pronoun_map_ourself.items() }
+
 pronoun_map_map = {
     'we': pronoun_map_we,
     'We': pronoun_map_We,
     'us': pronoun_map_us,
+    'Us': pronoun_map_Us,
     'our': pronoun_map_our,
     'Our': pronoun_map_Our,
     'ours': pronoun_map_ours,
+    'Ours': pronoun_map_Ours,
     'ourself': pronoun_map_ourself,
+    'Ourself': pronoun_map_Ourself,
     }
 
 def resolve_pronoun(player, mapkey):
@@ -392,7 +402,40 @@ def resolve_pronoun(player, mapkey):
 import unittest
 
 class TestInterpModule(unittest.TestCase):
-    
+
+    def test_pronoun(self):
+        player = {'name':'Fred', 'pronoun':'he'}
+        self.assertEqual('he', resolve_pronoun(player, 'we'))
+        self.assertEqual('him', resolve_pronoun(player, 'us'))
+        self.assertEqual('his', resolve_pronoun(player, 'our'))
+        self.assertEqual('His', resolve_pronoun(player, 'Our'))
+        self.assertEqual('His', resolve_pronoun(player, 'Ours'))
+        self.assertEqual('Himself', resolve_pronoun(player, 'Ourself'))
+
+        player = {'name':'Fred', 'pronoun':'she'}
+        self.assertEqual('She', resolve_pronoun(player, 'We'))
+        self.assertEqual('Her', resolve_pronoun(player, 'Us'))
+        self.assertEqual('Her', resolve_pronoun(player, 'Our'))
+        self.assertEqual('her', resolve_pronoun(player, 'our'))
+        self.assertEqual('hers', resolve_pronoun(player, 'ours'))
+        self.assertEqual('herself', resolve_pronoun(player, 'ourself'))
+
+        player = {'name':'Fred', 'pronoun':'name'}
+        self.assertEqual('Fred', resolve_pronoun(player, 'we'))
+        self.assertEqual('Fred', resolve_pronoun(player, 'us'))
+        self.assertEqual('Fred\'s', resolve_pronoun(player, 'our'))
+        self.assertEqual('Fred\'s', resolve_pronoun(player, 'Our'))
+        self.assertEqual('Fred\'s', resolve_pronoun(player, 'Ours'))
+        self.assertEqual('Fred', resolve_pronoun(player, 'Ourself'))
+
+        player = {'name':'Fred', 'pronoun':'they'}
+        self.assertEqual('They', resolve_pronoun(player, 'We'))
+        self.assertEqual('Them', resolve_pronoun(player, 'Us'))
+        self.assertEqual('Their', resolve_pronoun(player, 'Our'))
+        self.assertEqual('their', resolve_pronoun(player, 'our'))
+        self.assertEqual('theirs', resolve_pronoun(player, 'ours'))
+        self.assertEqual('themself', resolve_pronoun(player, 'ourself'))
+
     def test_parse(self):
         ls = parse('hello')
         self.assertEqual(ls, ['hello'])
