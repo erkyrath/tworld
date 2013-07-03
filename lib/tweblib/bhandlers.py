@@ -281,13 +281,19 @@ class BuildSetPropHandler(BuildBaseHandler):
             else:
                 prop = { '_id':propid, 'key':key, 'wid':wid, 'locid':locid }
                 
-            # Fetch the current version of the property (possibly None)
+            # Fetch the current version of the property (possibly None).
+            # Also check for a version with the same key-name (also may be
+            # None).
             if loc == '$player':
                 # We can only edit all-player wplayerprops here.
                 oprop = yield motor.Op(self.application.mongodb.wplayerprop.find_one,
+                                       { '_id':propid })
+                kprop = yield motor.Op(self.application.mongodb.wplayerprop.find_one,
                                        { 'wid':wid, 'uid':None, 'key':key })
             else:
                 oprop = yield motor.Op(self.application.mongodb.worldprop.find_one,
+                                       { '_id':propid })
+                kprop = yield motor.Op(self.application.mongodb.worldprop.find_one,
                                        { 'wid':wid, 'locid':locid, 'key':key })
 
             if self.get_argument('delete', False):
@@ -328,28 +334,36 @@ class BuildSetPropHandler(BuildBaseHandler):
 
             # Make sure this doesn't collide with an existing key (in a
             # different property).
-            if oprop and oprop['_id'] != propid:
+            if kprop and kprop['_id'] != propid:
                 raise Exception('A property with that key already exists.')
 
             if oprop:
                 ### push into trash queue
                 pass ###
-            
+
+            dependency2 = None
             # And now we write it.
             if loc == '$player':
                 yield motor.Op(self.application.mongodb.wplayerprop.update,
                                { '_id':propid }, prop, upsert=True)
                 dependency = ('wplayerprop', wid, None, key)
+                if oprop and key != oprop['key']:
+                    dependency2 = ('wplayerprop', wid, None, oprop['key'])
             else:
                 yield motor.Op(self.application.mongodb.worldprop.update,
                                { '_id':propid }, prop, upsert=True)
                 dependency = ('worldprop', wid, locid, key)
+                if oprop and key != oprop['key']:
+                    dependency2 = ('worldprop', wid, locid, oprop['key'])
 
             # Send dependency key to tworld
             try:
                 encoder = JSONEncoderExtra()
                 depmsg = encoder.encode({ 'cmd':'notifydatachange', 'change':dependency })
                 self.application.twservermgr.tworld_write(0, depmsg)
+                if dependency2:
+                    depmsg = encoder.encode({ 'cmd':'notifydatachange', 'change':dependency2 })
+                    self.application.twservermgr.tworld_write(0, depmsg)
             except Exception as ex:
                 self.application.twlog.warning('Unable to notify tworld of data change: %s', ex)
 
@@ -383,12 +397,12 @@ class BuildAddPropHandler(BuildBaseHandler):
             while True:
                 key = 'key_%d' % (counter,)
                 if loc == '$player':
-                    oprop = yield motor.Op(self.application.mongodb.wplayerprop.find_one,
+                    kprop = yield motor.Op(self.application.mongodb.wplayerprop.find_one,
                                        { 'wid':wid, 'uid':None, 'key':key })
                 else:
-                    oprop = yield motor.Op(self.application.mongodb.worldprop.find_one,
+                    kprop = yield motor.Op(self.application.mongodb.worldprop.find_one,
                                        { 'wid':wid, 'locid':locid, 'key':key })
-                if not oprop:
+                if not kprop:
                     break
                 counter = counter+1
                 if counter >= 5:
