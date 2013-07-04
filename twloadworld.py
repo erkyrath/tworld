@@ -80,6 +80,7 @@ if '--removeworld' in args:
 if opts.python_path:
     sys.path.insert(0, opts.python_path)
 
+import twcommon.access
 import two.interp
 from twcommon.misc import sluggify
 
@@ -374,6 +375,10 @@ def transform_prop(world, db, val):
     if type(val) is not dict:
         return val
     key = val.get('type', None)
+
+    if key == 'editstr':
+        if 'editaccess' in val:
+            val['editaccess'] = twcommon.access.level_named(val['editaccess'])
     
     if key == 'portal':
         quad = val['_tempquad']

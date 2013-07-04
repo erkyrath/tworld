@@ -577,7 +577,7 @@ def define_commands():
     @command('meta_scopeaccess', restrict='debug')
     def cmd_meta_scopeaccess(app, task, cmd, conn):
         loctx = yield task.get_loctx(conn.uid)
-        level = yield two.execute.scope_access_level(app, conn.uid, loctx.scid)
+        level = yield two.execute.scope_access_level(app, conn.uid, loctx.wid, loctx.scid)
         val = 'Access level to current scope: %s' % (level,)
         conn.write({'cmd':'message', 'text':val})        
 

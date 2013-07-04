@@ -292,6 +292,9 @@ class EvalPropContext(object):
         if self.depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'editstr':
             assert self.accum is not None, 'EvalPropContext.accum should not be None here'
             try:
+                level = yield two.execute.scope_access_level(self.app, self.uid, self.loctx.wid, self.loctx.scid)
+                if level < res.get('editaccess', ACC_MEMBER):
+                    return self.app.localize('message.widget_no_access')
                 extratext = None
                 val = res.get('label', None)
                 if val:
@@ -1068,5 +1071,6 @@ def str_or_null(res):
     return str(res)
 
 # Late imports, to avoid circularity
+from twcommon.access import ACC_VISITOR, ACC_MEMBER
 import two.execute
 from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_POPULACE, DIRTY_FOCUS

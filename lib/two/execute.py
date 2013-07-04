@@ -386,9 +386,28 @@ class WorldLocationsProxy(PropertyProxyMixin, object):
 
 
 @tornado.gen.coroutine
-def scope_access_level(app, uid, scid):
-    """Check the access level of the given player to the given scope.
+def scope_access_level(app, uid, wid, scid):
+    """Check the access level of the given player to the given world and
+    scope.
+    If the scope is global, the world creator has creator access, everybody
+    else is a visitor.
+    If the scope is personal, the owner has creator access. (This is actually
+    in the scopeaccess table, but we special-case it anyhow.)
+    Otherwise, check the scopeaccess table.
     """
+    scope = yield motor.Op(app.mongodb.scopes.find_one,
+                         {'_id':scid},
+                         {'type':1, 'level':1})
+    if scope['type'] == 'glob':
+        world = yield motor.Op(app.mongodb.worlds.find_one,
+                               {'_id':wid})
+        if world and world['creator'] == uid:
+            return ACC_CREATOR
+        return ACC_VISITOR
+
+    if scope['type'] == 'pers' and scope.get('uid', None) == uid:
+        return ACC_CREATOR
+    
     res = yield motor.Op(app.mongodb.scopeaccess.find_one,
                          {'uid':uid, 'scid':scid},
                          {'level':1})
@@ -1101,5 +1120,5 @@ from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_POPULACE, DIRTY
 from two.evalctx import EvalPropContext
 from two.evalctx import EVALTYPE_SYMBOL, EVALTYPE_RAW, EVALTYPE_CODE, EVALTYPE_TEXT
 from two.evalctx import LEVEL_EXECUTE, LEVEL_DISPSPECIAL, LEVEL_DISPLAY, LEVEL_MESSAGE, LEVEL_FLAT, LEVEL_RAW
-from twcommon.access import ACC_VISITOR
+from twcommon.access import ACC_VISITOR, ACC_CREATOR
 import two.symbols

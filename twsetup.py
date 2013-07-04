@@ -298,6 +298,7 @@ message.no_portaldesc: The destination is hazy.
 message.copy_already_have: This portal is already in your collection.
 message.copy_ok: You copy the portal to your collection.
 message.delete_own_portal_ok: You remove the portal from your collection.
+message.widget_no_access: You do not have permission to edit this.
 
 """
 
