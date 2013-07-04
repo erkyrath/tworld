@@ -19,6 +19,7 @@ import tornado.httputil
 import motor
 
 import twcommon.misc
+import twcommon.access
 from twcommon.excepts import MessageException
 from twcommon.misc import sluggify
 
@@ -154,6 +155,10 @@ class SessionMgr(object):
         yield motor.Op(self.app.mongodb.players.update,
                        {'_id':uid},
                        {'$set': {'scid': scid}})
+
+        # And give the player full access to it
+        yield motor.Op(self.app.mongodb.scopeaccess.insert,
+                       {'uid':uid, 'scid':scid, 'level':twcommon.access.ACC_CREATOR})
 
         # Create a personal portlist (booklet) for the player.
         portlist = {

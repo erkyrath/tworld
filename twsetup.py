@@ -13,7 +13,7 @@ schema to the current version. Use the --upgradedb option in this case.
 """
 
 # The database version created by this version of the script.
-DBVERSION = 2
+DBVERSION = 3
 
 import sys
 import os
@@ -61,6 +61,7 @@ opts = tornado.options.options
 if opts.python_path:
     sys.path.insert(0, opts.python_path)
 
+import twcommon.access
 from twcommon.misc import sluggify
 
 
@@ -91,6 +92,13 @@ def upgrade_to_v2():
         namekey = sluggify(player['name'])
         db.players.update({'_id':player['_id']}, {'$set':{'namekey':namekey}})
 
+def upgrade_to_v3():
+    print('Upgrading to v3...')
+    cursor = db.players.find({}, {'scid':1})
+    for player in cursor:
+        db.scopeaccess.update({'uid':player['_id'], 'scid':player['scid']},
+                              {'uid':player['_id'], 'scid':player['scid'], 'level':twcommon.access.ACC_CREATOR}, upsert=True)
+
 # if curversion is None, we're brand-new.
 if curversion is not None and curversion < DBVERSION:
     if not opts.upgradedb:
@@ -98,6 +106,8 @@ if curversion is not None and curversion < DBVERSION:
         sys.exit(1)
     if curversion < 2:
         upgrade_to_v2()
+    if curversion < 3:
+        upgrade_to_v3()
     db.config.update({'key':'dbversion'},
                      {'key':'dbversion', 'val':DBVERSION}, upsert=True)
 else:
@@ -142,6 +152,9 @@ db.iplayerprop.create_index([('iid', pymongo.ASCENDING), ('uid', pymongo.ASCENDI
 # Sparse indexes
 db.portals.create_index('inwid', sparse=True)
 db.portals.create_index('plistid', sparse=True)
+
+# Compound index
+db.scopeaccess.create_index([('uid', pymongo.ASCENDING), ('scid', pymongo.ASCENDING)], unique=True)
 
 # Create some config entries if they don't exist, but leave them alone
 # if they do exist.
