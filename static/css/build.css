@@ -34,11 +34,6 @@
   background: #C0C0A0;
 }
 
-.BuildSectionHead {
-  font-weight: normal;
-  font-style: italic;
-}
-
 .BuildPropTableBox {
   margin-top: 1.5em;
   margin-bottom: 1.5em;
@@ -67,6 +62,10 @@
   padding-top: 2px;
   padding-bottom: 2px;
   border-top: 1px solid #D8D8C8;
+}
+
+.BuildStaticCell {
+  font-style: italic;
 }
 
 .BuildPropDirty {
