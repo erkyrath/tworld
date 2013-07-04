@@ -17,8 +17,9 @@ Admin View
 
 <h3>Connection Table: {{ len(conntable) }} websockets</h3>
 <ul>
-{% for (id, conn) in sorted(conntable.items()) %}
-  <li><a href="/admin/player/{{ conn.uid }}">{{ conn.email}}</a>, on {{ conn.uptime() }}, idle {{ conn.idletime() }} 
+{% for (id, conn) in sorted(conntable.items(), key=lambda tup:tup[1].email) %}
+  <li><a href="/admin/player/{{ conn.uid }}">{{ conn.email}}</a>,
+      on {{ conn.uptime() }}, idle {{ conn.idletime() }} 
       (connid {{ id }}, uid {{ conn.uid }}, sessionid ...{{ conn.sessionid[-4:] }})
   {% if not conn.available %} (unavailable) {% end %}
 {% end %}
