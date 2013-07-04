@@ -573,7 +573,14 @@ def define_commands():
     def cmd_meta_refresh(app, task, cmd, conn):
         conn.write({'cmd':'message', 'text':'Refreshing display...'})
         app.queue_command({'cmd':'connrefreshall', 'connid':conn.connid})
-        
+
+    @command('meta_scopeaccess', restrict='debug')
+    def cmd_meta_scopeaccess(app, task, cmd, conn):
+        loctx = yield task.get_loctx(conn.uid)
+        level = yield two.execute.scope_access_level(app, conn.uid, loctx.scid)
+        val = 'Access level to current scope: %s' % (level,)
+        conn.write({'cmd':'message', 'text':val})        
+
     @command('meta_actionmaps', restrict='debug')
     def cmd_meta_actionmaps(app, task, cmd, conn):
         val = 'Locale action map: %s' % (conn.localeactions,)

@@ -383,7 +383,19 @@ class WorldLocationsProxy(PropertyProxyMixin, object):
     @tornado.gen.coroutine
     def setprop(self, ctx, loctx, key, val):
         raise ExecSandboxException('%s.%s: locations cannot be assigned' % (type(self).__name__, key))
-    
+
+
+@tornado.gen.coroutine
+def scope_access_level(app, uid, scid):
+    """Check the access level of the given player to the given scope.
+    """
+    res = yield motor.Op(app.mongodb.scopeaccess.find_one,
+                         {'uid':uid, 'scid':scid},
+                         {'level':1})
+    if not res:
+        return ACC_VISITOR
+    return res.get('level', ACC_VISITOR)
+
 @tornado.gen.coroutine
 def portal_in_reach(app, portal, uid, wid):
     """Make sure that a portal (object) is reachable by the player (uid)
