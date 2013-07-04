@@ -6,13 +6,13 @@ ACC_OWNER   = 3
 ACC_CREATOR = 4
 
 map = {
-    'banned':  ACC_BANNED,
-    'visitor': ACC_VISITOR,
-    'member':  ACC_MEMBER,
-    'owner':   ACC_OWNER,
-    'creator': ACC_CREATOR,
+    'BANNED':  ACC_BANNED,
+    'VISITOR': ACC_VISITOR,
+    'MEMBER':  ACC_MEMBER,
+    'OWNER':   ACC_OWNER,
+    'CREATOR': ACC_CREATOR,
     }
 
 def level_named(val):
-    val = val.lower()
+    val = val.upper()
     return map[val]

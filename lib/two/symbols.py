@@ -426,6 +426,26 @@ def define_globals():
         """
         return random.randrange(start, stop=stop, step=1)
     
+    @scriptfunc('level', group='access', yieldy=True)
+    def global_access_level(player=None, level=None):
+        """Return the access level of the given player (or the current player)
+        in the given scope.
+        If level is given, returns whether this access level is at least
+        that value.
+        """
+        ctx = EvalPropContext.get_current_context()
+        if player is None:
+            if not ctx.uid:
+                raise Exception('No current player')
+            uid = ctx.uid
+        else:
+            uid = player.uid
+        acclevel = yield two.execute.scope_access_level(ctx.app, uid, ctx.loctx.wid, ctx.loctx.scid)
+        if level is None:
+            return acclevel
+        else:
+            return (acclevel >= level)
+    
     # Copy the collection of top-level functions.
     globmap = dict(ScriptFunc.funcgroups['_'])
     
@@ -441,6 +461,11 @@ def define_globals():
     
     map = dict(ScriptFunc.funcgroups['random'])
     globmap['random'] = ScriptNamespace(map)
+
+    map = dict(ScriptFunc.funcgroups['access'])
+    # Add in all the access level names (as uppercase symbols)
+    map.update(twcommon.access.map)
+    globmap['access'] = ScriptNamespace(map)
 
     #map = dict(ScriptFunc.funcgroups['datetime'])
     ### Need an approximate-delta-in-English function
@@ -560,6 +585,7 @@ def find_symbol(app, loctx, key, locals=None, dependencies=None):
 
 # Late imports, to avoid circularity
 from twcommon.misc import is_typed_dict
+import twcommon.access
 import two.interp
 import two.execute
 import two.ipool
