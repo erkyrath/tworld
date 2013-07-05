@@ -99,6 +99,12 @@ def upgrade_to_v3():
         db.scopeaccess.update({'uid':player['_id'], 'scid':player['scid']},
                               {'uid':player['_id'], 'scid':player['scid'], 'level':twcommon.access.ACC_CREATOR}, upsert=True)
 
+### upgrade_to_v4:
+### remove all portals with {inwid:{$gt:ObjectId("000000000000000000000000")}}
+### remove the sparse indexes on inwid, plistid
+### set iid:None for all portals
+### in indexes: add compound index on plistid, iid
+
 # if curversion is None, we're brand-new.
 if curversion is not None and curversion < DBVERSION:
     if not opts.upgradedb:
@@ -294,6 +300,7 @@ action.oportin: %s appears.
 action.oleave: %s leaves.
 action.oarrive: %s arrives.
 
+message.desc_own_portlist: You consult your portal collection.
 message.instance_no_access: You do not have access to this instance.
 message.panic_portal_set: Panic portal set to %s, %s.
 message.no_portaldesc: The destination is hazy.

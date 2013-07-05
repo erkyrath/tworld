@@ -283,7 +283,10 @@ def parse_prop(prop):
         if key == 'portlist':
             order = World.portlist_define_order
             World.portlist_define_order += 1
-            return {'type':'portlist', '_templist':[], '_temporder':order}
+            res = {'type':'portlist', '_templist':[], '_temporder':order}
+            if 'single' in val.split():
+                res['single'] = True
+            return res
         
         if not val and key != 'code':
             error('%s must be followed by a value' % (key,))
@@ -307,7 +310,7 @@ def parse_prop(prop):
             return {'type':'selfdesc', 'text':val}
         elif key == 'editstr':
             return {'type':'editstr', 'key':val}
-        elif key == 'portal':
+        elif key == 'portal': ###delete
             subls = [ subval.strip() for subval in val.split(',') ]
             if len(subls) != 4:
                 error('Portal property must have four fields')
@@ -366,7 +369,7 @@ def append_to_prop(dic, key, ln, indent=0):
     elif type(val) is dict and 'text' in val:
         # Covers {text}, {event}
         val['text'] += ('\n\n' + ln)
-    elif type(val) is dict and val.get('type', None) == 'portal':
+    elif type(val) is dict and val.get('type', None) == 'portal': ###delete
         val['text'] = ln
     else:
         error('Cannot append to property %s' % (key,))
@@ -380,7 +383,7 @@ def transform_prop(world, db, val):
         if 'editaccess' in val:
             val['editaccess'] = twcommon.access.level_named(val['editaccess'])
     
-    if key == 'portal':
+    if key == 'portal': ###delete
         quad = val['_tempquad']
         tocreator = db.players.find_one({'name':quad[1]})
         if not tocreator:
@@ -417,8 +420,9 @@ def transform_prop(world, db, val):
             plistid = db.portlists.insert({'type':'world', 'wid':world.wid})
             print('Created portlist (%s)' % (plistid,))
         # Clean out the portlist and rebuild it
-        db.portals.remove({'plistid':plistid})
+        db.portals.remove({'plistid':plistid}) ####not instance-level!
         listpos = 0.0
+        portid = None
         for quad in val['_templist']:
             tocreator = db.players.find_one({'name':quad[1]})
             if not tocreator:
@@ -444,6 +448,8 @@ def transform_prop(world, db, val):
         newval = { 'type':'portlist', 'plistid':plistid }
         if 'text' in val:
             newval['text'] = val['text']
+        if 'single' in val and portid:
+            newval['focusport'] = portid
         return newval
             
     
@@ -470,7 +476,7 @@ def prop_to_string(val):
     if key == 'selfdesc':
         res = '*selfdesc %s' % (val['text'],)
         return res
-    if key == 'portal':
+    if key == 'portal': ###delete
         res = '*portal %s' % (', '.join(val['_tempquad']),)
         if 'text' in val:
             res += ('\n\t- text: ' + val['text'])

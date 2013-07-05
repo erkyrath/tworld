@@ -316,8 +316,9 @@ class EvalPropContext(object):
             except Exception as ex:
                 self.task.log.warning('Caught exception (editstr): %s', ex, exc_info=self.app.debugstacktraces)
                 return '[Exception: %s]' % (ex,)
-                
-        if self.depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'portal':
+
+        ####delete? probably
+        if False: ####self.depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'portal':
             assert self.accum is not None, 'EvalPropContext.accum should not be None here'
             assert self.parentdepth == 0, 'EvalPropContext.parentdepth should be zero if depth is zero'
             try:
@@ -366,12 +367,15 @@ class EvalPropContext(object):
                 self.task.log.warning('Caught exception (portal): %s', ex, exc_info=self.app.debugstacktraces)
                 return '[Exception: %s]' % (ex,)
 
-        if self.depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'portlist':
+        if False: ####self.depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'portlist':
             assert self.accum is not None, 'EvalPropContext.accum should not be None here'
             try:
+                level = yield two.execute.scope_access_level(self.app, self.uid, self.loctx.wid, self.loctx.scid)
+                if level < res.get('readaccess', ACC_VISITOR):
+                    return self.app.localize('message.widget_no_access')
                 plistid = res.get('plistid', None)
                 extratext = None
-                val = res.get('text', None)
+                val = res.get('text', None) ####label?
                 if val:
                     # Look up the extra text in a separate context.
                     ctx = EvalPropContext(self.task, parent=self, level=LEVEL_DISPLAY)
@@ -381,7 +385,7 @@ class EvalPropContext(object):
                                           {'_id':plistid})
                 if not portlist or portlist['wid'] != self.loctx.wid:
                     raise ErrorMessageException('This portal list is not available.')
-                cursor = self.app.mongodb.portals.find({'plistid':plistid})
+                cursor = self.app.mongodb.portals.find({'plistid':plistid}) ###check instance-level portals!
                 ls = []
                 while (yield cursor.fetch_next):
                     portal = cursor.next_object()
@@ -757,7 +761,7 @@ class EvalPropContext(object):
             # All other special objects are returned as-is.
             return res
         
-        if restype in ('text', 'portal', 'portlist', 'selfdesc', 'editstr'):
+        if restype in ('text', 'selfdesc', 'editstr'):
             # Set focus to this symbol-name
             yield motor.Op(self.app.mongodb.playstate.update,
                            {'_id':uid},
@@ -765,8 +769,26 @@ class EvalPropContext(object):
             self.task.set_dirty(uid, DIRTY_FOCUS)
             return None
 
-        ### 'focus'?
-        
+        if restype == 'portlist':
+            # Set focus to an ugly special-case array
+            plistid = res.get('plistid', None)
+            if not plistid:
+                raise ErrorMessageException('portlist property has no plistid')
+            
+            level = yield two.execute.scope_access_level(self.app, self.uid, self.loctx.wid, self.loctx.scid)
+            if level < res.get('readaccess', ACC_VISITOR):
+                raise MessageException(self.app.localize('message.widget_no_access'))
+            editable = (level < res.get('editaccess', ACC_MEMBER))
+            extratext = res.get('text', None)
+            focusport = res.get('focusport', None)
+            withback = (focusport is None)
+            arr = ['portlist', plistid, editable, extratext, withback, focusport]
+            yield motor.Op(self.app.mongodb.playstate.update,
+                           {'_id':uid},
+                           {'$set':{'focus':arr}})
+            self.task.set_dirty(uid, DIRTY_FOCUS)
+            return None
+
         if restype == 'code':
             val = res.get('text', None)
             if not val:

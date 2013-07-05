@@ -717,9 +717,6 @@ def render_focus(task, loctx, conn, focusobj):
     evaltype = EVALTYPE_SYMBOL
 
     assert conn.uid == loctx.uid
-    wid = loctx.wid
-    iid = loctx.iid
-    locid = loctx.locid
     
     if type(focusobj) is list:
         restype = focusobj[0]
@@ -735,16 +732,105 @@ def render_focus(task, loctx, conn, focusobj):
             conn.focusdependencies.add( ('players', focusobj[1], 'name') )
             return (focusdesc, False)
         
-        if restype == 'portal':
-            evaltype = EVALTYPE_RAW
-            arr = focusobj
-            focusobj = {'type':'portal', 'portid':arr[1]}
-            if len(arr) >= 3:
-                focusobj['backto'] = arr[2]
-            pass   # Fall through to EvalPropContext code below
-        else:
-            focusdesc = '[Focus: %s]' % (focusobj,)
-            return (focusdesc, False)
+        if restype == 'portlist':
+            # We've already checked access level (if indeed this portlist
+            # focus array came from a {portlist} with a readaccess level).
+            task.log.debug('### portlist focus: %s', (focusobj,))
+            (dummy, plistid, editable, extratext, withback, portid) = focusobj
+            
+            if extratext:
+                # Look up the extra text in a separate context.
+                ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_DISPLAY)
+                extratext = yield ctx.eval(extratext, evaltype=EVALTYPE_TEXT)
+                if ctx.linktargets:
+                    conn.focusactions.update(ctx.linktargets)
+                if ctx.dependencies:
+                    conn.focusdependencies.update(ctx.dependencies)
+
+            portlist = yield motor.Op(task.app.mongodb.portlists.find_one,
+                                      {'_id':plistid})
+            if not portlist:
+                raise ErrorMessageException('No such portal list.')
+            if 'uid' in portlist and portlist['uid'] != conn.uid:
+                raise ErrorMessageException('This portal list is not yours.')
+            if 'wid' in portlist and portlist['wid'] != loctx.wid:
+                raise ErrorMessageException('This portal list is not available.')
+
+            if portid:
+                # We are focussed on a predetermined portal in the list.
+                # Render it.
+                portal = yield motor.Op(task.app.mongodb.portals.find_one,
+                                        {'_id':portid})
+                if not portal:
+                    raise ErrorMessageException('No such portal.')
+                if portal.get('plistid', None) != plistid:
+                    raise ErrorMessageException('Portal does not match portlist.')
+
+                if withback:
+                    # If the player has poked into a bookshelf, show the
+                    # back link (but not the bookshelf description).
+                    backkey = 'plistback' + EvalPropContext.build_action_key()
+                    conn.focusactions[backkey] = ('focusportal', None, plistid)
+                    extratext = None
+                else:
+                    # Got here by an autofocus portlist, or by selecting from
+                    # the player's personal portlist.
+                    backkey = None
+                
+                yield two.execute.portal_in_reach(task.app, portal, conn.uid, loctx.wid)
+                portalobj = yield two.execute.portal_description(task.app, portal, conn.uid, uidiid=loctx.iid, location=True)
+                portalobj['portid'] = str(portal['_id'])
+                ackey = 'port' + EvalPropContext.build_action_key()
+                conn.focusactions[ackey] = ('portal', portid)
+                if portalobj.get('copyable', False):
+                    copykey = 'copy' + EvalPropContext.build_action_key()
+                    conn.focusactions[copykey] = ('copyportal', portid)
+                    portalobj['copyable'] = copykey
+                    
+                altloctx = two.task.LocContext(None, wid=portal['wid'], locid=portal['locid'])
+                ctx = EvalPropContext(task, loctx=altloctx, level=LEVEL_FLAT)
+                try:
+                    desttext = yield ctx.eval('portaldesc')
+                except:
+                    desttext = None
+                # This is a dependency on 'portaldesc', whether or not the
+                # property was found.
+                if ctx.linktargets:
+                    conn.focusactions.update(ctx.linktargets)
+                if ctx.dependencies:
+                    conn.focusdependencies.update(ctx.dependencies)
+                
+                if not desttext:
+                    desttext = task.app.localize('message.no_portaldesc') # 'The destination is hazy.'
+                portalobj['view'] = desttext;
+                specres = ['portal', ackey, portalobj, backkey, extratext]
+                return (specres, True)
+
+            # Render the portlist.
+            cursor = task.app.mongodb.portals.find({'plistid':plistid}) ###include instance-level portals!
+            ls = []
+            while (yield cursor.fetch_next):
+                portal = cursor.next_object()
+                ls.append(portal)
+            cursor.close()
+            ls.sort(key=lambda portal:portal.get('listpos', 0))
+            
+            subls = []
+            for portal in ls:
+                desc = yield two.execute.portal_description(task.app, portal, conn.uid, uidiid=loctx.iid)
+                if not desc:
+                    continue
+                ackey = 'plist' + EvalPropContext.build_action_key()
+                conn.focusactions[ackey] = ('focusportal', portal['_id'], plistid)
+                desc['target'] = ackey
+                subls.append(desc)
+                
+            specres = ['portlist', subls, extratext]
+            return (specres, True)
+
+        # Unknown format, complain
+        focusdesc = '[Focus: %s]' % (focusobj,)
+        return (focusdesc, False)
 
     ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_DISPSPECIAL)
     focusdesc = yield ctx.eval(focusobj, evaltype=evaltype)
@@ -828,6 +914,7 @@ def generate_update(task, conn, dirty):
             ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_DISPLAY)
             localedesc = yield ctx.eval('desc')
         except Exception as ex:
+            task.log.warning('Exception rendering locale: %s', ex, exc_info=app.debugstacktraces)
             localedesc = '[Exception: %s]' % (str(ex),)
         
         if ctx.linktargets:
@@ -905,6 +992,7 @@ def generate_update(task, conn, dirty):
             focusobj = playstate.get('focus', None)
             (focusdesc, focusspecial) = yield render_focus(task, loctx, conn, focusobj)
         except Exception as ex:
+            task.log.warning('Exception rendering focus: %s', ex, exc_info=app.debugstacktraces)
             focusdesc = '[Exception: %s]' % (str(ex),)
             focusspecial = False
 
@@ -947,7 +1035,7 @@ def perform_action(task, cmd, conn, target):
             task.set_dirty(uid, DIRTY_FOCUS)
             return
 
-        if restype == 'focus':
+        if False: ####restype == 'focus':
             obj = list(target[1:])
             yield motor.Op(app.mongodb.playstate.update,
                            {'_id':uid},
@@ -981,6 +1069,24 @@ def perform_action(task, cmd, conn, target):
                 ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_MESSAGE)
                 val = yield ctx.eval(otext, evaltype=EVALTYPE_TEXT)
                 task.write_event(others, val)
+            return
+            
+        if restype == 'focusportal':
+            # Change the current (portlist) focus to a specific entry in
+            # that portlist.
+            res = yield motor.Op(app.mongodb.playstate.find_one,
+                                 {'_id':uid},
+                                 {'focus':1})
+            curfocus = res.get('focus', None)
+            # Make sure the current focus really is the mentioned portlist.
+            if not curfocus or type(curfocus) != list or curfocus[0] != 'portlist' or curfocus[1] != target[2]:
+                raise ErrorMessageException('Portal list does not match action.')
+            curfocus[5] = target[1] # may be None
+            
+            yield motor.Op(app.mongodb.playstate.update,
+                           {'_id':uid},
+                           {'$set':{'focus':curfocus}})
+            task.set_dirty(uid, DIRTY_FOCUS)
             return
             
         if restype == 'copyportal':

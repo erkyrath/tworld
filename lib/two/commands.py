@@ -823,11 +823,13 @@ def define_commands():
         player = yield motor.Op(app.mongodb.players.find_one,
                                 {'_id':conn.uid},
                                 {'plistid':1})
+        plistid = player['plistid']
         portal = yield motor.Op(app.mongodb.portals.find_one,
-                                {'_id':ObjectId(cmd.portid), 'plistid':player['plistid']})
+                                {'_id':ObjectId(cmd.portid), 'plistid':plistid})
         if not portal:
             raise ErrorMessageException('No such portal in your collection.')
-        focusobj = ['portal', portal['_id'], None, None]
+        msg = app.localize('message.desc_own_portlist')
+        focusobj = ['portlist', plistid, False, msg, False, portal['_id']]
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':conn.uid},
                        {'$set':{'focus':focusobj}})
