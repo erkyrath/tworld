@@ -215,6 +215,8 @@ else:
     db.players.update({'_id':adminuid},
                       {'$set': {'scid': scid}})
 
+    db.scopeaccess.insert({'uid':adminuid, 'scid':scid, 'level':twcommon.access.ACC_CREATOR})
+
 
 # The starting world (solo).
 
