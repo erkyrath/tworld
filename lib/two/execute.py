@@ -735,7 +735,7 @@ def render_focus(task, loctx, conn, focusobj):
         if restype == 'portlist':
             # We've already checked access level (if indeed this portlist
             # focus array came from a {portlist} with a readaccess level).
-            task.log.debug('### portlist focus: %s', (focusobj,))
+            task.log.debug('#### portlist focus: %s', (focusobj,))
             (dummy, plistid, editable, extratext, withback, portid) = focusobj
             
             if extratext:
@@ -1035,14 +1035,6 @@ def perform_action(task, cmd, conn, target):
             task.set_dirty(uid, DIRTY_FOCUS)
             return
 
-        if False: ####restype == 'focus':
-            obj = list(target[1:])
-            yield motor.Op(app.mongodb.playstate.update,
-                           {'_id':uid},
-                           {'$set':{'focus':obj}})
-            task.set_dirty(uid, DIRTY_FOCUS)
-            return
-        
         if restype == 'editstr':
             key = target[1]
             text = target[2]

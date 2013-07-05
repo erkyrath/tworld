@@ -310,12 +310,6 @@ def parse_prop(prop):
             return {'type':'selfdesc', 'text':val}
         elif key == 'editstr':
             return {'type':'editstr', 'key':val}
-        elif key == 'portal': ###delete
-            subls = [ subval.strip() for subval in val.split(',') ]
-            if len(subls) != 4:
-                error('Portal property must have four fields')
-                return None
-            return {'type':'portal', '_tempquad':subls}
         elif key == 'datetime':
             val = datetime.datetime.strptime(val, '%Y-%m-%d')
             return datetime.datetime(year=val.year, month=val.month, day=val.day, tzinfo=datetime.timezone.utc)
@@ -369,8 +363,6 @@ def append_to_prop(dic, key, ln, indent=0):
     elif type(val) is dict and 'text' in val:
         # Covers {text}, {event}
         val['text'] += ('\n\n' + ln)
-    elif type(val) is dict and val.get('type', None) == 'portal': ###delete
-        val['text'] = ln
     else:
         error('Cannot append to property %s' % (key,))
 
@@ -383,36 +375,6 @@ def transform_prop(world, db, val):
         if 'editaccess' in val:
             val['editaccess'] = twcommon.access.level_named(val['editaccess'])
     
-    if key == 'portal': ###delete
-        quad = val['_tempquad']
-        tocreator = db.players.find_one({'name':quad[1]})
-        if not tocreator:
-            error('Creator not found for portal: %s, %s' % (quad[0], quad[1]))
-            return '[Portal world creator not found]'
-        toworld = db.worlds.find_one({'name':quad[0], 'creator':tocreator['_id']})
-        if not toworld:
-            error('World not found for portal: %s, %s' % (quad[0], quad[1]))
-            return '[Portal world not found]'
-        toloc = db.locations.find_one({'wid':toworld['_id'], 'key':quad[3]})
-        if not toloc:
-            error('Location not found for portal: %s, %s' % (quad[0], quad[3]))
-            return '[Portal location not found]'
-        query = { 'inwid':world.wid, 'wid':toworld['_id'], 'locid':toloc['_id'] }
-        if quad[2] in ('personal', 'global', 'same'):
-            query['scid'] = quad[2]
-        else:
-            query['scid'] = ObjectId(quad[2])
-        portal = db.portals.find_one(query)
-        if portal:
-            portid = portal['_id']
-        else:
-            portid = db.portals.insert(query)
-            print('Created portal %s (%s)' % (quad, portid,))
-        newval = { 'type':'portal', 'portid':portid }
-        if 'text' in val:
-            newval['text'] = val['text']
-        return newval
-
     if key == 'portlist':
         if val['_temporder'] < len(world.allportlists):
             plistid = world.allportlists[val['_temporder']]['_id']
@@ -475,11 +437,6 @@ def prop_to_string(val):
         return res
     if key == 'selfdesc':
         res = '*selfdesc %s' % (val['text'],)
-        return res
-    if key == 'portal': ###delete
-        res = '*portal %s' % (', '.join(val['_tempquad']),)
-        if 'text' in val:
-            res += ('\n\t- text: ' + val['text'])
         return res
     if key == 'text':
         val = val['text']
