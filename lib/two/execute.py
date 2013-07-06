@@ -861,6 +861,11 @@ def render_focus(task, loctx, conn, focusobj):
                 ls.append(portal)
             cursor.close()
             ls.sort(key=lambda portal:portal.get('listpos', 0))
+
+            # Note the dependencies on the world and instance portlist.
+            conn.focusdependencies.add( ('portlist', plistid, None) )
+            if loctx.iid:
+                conn.focusdependencies.add( ('portlist', plistid, loctx.iid) )
             
             subls = []
             for portal in ls:
