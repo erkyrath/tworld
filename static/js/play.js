@@ -477,10 +477,21 @@ function toolpane_plist_select(portid, useasfocus) {
     portal = seg.map[seg.selection];
     if (!portal) {
         seg.selection = null;
+        if (focuspane_current_special_plist_editable()) {
+            plistedit_update_portal_selection();
+        }
         return;
     }
 
     portal.el.addClass('ToolListSelected');
+
+    if (focuspane_current_special_plist_editable()) {
+        var editel = $('.FocusPane .FocusPlistEdit');
+        if (editel.data('visible')) {
+            plistedit_update_portal_selection();
+            return;
+        }
+    }
 
     if (useasfocus) {
         websocket_send_json({ cmd:'plistselect', portid:portid });
@@ -777,6 +788,7 @@ function focuspane_set(desc, extrals)
 }
 
 var focuspane_special_val = [];
+var focuspane_special_editplist = null;
 
 function focuspane_set_special(ls) {
     /* ### This seriously neglects dependencies. */
@@ -785,6 +797,7 @@ function focuspane_set_special(ls) {
     try {
         type = ls[0];
         focuspane_special_val = ls;
+        focuspane_special_editplist = null;
         if (type == 'selfdesc') {
             /* ['selfdesc', name, pronoun, desc, extratext] */
             var extrals = selfdesc_build_controls();
@@ -860,10 +873,23 @@ function focuspane_set_special(ls) {
                description. */
             var extrals = [];
             if (editable) {
-                var buttonel = $('<input>', { 'class':'FocusButtonLarge', type:'submit', value:'Edit List' });
-                var el = $('<div>', {'class':'FocusButtonBar'});
-                el.append(buttonel);
-                extrals.push(el);
+                focuspane_special_editplist = $('<div>');
+                extrals.push(focuspane_special_editplist);
+
+                var buttonel = $('<input>', { 'class':'FocusButtonLarge FocusPlistEditButton', type:'submit', value:localize('client.button.edit_collection') });
+                buttonel.on('click', function(ev) { ev.preventDefault(); plistedit_toggle_edit(); })
+                var barel = $('<div>', {'class':'FocusButtonBar'});
+                barel.append(buttonel);
+                focuspane_special_editplist.append(barel);
+                var el = $('<div>', {'class':'FocusPlistEdit', 'style':'display:none;'});
+                var labelel = $('<div>', {'class':'FocusPlistPortal'}).text('--');
+                el.append(labelel);
+                var buttonel = $('<input>', { 'class':'FocusPlistAddButton', type:'submit', value:localize('client.button.add_portal') });
+                var barel = $('<div>', {'class':'FocusButtonBar'});
+                barel.append(buttonel);
+                el.append(barel);
+                focuspane_special_editplist.append(el);
+                plistedit_update_portal_selection();
             }
             if (!portlist.length) {
                 var el = $('<p>').text(localize('client.label.plist_is_empty'));
@@ -893,6 +919,7 @@ function focuspane_set_special(ls) {
     }
     catch (ex) {
         focuspane_special_val = [];
+        focuspane_special_editplist = null;
         focuspane_set('[Error creating special focus ' + type + ': ' + ex + ']');
     }
 }
@@ -916,6 +943,52 @@ function focuspane_current_special_plist_editable() {
             return focuspane_special_val[3];
     }
     return false;
+}
+
+function plistedit_toggle_edit() {
+    var editkey = focuspane_current_special_plist_editable();
+    if (!editkey)
+        return;
+    var editel = $('.FocusPane .FocusPlistEdit');
+    if (!editel)
+        return;
+
+    if (!editel.data('visible')) {
+        $('.FocusPlistEditButton').prop('value', localize('client.button.done_editing'));
+        editel.data('visible', true);
+        editel.slideDown(200);
+        plistedit_update_portal_selection();
+    }
+    else {
+        $('.FocusPlistEditButton').prop('value', localize('client.button.edit_collection'));
+        editel.data('visible', false);
+        editel.slideUp(200);
+    }
+}
+
+function plistedit_update_portal_selection() {
+    var editkey = focuspane_current_special_plist_editable();
+    if (!editkey)
+        return;
+    var editel = $('.FocusPane .FocusPlistEdit');
+    if (!editel)
+        return;
+
+    var el = editel.find('.FocusPlistPortal');
+    if (!el)
+        return;
+    
+    var seg = toolsegments['plist'];
+    var portal = seg.map[seg.selection];
+    if (!portal) {
+        el.text(localize('client.label.select_portal_to_add'));
+        $('.FocusPlistAddButton').prop('disabled', true);
+    }
+    else {
+        el.text(portal.world + ' \u2013 ' + portal.location + ' (' + portal.scope + ')');
+        $('.FocusPlistAddButton').prop('disabled', false);
+    }
+
 }
 
 function selfdesc_build_controls() {
@@ -1068,6 +1141,7 @@ function cmd_update(obj) {
     }
     if (obj.focus !== undefined) {
         focuspane_special_val = [];
+        focuspane_special_editplist = null;
         if (!obj.focus)
             focuspane_clear();
         else if (obj.focusspecial)
@@ -1160,6 +1234,7 @@ function cmd_updatescopes(obj) {
 function cmd_clearfocus(obj) {
     /* Same as update { focus:false }, really */
     focuspane_special_val = [];
+    focuspane_special_editplist = null;
     focuspane_clear();
     toolpane_portal_addremove();
 }

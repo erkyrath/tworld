@@ -278,6 +278,10 @@ default_localize_entries = """
 +client.tool.menu.set_panic_portal: Set as Panic Portal
 +client.tool.menu.delete_own_portal: Remove Portal from List
 
++client.button.edit_collection: Edit Collection
++client.button.done_editing: Done Editing
++client.button.add_portal: Add Portal
+
 +client.label.copy_portal: Copy this portal to your collection
 +client.label.not_copyable: This portal cannot be copied
 +client.label.only_solo: Only your personal instance is available
@@ -287,6 +291,8 @@ default_localize_entries = """
 +client.label.enter_portal: Enter the portal.
 +client.label.plist_is_empty: The collection is empty.
 +client.label.created_by_paren: (created by %s)
++client.label.select_portal_to_add: Select a portal from your list to add to this collection.
+
 +client.eventpane.start: Click on the links above to explore. Type in this pane to chat with nearby players.
 
 +label.in_transition: (In transition)

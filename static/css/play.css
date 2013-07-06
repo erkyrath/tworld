@@ -538,3 +538,9 @@ ul.ToolList + ul.ToolList {
 .FocusButtonLarge {
   font-size: 1.0em;
 }
+
+.FocusPlistPortal {
+  margin-left: 20px;
+  margin-right: 20px;
+  font-style: italic;
+}
