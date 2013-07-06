@@ -412,6 +412,10 @@ def transform_prop(world, db, val):
             newval['text'] = val['text']
         if 'single' in val and portid:
             newval['focusport'] = portid
+        if 'editaccess' in val:
+            newval['editaccess'] = twcommon.access.level_named(val['editaccess'])
+        if 'readaccess' in val:
+            newval['readaccess'] = twcommon.access.level_named(val['readaccess'])
         return newval
             
     
