@@ -13,7 +13,7 @@ schema to the current version. Use the --upgradedb option in this case.
 """
 
 # The database version created by this version of the script.
-DBVERSION = 3
+DBVERSION = 4
 
 import sys
 import os
@@ -23,6 +23,7 @@ import logging
 import datetime
 
 import pymongo
+from bson.objectid import ObjectId
 
 import tornado.options
 
@@ -99,11 +100,12 @@ def upgrade_to_v3():
         db.scopeaccess.update({'uid':player['_id'], 'scid':player['scid']},
                               {'uid':player['_id'], 'scid':player['scid'], 'level':twcommon.access.ACC_CREATOR}, upsert=True)
 
-### upgrade_to_v4:
-### remove all portals with {inwid:{$gt:ObjectId("000000000000000000000000")}}
-### remove the sparse indexes on inwid, plistid
-### set iid:None for all portals
-### in indexes: add compound index on plistid, iid
+def upgrade_to_v4():
+    print('Upgrading to v4...')
+    db.portals.remove({'inwid':{'$gt':ObjectId("000000000000000000000000")}})
+    db.portals.drop_index('inwid_1')
+    db.portals.drop_index('plistid_1')
+    db.portals.update({}, {'$set':{'iid':None}}, multi=True)
 
 # if curversion is None, we're brand-new.
 if curversion is not None and curversion < DBVERSION:
@@ -114,6 +116,8 @@ if curversion is not None and curversion < DBVERSION:
         upgrade_to_v2()
     if curversion < 3:
         upgrade_to_v3()
+    if curversion < 4:
+        upgrade_to_v4()
     db.config.update({'key':'dbversion'},
                      {'key':'dbversion', 'val':DBVERSION}, upsert=True)
 else:
@@ -155,9 +159,8 @@ db.wplayerprop.create_index([('wid', pymongo.ASCENDING), ('uid', pymongo.ASCENDI
 # Compound index
 db.iplayerprop.create_index([('iid', pymongo.ASCENDING), ('uid', pymongo.ASCENDING), ('key', pymongo.ASCENDING)], unique=True)
 
-# Sparse indexes
-db.portals.create_index('inwid', sparse=True)
-db.portals.create_index('plistid', sparse=True)
+# Compound index
+db.portals.create_index([('plistid', pymongo.ASCENDING), ('iid', pymongo.ASCENDING)])
 
 # Compound index
 db.scopeaccess.create_index([('uid', pymongo.ASCENDING), ('scid', pymongo.ASCENDING)], unique=True)

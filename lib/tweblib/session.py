@@ -198,7 +198,7 @@ class SessionMgr(object):
                 raise Exception('Unable to define portal')
 
             portal = {
-                'plistid':plistid, 'listpos':1.0,
+                'plistid':plistid, 'iid':None, 'listpos':1.0,
                 'wid':portwid, 'scid':portscid, 'locid':portlocid,
                 }
             yield motor.Op(self.app.mongodb.portals.insert, portal)

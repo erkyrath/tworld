@@ -665,8 +665,8 @@ def create_portal_for_player(app, uid, plistid, newwid, newscid, newlocid):
     legality or access; the caller must do that.
     Raises a MessageException if the player already has this portal.
     """
-            
-    newportal = { 'plistid':plistid,
+    
+    newportal = { 'plistid':plistid, 'iid':None,
                   'wid':newwid, 'scid':newscid, 'locid':newlocid,
                   }
     res = yield motor.Op(app.mongodb.portals.find_one,
@@ -677,7 +677,7 @@ def create_portal_for_player(app, uid, plistid, newwid, newscid, newlocid):
     # Look through the player's list and find the entry with the
     # highest listpos.
     res = yield motor.Op(app.mongodb.portals.aggregate, [
-            {'$match': {'plistid':plistid}},
+            {'$match': {'plistid':plistid, 'iid':None}},
             {'$sort': {'listpos':-1}},
             {'$limit': 1},
             ])
@@ -735,7 +735,6 @@ def render_focus(task, loctx, conn, focusobj):
         if restype == 'portlist':
             # We've already checked access level (if indeed this portlist
             # focus array came from a {portlist} with a readaccess level).
-            task.log.debug('#### portlist focus: %s', (focusobj,))
             (dummy, plistid, editable, extratext, withback, portid) = focusobj
             
             if extratext:
@@ -807,7 +806,12 @@ def render_focus(task, loctx, conn, focusobj):
                 return (specres, True)
 
             # Render the portlist.
-            cursor = task.app.mongodb.portals.find({'plistid':plistid}) ###include instance-level portals!
+            query = { 'plistid':plistid }
+            if not loctx.iid:
+                query = {'plistid':plistid, 'iid':None}
+            else:
+                query = {'plistid':plistid, '$or':[{'iid':None}, {'iid':loctx.iid}]}
+            cursor = task.app.mongodb.portals.find(query)
             ls = []
             while (yield cursor.fetch_next):
                 portal = cursor.next_object()

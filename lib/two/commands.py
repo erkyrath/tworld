@@ -297,7 +297,7 @@ def define_commands():
             return
         plistid = player['plistid']
         iid = playstate['iid']
-        cursor = app.mongodb.portals.find({'plistid':plistid})
+        cursor = app.mongodb.portals.find({'plistid':plistid, 'iid':None})
         ls = []
         while (yield cursor.fetch_next):
             portal = cursor.next_object()
@@ -446,7 +446,7 @@ def define_commands():
             # Look through the player's list and find the preferred entry.
             plistid = player['plistid']
             res = yield motor.Op(app.mongodb.portals.find_one,
-                                 {'plistid':plistid, 'preferred':True})
+                                 {'plistid':plistid, 'iid':None, 'preferred':True})
             if res:
                 newwid = res['wid']
                 newscid = res['scid']
@@ -824,8 +824,9 @@ def define_commands():
                                 {'_id':conn.uid},
                                 {'plistid':1})
         plistid = player['plistid']
+        #### not necessarily your collection!
         portal = yield motor.Op(app.mongodb.portals.find_one,
-                                {'_id':ObjectId(cmd.portid), 'plistid':plistid})
+                                {'_id':ObjectId(cmd.portid), 'plistid':plistid, 'iid':None})
         if not portal:
             raise ErrorMessageException('No such portal in your collection.')
         msg = app.localize('message.desc_own_portlist')
@@ -843,12 +844,12 @@ def define_commands():
                                 {'_id':conn.uid},
                                 {'plistid':1})
         portal = yield motor.Op(app.mongodb.portals.find_one,
-                                {'_id':ObjectId(cmd.portid), 'plistid':player['plistid']})
+                                {'_id':ObjectId(cmd.portid), 'plistid':player['plistid'], 'iid':None})
         if not portal:
             raise ErrorMessageException('No such portal in your collection.')
         # Remove all preferred flags for this player
         yield motor.Op(app.mongodb.portals.update,
-                       {'plistid':player['plistid'], 'preferred':True},
+                       {'plistid':player['plistid'], 'iid':None, 'preferred':True},
                        {'$unset': {'preferred':1}},
                        multi=True)
         # And set the new one
@@ -864,7 +865,7 @@ def define_commands():
                                 {'_id':conn.uid},
                                 {'plistid':1})
         portal = yield motor.Op(app.mongodb.portals.find_one,
-                                {'_id':ObjectId(cmd.portid), 'plistid':player['plistid']})
+                                {'_id':ObjectId(cmd.portid), 'plistid':player['plistid'], 'iid':None})
         if not portal:
             raise ErrorMessageException('No such portal in your collection.')
         yield motor.Op(app.mongodb.portals.remove,

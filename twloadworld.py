@@ -382,7 +382,7 @@ def transform_prop(world, db, val):
             plistid = db.portlists.insert({'type':'world', 'wid':world.wid})
             print('Created portlist (%s)' % (plistid,))
         # Clean out the portlist and rebuild it
-        db.portals.remove({'plistid':plistid}) ####not instance-level!
+        db.portals.remove({'plistid':plistid, 'iid':None})
         listpos = 0.0
         portid = None
         for quad in val['_templist']:
@@ -398,7 +398,7 @@ def transform_prop(world, db, val):
             if not toloc:
                 error('Location not found for portal: %s, %s' % (quad[0], quad[3]))
                 return '[Portal location not found]'
-            query = { 'plistid':plistid, 'wid':toworld['_id'], 'locid':toloc['_id'] }
+            query = { 'plistid':plistid, 'iid':None, 'wid':toworld['_id'], 'locid':toloc['_id'] }
             if quad[2] in ('personal', 'global', 'same'):
                 query['scid'] = quad[2]
             else:
