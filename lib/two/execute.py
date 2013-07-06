@@ -665,7 +665,6 @@ def create_portal_for_player(app, uid, plistid, newwid, newscid, newlocid):
     legality or access; the caller must do that.
     Raises a MessageException if the player already has this portal.
     """
-    
     newportal = { 'plistid':plistid, 'iid':None,
                   'wid':newwid, 'scid':newscid, 'locid':newlocid,
                   }
@@ -705,6 +704,50 @@ def create_portal_for_player(app, uid, plistid, newwid, newscid, newlocid):
         app.log.warning('Unable to notify player of new portal: %s', ex, exc_info=app.debugstacktraces)
 
     return newportid
+
+@tornado.gen.coroutine
+def create_portal_for_plist(task, iid, plistid, newwid, newscid, newlocid):
+    """Create a new portal in an instance of a portal list. This does not
+    check legality or access; the caller must do that.
+    Raises a MessageException if the list already has this portal.
+    """
+    app = task.app
+    if not iid:
+        raise ErrorMessageException('create_portal_for_plist: not in an instance!')
+    newportal = { 'plistid':plistid, 'iid':iid,
+                  'wid':newwid, 'scid':newscid, 'locid':newlocid,
+                  }
+    # Check whether it's in the world-level or instance-level list.
+    res = yield motor.Op(app.mongodb.portals.find_one,
+                         newportal)
+    if res:
+        raise MessageException(app.localize('message.plist_add_already_have')) # 'This portal is already in this collection.'
+    altportal = dict(newportal)
+    altportal['iid'] = None
+    res = yield motor.Op(app.mongodb.portals.find_one,
+                         altportal)
+    if res:
+        raise MessageException(app.localize('message.plist_add_already_have')) # 'This portal is already in this collection.'
+
+    # Look through the list (both intance and world) and find the
+    # entry with the highest listpos.
+    res = yield motor.Op(app.mongodb.portals.aggregate, [
+            {'$match': {'plistid':plistid, '$or':[{'iid':None}, {'iid':iid}]}},
+            {'$sort': {'listpos':-1}},
+            {'$limit': 1},
+            ])
+    listpos = 0.0
+    if res and res['result']:
+        listpos = res['result'][0].get('listpos', 0.0)
+        
+    newportal['listpos'] = listpos + 1.0
+    newportid = yield motor.Op(app.mongodb.portals.insert, newportal)
+    newportal['_id'] = newportid
+
+    # Data change for anyone watching this portlist
+    task.set_data_change( ('portlist', plistid, iid) )
+    return newportid
+    
 
 @tornado.gen.coroutine
 def render_focus(task, loctx, conn, focusobj):
@@ -1070,7 +1113,31 @@ def perform_action(task, cmd, conn, target):
                 val = yield ctx.eval(otext, evaltype=EVALTYPE_TEXT)
                 task.write_event(others, val)
             return
-            
+
+        if restype == 'editplist':
+            plistid = target[1]
+            portlist = yield motor.Op(app.mongodb.portlists.find_one,
+                                      {'_id':plistid})
+            if not portlist:
+                raise ErrorMessageException('Portlist not found.')
+            if portlist['type'] != 'world' or portlist['wid'] != loctx.wid:
+                raise ErrorMessageException('Portlist not reachable.')
+            # The editaccess check was done earlier, and can't be repeated
+            # at this point, sadly. But at least we know that the portlist
+            # belongs to this world.
+            if cmd.edit == 'add':
+                portid = ObjectId(cmd.portid)
+                portal = yield motor.Op(app.mongodb.portals.find_one,
+                                        {'_id':portid})
+                if not portal:
+                    raise ErrorMessageException('Portal not found.')
+                if not isinstance(portal['scid'], ObjectId):
+                    raise ErrorMessageException('Portal does not have definite scope.')
+                yield create_portal_for_plist(task, loctx.iid, plistid, portal['wid'], portal['scid'], portal['locid'])
+                conn.write({'cmd':'message', 'text':app.localize('message.plist_add_ok')}) # 'You add your portal to this collection.'
+                return
+            raise ErrorMessageException('Portlist edit not understood: %s.' % (cmd.edit,))
+        
         if restype == 'focusportal':
             # Change the current (portlist) focus to a specific entry in
             # that portlist.

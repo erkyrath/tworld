@@ -885,6 +885,7 @@ function focuspane_set_special(ls) {
                 var labelel = $('<div>', {'class':'FocusPlistPortal'}).text('--');
                 el.append(labelel);
                 var buttonel = $('<input>', { 'class':'FocusPlistAddButton', type:'submit', value:localize('client.button.add_portal') });
+                buttonel.on('click', function(ev) { ev.preventDefault(); plistedit_add_portal(); })
                 var barel = $('<div>', {'class':'FocusButtonBar'});
                 barel.append(buttonel);
                 el.append(barel);
@@ -964,6 +965,27 @@ function plistedit_toggle_edit() {
         editel.data('visible', false);
         editel.slideUp(200);
     }
+}
+
+function plistedit_add_portal() {
+    var editkey = focuspane_current_special_plist_editable();
+    if (!editkey)
+        return;
+    var editel = $('.FocusPane .FocusPlistEdit');
+    if (!editel)
+        return;
+
+    if (!editel.data('visible')) 
+        return;
+
+    var seg = toolsegments['plist'];
+    var portal = seg.map[seg.selection];
+    if (!portal) 
+        return;
+    
+    websocket_send_json({
+        cmd:'action', action:editkey,
+        edit:'add', portid:portal.portid});
 }
 
 function plistedit_update_portal_selection() {

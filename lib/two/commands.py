@@ -877,7 +877,7 @@ def define_commands():
                        {'_id':conn.uid},
                        {'$set':{'focus':None}})
         task.set_dirty(conn.uid, DIRTY_FOCUS)
-        
+
     @command('selfdesc', doeswrite=True)
     def cmd_selfdesc(app, task, cmd, conn):
         if getattr(cmd, 'pronoun', None):
