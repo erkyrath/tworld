@@ -544,3 +544,15 @@ ul.ToolList + ul.ToolList {
   margin-right: 20px;
   font-style: italic;
 }
+
+.FocusListDelButton {
+  display: inline-block;
+  color: #F00;
+  background: #FCC;
+  font-size: 0.8em;
+  line-height: 1.0em;
+  margin: 0px;
+  padding: 2px 0px;
+  width: 1.2em;
+  height: 1.0em;
+}

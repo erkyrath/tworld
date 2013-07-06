@@ -897,11 +897,16 @@ function focuspane_set_special(ls) {
                 extrals.push(el);
             }
             else {
-                var el = $('<ul>');
+                var el = $('<ul>', {'class':'FocusPlistList'});
                 extrals.push(el);
                 for (var ix=0; ix<portlist.length; ix++) {
                     var portal = portlist[ix];
                     var lel = $('<li>');
+                    if (editable) {
+                        var delbutton = $('<div>', {'class':'FocusListDelButton ToolControl', style:'display:none;'}).text('\u00D7');
+                        lel.append(delbutton);
+                        lel.append(' ');
+                    }
                     var ael = $('<a>', {href:'#'+portal.target});
                     ael.text(portal.world);
                     ael.on('click', {target:portal.target}, evhan_click_action);
@@ -958,12 +963,14 @@ function plistedit_toggle_edit() {
         $('.FocusPlistEditButton').prop('value', localize('client.button.done_editing'));
         editel.data('visible', true);
         editel.slideDown(200);
+        $('.FocusListDelButton').show(200);
         plistedit_update_portal_selection();
     }
     else {
         $('.FocusPlistEditButton').prop('value', localize('client.button.edit_collection'));
         editel.data('visible', false);
         editel.slideUp(200);
+        $('.FocusListDelButton').hide(200);
     }
 }
 
