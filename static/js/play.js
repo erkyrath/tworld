@@ -854,12 +854,17 @@ function focuspane_set_special(ls) {
         }
         if (type == 'portlist') {
             var portlist = ls[1];
-            var extratext = null;
-            if (ls.length >= 3)
-                extratext = ls[2];
+            var extratext = ls[2];
+            var editable = ls[3];
             /* Note that extratext, if present, may be a full-fledged
                description. */
             var extrals = [];
+            if (editable) {
+                var buttonel = $('<input>', { 'class':'FocusButtonLarge', type:'submit', value:'Edit List' });
+                var el = $('<div>', {'class':'FocusButtonBar'});
+                el.append(buttonel);
+                extrals.push(el);
+            }
             if (!portlist.length) {
                 var el = $('<p>').text(localize('client.label.plist_is_empty'));
                 extrals.push(el);
@@ -892,7 +897,7 @@ function focuspane_set_special(ls) {
     }
 }
 
-/* Return the portal object that focus is set to, if any; otherwise null.
+/* Returns the portal object that focus is set to, if any; otherwise null.
  */
 function focuspane_current_special_portal() {
     var portal = null;
@@ -900,6 +905,17 @@ function focuspane_current_special_portal() {
         portal = focuspane_special_val[2];
     }
     return portal;
+}
+
+/* Returns the edit action key, if the focus is set to an editable portlist.
+   Otherwise returns null.
+ */
+function focuspane_current_special_plist_editable() {
+    if (focuspane_special_val && focuspane_special_val[0] == 'portlist') {
+        if (focuspane_special_val[3])
+            return focuspane_special_val[3];
+    }
+    return false;
 }
 
 function selfdesc_build_controls() {

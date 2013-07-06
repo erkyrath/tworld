@@ -530,3 +530,11 @@ ul.ToolList + ul.ToolList {
   height: 1px;
 }
 
+.FocusButtonBar {
+  text-align: right;
+  margin-right: 20px;
+}
+
+.FocusButtonLarge {
+  font-size: 1.0em;
+}

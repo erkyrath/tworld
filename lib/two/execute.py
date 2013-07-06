@@ -828,8 +828,12 @@ def render_focus(task, loctx, conn, focusobj):
                 conn.focusactions[ackey] = ('focusportal', portal['_id'], plistid)
                 desc['target'] = ackey
                 subls.append(desc)
-                
-            specres = ['portlist', subls, extratext]
+
+            editkey = None
+            if editable and withback:
+                editkey = 'editplist' + EvalPropContext.build_action_key()
+                conn.focusactions[editkey] = ('editplist', plistid)
+            specres = ['portlist', subls, extratext, editkey]
             return (specres, True)
 
         # Unknown format, complain

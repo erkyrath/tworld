@@ -688,7 +688,7 @@ class EvalPropContext(object):
             level = yield two.execute.scope_access_level(self.app, self.uid, self.loctx.wid, self.loctx.scid)
             if level < res.get('readaccess', ACC_VISITOR):
                 raise MessageException(self.app.localize('message.widget_no_access'))
-            editable = (level < res.get('editaccess', ACC_MEMBER))
+            editable = (level >= res.get('editaccess', ACC_MEMBER))
             extratext = res.get('text', None)
             focusport = res.get('focusport', None)
             withback = (focusport is None)
