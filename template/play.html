@@ -19,12 +19,22 @@ var db_uiprefs = {% raw uiprefs %};
 /* Localization table, pulled from the localize collection. */
 var db_localize = {% raw localize %};
 
+/* All the base fonts that are available in the font preference menu.
+   The default entry must describe the CSS font-family for #submain. */
+var template_base_fonts = [
+    { label:'Palatino', 'default':true, family:'' },
+    { label:'Helvetica', family:'"Helvetica Neue", "Helvetica", "Arial", sans-serif' },
+    { label:'Times Roman', family:'"Times New Roman", "Times", serif' },
+    { label:'Trebuchet', family:'"Trebuchet MS", "Arial", sans-serif' },
+    { label:'Georgia', family:'"Georgia", "Palatino", serif' }
+];
+
 /* All the text styles that are legal in room descriptions and so on.
    Each is mapped to the CSS class that displays it. */
 var description_style_classes = {
     emph: 'StyleEmph',
     fixed: 'StyleFixed'
-}
+};
 
 </script>
 {% end %}

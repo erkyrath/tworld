@@ -9,10 +9,17 @@ var uiprefs = {
     toolseg_min_prefs: true,
     leftright_percent: 75,
     updown_percent: 70,
+    font_family: '', /* default font */
     font_size: 100,
     line_height: 135,
     smooth_scroll: true
 };
+
+/* Maps font-family names (as seen in the font preference menu) to
+   font objects (as seen in the template_base_fonts array in play.html).
+   As a special case, '' maps to the default font.
+   Constructed in collate_uiprefs(). */
+var template_base_font_map = {};
 
 /* When there are more than 80 lines in the event pane, chop it down to
    the last 60. */
@@ -32,6 +39,14 @@ var NBSP = '\u00A0';
 function collate_uiprefs() {
     for (var key in db_uiprefs) {
         uiprefs[key] = db_uiprefs[key];
+    }
+
+    /* We also take this opportunity to built the template_base_font_map. */
+    for (var ix=0; ix<template_base_fonts.length; ix++) {
+        var font = template_base_fonts[ix];
+        template_base_font_map[font.label] = font;
+        if (font.default)
+            template_base_font_map[''] = font;
     }
 }
 
@@ -95,6 +110,13 @@ function build_page_structure() {
     $('#bottomcol').css({ height: (100-uiprefs.updown_percent)+'%' });
     $('#leftcol').css({ width: uiprefs.leftright_percent+'%' });
     $('#rightcol').css({ width: (100-uiprefs.leftright_percent)+'%' });
+    var font = template_base_font_map[uiprefs.font_family];
+    if (!font || font.default) {
+        $('#submain').css({ 'font-family':'' });
+    }
+    else {
+        $('#submain').css({ 'font-family':font.family });
+    }
     var val = uiprefs.font_size / 100.0;
     $('#main').css('font-size', val+'em');
     val = uiprefs.line_height / 100.0;
@@ -141,6 +163,25 @@ function setup_event_handlers() {
     /* The controls in the prefs pane... */
 
     var seg = toolsegments['prefs'];
+
+    var font = template_base_font_map[uiprefs.font_family];
+    if (!font)
+        font = template_base_font_map[''];
+    seg.fontfamilyselect.prop('value', font.label);
+    seg.fontfamilyselect.on('change', function(ev) {
+            var seg = toolsegments['prefs'];
+            var val = seg.fontfamilyselect.prop('value');
+            var font = template_base_font_map[val];
+            if (!font || font.default) {
+                $('#submain').css({ 'font-family':'' });
+                val = '';
+            }
+            else {
+                $('#submain').css({ 'font-family':font.family });
+            }
+            uiprefs.font_family = val;
+            note_uipref_changed('font_family');
+        });
 
     seg.fontsizeslider.slider({
             value: uiprefs.font_size, min: 80, max: 120, step: 5,
@@ -345,6 +386,19 @@ function toolpane_fill_pane_prefs(seg) {
 
     var listel = $('<ul>', {'class':'ToolList'});
     seg.bodyel.append(listel);
+
+    el = $('<li>');
+    listel.append(el);
+    el.append($('<label>').text('Text Font'));
+    el.append($('<br>'));
+    var selectel = $('<select>', { 'class':'FocusSelect' });
+    el.append(selectel);
+    for (var ix=0; ix<template_base_fonts.length; ix++) {
+        var font = template_base_fonts[ix];
+        var optel = $('<option>', {value:font.label}).text(font.label);
+        selectel.append(optel);
+    }
+    seg.fontfamilyselect = selectel;
 
     var el = $('<li>').text('Text Size');
     listel.append(el);
