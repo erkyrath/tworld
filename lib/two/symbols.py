@@ -152,6 +152,7 @@ def define_globals():
         """Wrap a string as a {text} object, so that its markup will get
         interpreted.
         """
+        ### Idempotent!
         return { 'type':'text', 'text':str(object) }
 
     @scriptfunc('isinstance', group='_')
@@ -167,6 +168,7 @@ def define_globals():
         ### Or all players in a given location?
         ### Maybe a second argument, for "unfocus if the focus is equal to
         this"? Would let us optimize out the already-null case, too.
+        ### Check for task-writability before updating the DB!
         """
         ctx = EvalPropContext.get_current_context()
         if player is None:
