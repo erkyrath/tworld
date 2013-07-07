@@ -152,7 +152,8 @@ def define_globals():
         """Wrap a string as a {text} object, so that its markup will get
         interpreted.
         """
-        ### Idempotent!
+        if twcommon.misc.is_typed_dict(object, 'text'):
+            return object
         return { 'type':'text', 'text':str(object) }
 
     @scriptfunc('isinstance', group='_')
