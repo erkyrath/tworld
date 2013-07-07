@@ -511,7 +511,7 @@ ul.ToolList + ul.ToolList {
   margin: 0px;
   border: 1px solid #CCC;
   padding: 4px 0px;
-  font-family: SortsMillGoudy, Palatino, Georgia, serif; /*### shouldn't be SortsMill here */
+  font-family: Palatino, Georgia, serif;
   font-size: 1em;
   border-radius: 3px;
   text-indent: 10px;
