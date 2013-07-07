@@ -4,6 +4,7 @@ import random
 import datetime
 
 import tornado.gen
+from bson.objectid import ObjectId
 import motor
 
 from twcommon.excepts import SymbolError
@@ -159,8 +160,21 @@ def define_globals():
     @scriptfunc('isinstance', group='_')
     def global_isinstance(object, typ):
         """The isinstance function.
+        ### Special-case to handle text, ObjectId "types"?
         """
         return isinstance(object, typ)
+
+    @scriptfunc('ObjectId', group='_')
+    def global_objectid(oid=None):
+        """The ObjectId constructor. We extend this to handle player and
+        location objects.
+        """
+        if (isinstance(oid, two.execute.PlayerProxy)):
+            return oid.uid
+        if (isinstance(oid, two.execute.LocationProxy)):
+            return oid.locid
+        ### RealmProxy? (wid or iid?)
+        return ObjectId(oid)
 
     @scriptfunc('unfocus', group='_', yieldy=True)
     def global_unfocus(player=None):
