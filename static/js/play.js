@@ -177,6 +177,7 @@ function setup_event_handlers() {
 function open_websocket() {
     try {
         var url = 'ws://' + window.location.host + '/websocket';
+        console.log('### creating WebSocket ' + url);
         websocket = new WebSocket(url);
     }
     catch (ex) {
@@ -365,6 +366,7 @@ function toolpane_fill_pane_prefs(seg) {
     var smoothscrollbox = $('<input>', {'class':'CheckboxRight', 'type':'checkbox'});
     el.append(smoothscrollbox);
     seg.smoothscrollbox = smoothscrollbox;
+
 }
 
 function toolpane_fill_pane_plist(seg) {
@@ -1790,15 +1792,15 @@ function evhan_websocket_open() {
     everconnected = true;
 }
 
-function evhan_websocket_close() {
+function evhan_websocket_close(ev) {
     websocket = null;
     connected = false;
 
     if (!everconnected) {
-        display_error('The connection to the server could not be opened.');
+        display_error('The connection to the server could not be opened. (' + ev.code + ',' + ev.reason + ')');
     }
     else {
-        display_error('The connection to the server was lost.');
+        display_error('The connection to the server was lost. (' + ev.code + ',' + ev.reason + ')');
     }
 
     /* ### set up a timer to try reconnecting. But don't change the displayed
