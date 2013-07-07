@@ -321,6 +321,8 @@ message.delete_own_portal_ok: You remove the portal from your collection.
 message.widget_no_access: You do not have permission to edit this.
 message.plist_add_ok: You add your portal to this collection.
 message.plist_add_already_have: This portal is already in this collection.
+message.plist_delete_ok: You delete the portal from this collection.
+message.plist_delete_not_instance: This portal is not deleteable.
 
 """
 

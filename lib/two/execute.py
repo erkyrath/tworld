@@ -1143,6 +1143,24 @@ def perform_action(task, cmd, conn, target):
                 yield create_portal_for_plist(task, loctx.iid, plistid, portal['wid'], portal['scid'], portal['locid'])
                 conn.write({'cmd':'message', 'text':app.localize('message.plist_add_ok')}) # 'You add your portal to this collection.'
                 return
+            if cmd.edit == 'delete':
+                portid = ObjectId(cmd.portid)
+                portal = yield motor.Op(app.mongodb.portals.find_one,
+                                        {'_id':portid})
+                if not portal:
+                    raise ErrorMessageException('Portal not found.')
+                if portal.get('plistid', None) != plistid:
+                    raise ErrorMessageException('Portal not in this portlist.')
+                if portal.get('iid', None) is None:
+                    raise MessageException(app.localize('message.plist_delete_not_instance'))
+                if portal.get('iid', None) != loctx.iid:
+                    raise ErrorMessageException('Portal not in this instance.')
+                yield motor.Op(app.mongodb.portals.remove,
+                               {'_id':portid})
+                # Data change for anyone watching this portlist
+                task.set_data_change( ('portlist', plistid, loctx.iid) )
+                conn.write({'cmd':'message', 'text':app.localize('message.plist_delete_ok')}) # 'You delete the portal from this collection.'
+                return
             raise ErrorMessageException('Portlist edit not understood: %s.' % (cmd.edit,))
         
         if restype == 'focusportal':
