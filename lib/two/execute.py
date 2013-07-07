@@ -875,6 +875,8 @@ def render_focus(task, loctx, conn, focusobj):
                 ackey = 'plist' + EvalPropContext.build_action_key()
                 conn.focusactions[ackey] = ('focusportal', portal['_id'], plistid)
                 desc['target'] = ackey
+                if editable and withback:
+                    desc['portid'] = str(portal['_id'])
                 subls.append(desc)
 
             editkey = None

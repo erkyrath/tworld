@@ -904,6 +904,10 @@ function focuspane_set_special(ls) {
                     var lel = $('<li>');
                     if (editable) {
                         var delbutton = $('<div>', {'class':'FocusListDelButton ToolControl', style:'display:none;'}).text('\u00D7');
+                        delbutton.on('click', {portal:portal, listel:lel}, function(ev) {
+                                ev.preventDefault(); 
+                                plistedit_toggle_delete(ev.data.portal, ev.data.listel);
+                            } );
                         lel.append(delbutton);
                         lel.append(' ');
                     }
@@ -956,7 +960,7 @@ function plistedit_toggle_edit() {
     if (!editkey)
         return;
     var editel = $('.FocusPane .FocusPlistEdit');
-    if (!editel)
+    if (!editel.length)
         return;
 
     if (!editel.data('visible')) {
@@ -971,6 +975,7 @@ function plistedit_toggle_edit() {
         editel.data('visible', false);
         editel.slideUp(200);
         $('.FocusListDelButton').hide(200);
+        $('.FocusPlistList .FocusButtonBar').remove();
     }
 }
 
@@ -979,7 +984,7 @@ function plistedit_add_portal() {
     if (!editkey)
         return;
     var editel = $('.FocusPane .FocusPlistEdit');
-    if (!editel)
+    if (!editel.length)
         return;
 
     if (!editel.data('visible')) 
@@ -1000,7 +1005,7 @@ function plistedit_update_portal_selection() {
     if (!editkey)
         return;
     var editel = $('.FocusPane .FocusPlistEdit');
-    if (!editel)
+    if (!editel.length)
         return;
 
     var el = editel.find('.FocusPlistPortal');
@@ -1018,6 +1023,46 @@ function plistedit_update_portal_selection() {
         $('.FocusPlistAddButton').prop('disabled', false);
     }
 
+}
+
+function plistedit_toggle_delete(portal, listel) {
+    var editkey = focuspane_current_special_plist_editable();
+    if (!editkey)
+        return;
+    var editel = $('.FocusPane .FocusPlistEdit');
+    if (!editel.length)
+        return;
+
+    if (!editel.data('visible')) 
+        return;
+
+    var barel = listel.find('.FocusButtonBar');
+    if (barel.length) {
+        barel.slideUp(200, function() { barel.remove(); });
+        return;
+    }
+
+    barel = $('<div>', {'class':'FocusButtonBar', style:'display:none;'});
+    var buttonel = $('<input>', { type:'submit', value:localize('client.button.cancel') });
+    barel.append(buttonel);
+    buttonel.on('click', {portal:portal, listel:listel}, function(ev) {
+            /* Cancel button calls back to this function, to toggle
+               the buttons away. */
+            ev.preventDefault(); 
+            plistedit_toggle_delete(ev.data.portal, ev.data.listel);
+        } );
+
+    var buttonel = $('<input>', { type:'submit', value:localize('client.button.delete') });
+    barel.append(buttonel);
+    buttonel.on('click', {portal:portal, listel:listel}, function(ev) {
+            ev.preventDefault(); 
+            websocket_send_json({
+                cmd:'action', action:editkey,
+                edit:'delete', portid:ev.data.portal.portid});
+        });
+
+    listel.append(barel);
+    barel.slideDown(200);
 }
 
 function selfdesc_build_controls() {

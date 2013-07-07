@@ -278,6 +278,8 @@ default_localize_entries = """
 +client.tool.menu.set_panic_portal: Set as Panic Portal
 +client.tool.menu.delete_own_portal: Remove Portal from List
 
++client.button.cancel: Cancel
++client.button.delete: Delete
 +client.button.edit_collection: Edit Collection
 +client.button.done_editing: Done Editing
 +client.button.add_portal: Add Portal
