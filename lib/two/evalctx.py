@@ -902,9 +902,21 @@ class EvalPropContext(object):
                 continue
             
             if nodkey == 'PlayerRef':
+                if nod.expr:
+                    uid = yield self.evalobj(nod.expr, evaltype=EVALTYPE_CODE)
+                    if isinstance(uid, two.execute.PlayerProxy):
+                        uid = uid.uid
+                    else:
+                        uid = ObjectId(uid)
+                else:
+                    uid = self.uid
+                    
                 player = yield motor.Op(self.app.mongodb.players.find_one,
-                                        {'_id':self.uid},
+                                        {'_id':uid},
                                         {'name':1, 'pronoun':1})
+                if not player:
+                    self.accum.append('[No such player]')
+                    continue
                 if nod.key == 'name':
                     self.accum.append(player['name'])
                 else:

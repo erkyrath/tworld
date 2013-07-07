@@ -32,6 +32,8 @@ class InterpNode(object):
             return '[Unknown key: %s]' % (key,)
         if callable(nod):
             return nod(val)
+        if val:
+            return '[%s does not accept arguments]' % (key,)
         return nod[0](*nod[1:])
 
 class Interpolate(InterpNode):
@@ -131,7 +133,10 @@ class PlayerRef(InterpNode):
     classname = 'PlayerRef'
     def __init__(self, key, expr=None):
         self.key = key
-        self.expr = expr
+        if expr:
+            self.expr = expr
+        else:
+            self.expr = None
     def __repr__(self):
         if self.expr is None:
             return '<PlayerRef "%s">' % (self.key,)
@@ -150,28 +155,28 @@ interp_node_table = {
     '$else': (Else,),
     '$end': (End,),
     
-    '$name': (PlayerRef, 'name'),  ### val may be an expression
-    '$Name': (PlayerRef, 'name'),  ### ditto below
-    '$we': (PlayerRef, 'we'),
-    '$they': (PlayerRef, 'we'),
-    '$us': (PlayerRef, 'us'),
-    '$them': (PlayerRef, 'us'),
-    '$our': (PlayerRef, 'our'),
-    '$their': (PlayerRef, 'our'),
-    '$ours': (PlayerRef, 'ours'),
-    '$theirs': (PlayerRef, 'ours'),
-    '$ourself': (PlayerRef, 'ourself'),
-    '$themself': (PlayerRef, 'ourself'),
-    '$We': (PlayerRef, 'We'),
-    '$They': (PlayerRef, 'We'),
-    '$Us': (PlayerRef, 'Us'),
-    '$Them': (PlayerRef, 'Us'),
-    '$Our': (PlayerRef, 'Our'),
-    '$Their': (PlayerRef, 'Our'),
-    '$Ours': (PlayerRef, 'Ours'),
-    '$Theirs': (PlayerRef, 'Ours'),
-    '$Ourself': (PlayerRef, 'Ourself'),
-    '$Themself': (PlayerRef, 'Ourself'),
+    '$name': lambda val: PlayerRef('name', val),
+    '$Name': lambda val: PlayerRef('name', val),
+    '$we': lambda val: PlayerRef('we', val),
+    '$they': lambda val: PlayerRef('we', val),
+    '$us': lambda val: PlayerRef('us', val),
+    '$them': lambda val: PlayerRef('us', val),
+    '$our': lambda val: PlayerRef('our', val),
+    '$their': lambda val: PlayerRef('our', val),
+    '$ours': lambda val: PlayerRef('ours', val),
+    '$theirs': lambda val: PlayerRef('ours', val),
+    '$ourself': lambda val: PlayerRef('ourself', val),
+    '$themself': lambda val: PlayerRef('ourself', val),
+    '$We': lambda val: PlayerRef('We', val),
+    '$They': lambda val: PlayerRef('We', val),
+    '$Us': lambda val: PlayerRef('Us', val),
+    '$Them': lambda val: PlayerRef('Us', val),
+    '$Our': lambda val: PlayerRef('Our', val),
+    '$Their': lambda val: PlayerRef('Our', val),
+    '$Ours': lambda val: PlayerRef('Ours', val),
+    '$Theirs': lambda val: PlayerRef('Ours', val),
+    '$Ourself': lambda val: PlayerRef('Ourself', val),
+    '$Themself': lambda val: PlayerRef('Ourself', val),
     
     '$em': (Style, 'emph'),
     '$/em': (EndStyle, 'emph'),
