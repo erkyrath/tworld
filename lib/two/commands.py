@@ -534,10 +534,8 @@ def define_commands():
         task.set_data_change( ('populace', newiid, newlocid) )
         task.clear_loctx(cmd.uid)
 
-        # We set everybody in the destination room DIRTY_POPULACE.
         others = yield task.find_locale_players(uid=cmd.uid, notself=True)
         if others:
-            task.set_dirty(others, DIRTY_POPULACE)
             task.write_event(others, app.localize('action.oportin') % (playername,)) # '%s appears.'
         task.write_event(cmd.uid, app.localize('action.portin')) # 'You are somewhere new.'
         

@@ -996,6 +996,7 @@ def generate_update(task, conn, dirty):
         conn.populacedependencies.clear()
         
         # Build a list of all the other people in the location.
+        conn.populacedependencies.add( ('populace', iid, locid) )
         cursor = app.mongodb.playstate.find({'iid':iid, 'locid':locid},
                                             {'_id':1, 'lastmoved':1})
         people = []

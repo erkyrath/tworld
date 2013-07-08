@@ -986,13 +986,6 @@ class EvalPropContext(object):
         self.task.set_data_change( ('populace', self.loctx.iid, locid) )
         self.task.clear_loctx(self.uid)
         
-        # We set everybody in the destination room DIRTY_POPULACE.
-        # (Players in the starting room have a dependency, which is already
-        # covered.)
-        others = yield self.task.find_locale_players(notself=True)
-        if others:
-            self.task.set_dirty(others, DIRTY_POPULACE)
-            
         msg = oarrive
         if msg is None:
             msg = self.app.localize('action.oarrive') % (playername,) # '%s arrives.'
@@ -1000,7 +993,7 @@ class EvalPropContext(object):
             ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
             msg = yield ctx.eval(msg, evaltype=EVALTYPE_TEXT)
         if msg:
-            # others is already set
+            others = yield self.task.find_locale_players(notself=True)
             if others:
                 self.task.write_event(others, msg)
                 
