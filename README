@@ -44,6 +44,18 @@ service such as Linode or Amazon EC2. Tworld is not suitable for a shared
 web-hosting service; these usually forbid long-running processes such as
 chat and MUD apps.
 
+Once you have installed everything, edit tworld.conf to your liking.
+(The admin_email entry must be usable, for when password recovery works.)
+
+Make sure mongodb is running.
+
+Run the setup script:
+python3 twsetup.py --config=tworld.conf
+
+Then start the tworld and tweb processes, in separate shells:
+python3 tworld.py --config=tworld.conf
+python3 tweb.py --config=tworld.conf
+
 
 * License
 
