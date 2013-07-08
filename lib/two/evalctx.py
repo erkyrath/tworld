@@ -972,15 +972,18 @@ class EvalPropContext(object):
                 self.task.write_event(others, msg)
 
         # Move the player to the new location.
-                
+        lastlocid = self.loctx.locid
         yield motor.Op(self.app.mongodb.playstate.update,
                        {'_id':self.uid},
                        {'$set':{'locid':locid,
                                 'focus':None,
-                                'lastlocid': self.loctx.locid,
+                                'lastlocid': lastlocid,
                                 'lastmoved': self.task.starttime }})
         self.task.set_dirty(self.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_POPULACE)
         self.task.set_data_change( ('playstate', self.uid, 'locid') )
+        if lastlocid:
+            self.task.set_data_change( ('populace', self.loctx.iid, lastlocid) )
+        self.task.set_data_change( ('populace', self.loctx.iid, locid) )
         self.task.clear_loctx(self.uid)
         
         # We set everybody in the destination room DIRTY_POPULACE.

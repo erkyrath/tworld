@@ -230,6 +230,7 @@ def define_commands():
             playername = res['name']
             task.write_event(others, app.localize('action.oportout') % (playername,)) # '%s disappears.'
         # Move the player to the void.
+        oldloctx = yield task.get_loctx(cmd.uid)
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':cmd.uid},
                        {'$set':{'focus':None, 'iid':None, 'locid':None,
@@ -239,6 +240,8 @@ def define_commands():
         task.set_dirty(cmd.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_WORLD | DIRTY_POPULACE)
         task.set_data_change( ('playstate', cmd.uid, 'iid') )
         task.set_data_change( ('playstate', cmd.uid, 'locid') )
+        if oldloctx.iid:
+            task.set_data_change( ('populace', oldloctx.iid, oldloctx.locid) )
         task.clear_loctx(cmd.uid)
         if cmd.portin:
             app.schedule_command({'cmd':'portin', 'uid':cmd.uid}, 1.5)
@@ -528,8 +531,9 @@ def define_commands():
         task.set_dirty(cmd.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_WORLD | DIRTY_POPULACE)
         task.set_data_change( ('playstate', cmd.uid, 'iid') )
         task.set_data_change( ('playstate', cmd.uid, 'locid') )
+        task.set_data_change( ('populace', newiid, newlocid) )
         task.clear_loctx(cmd.uid)
-        
+
         # We set everybody in the destination room DIRTY_POPULACE.
         others = yield task.find_locale_players(uid=cmd.uid, notself=True)
         if others:

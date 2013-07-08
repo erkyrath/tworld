@@ -424,6 +424,31 @@ def define_globals():
         ctx = EvalPropContext.get_current_context()
         return ctx.task.starttime
 
+    @scriptfunc('count', group='players', yieldy=True)
+    def global_players_count(loc):
+        """Number of players in a location or the instance.
+        """
+        ctx = EvalPropContext.get_current_context()
+        iid = ctx.loctx.iid
+        if not iid:
+            raise Exception('No current instance')
+        if isinstance(loc, two.execute.RealmProxy):
+            cursor = ctx.app.mongodb.playstate.find({'iid':iid},
+                                                    {'_id':1})
+            # Could have a dependency on ('populace', iid, None). But then
+            # we'd have to ping it whenever a player moved in the instance,
+            # and I'm not sure it's worth the effort.
+        elif isinstance(loc, two.execute.LocationProxy):
+            cursor = ctx.app.mongodb.playstate.find({'iid':iid, 'locid':loc.locid},
+                                                    {'_id':1})
+            if ctx.dependencies is not None:
+                ctx.dependencies.add( ('populace', iid, loc.locid) )
+        else:
+            raise TypeError('players.count: must be location or realm')
+        res = yield motor.Op(cursor.count)
+        cursor.close()
+        return res
+
     @scriptfunc('choice', group='random')
     def global_random_choice(seq):
         """Choose a random member of a list.
@@ -478,6 +503,9 @@ def define_globals():
     
     map = dict(ScriptFunc.funcgroups['random'])
     globmap['random'] = ScriptNamespace(map)
+
+    map = dict(ScriptFunc.funcgroups['players'])
+    globmap['players'] = ScriptNamespace(map)
 
     map = dict(ScriptFunc.funcgroups['access'])
     # Add in all the access level names (as uppercase symbols)

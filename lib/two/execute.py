@@ -1291,6 +1291,8 @@ def perform_action(task, cmd, conn, target):
             task.set_dirty(uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_WORLD | DIRTY_POPULACE)
             task.set_data_change( ('playstate', uid, 'iid') )
             task.set_data_change( ('playstate', uid, 'locid') )
+            if loctx.iid:
+                task.set_data_change( ('populace', loctx.iid, loctx.locid) )
             task.clear_loctx(uid)
             app.schedule_command({'cmd':'portin', 'uid':uid}, 1.5)
             return
