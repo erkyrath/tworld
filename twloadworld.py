@@ -145,6 +145,12 @@ class World(object):
                     self.symbolsused.add( (nod.expr, lockey) )
 
         for (symbol, lockey) in self.symbolsused:
+            if not symbol.isidentifier():
+                try:
+                    ast.parse(symbol)
+                except:
+                    print('Warning: code snippet "%s" in %s does not parse.' % (symbol, lockey,))                    
+                continue
             if lockey is None:
                 loc = None
             else:
