@@ -41,8 +41,8 @@ class ScriptNamespace(object):
                 val = 'ScriptNamespace(...)'
             else:
                 val = str(val)
-                if len(val) > 24:
-                    val = val[:24] + '...'
+                if len(val) > 30:
+                    val = val[:30] + '...'
             ls.append('%s=%s' % (key, val))
         ls = ', '.join(ls)
         return '<ScriptNamespace(%s)>' % (ls,)
@@ -89,8 +89,11 @@ class ScriptFunc:
     # stuffed into a dict in this master dict.
     funcgroups = {}
     
-    def __init__(self, name, func, yieldy=False):
+    def __init__(self, name, func, group=None, yieldy=False):
         self.name = name
+        if group == '_':
+            group = None
+        self.groupname = group
         self.yieldy = yieldy
 
         if not yieldy:
@@ -99,13 +102,16 @@ class ScriptFunc:
             self.yieldfunc = tornado.gen.coroutine(func)
         
     def __repr__(self):
-        return '<ScriptFunc "%s">' % (self.name,)
+        prefix = ''
+        if self.groupname:
+            prefix = self.groupname + '.'
+        return '<ScriptFunc "%s%s">' % (prefix, self.name,)
 
 def scriptfunc(name, group=None, **kwargs):
     """Decorator for scriptfunc functions.
     """
     def wrap(func):
-        func = ScriptFunc(name, func, **kwargs)
+        func = ScriptFunc(name, func, group=group, **kwargs)
         if group is not None:
             if group not in ScriptFunc.funcgroups:
                 ScriptFunc.funcgroups[group] = {}
@@ -447,6 +453,35 @@ def define_globals():
             raise TypeError('players.count: must be location or realm')
         res = yield motor.Op(cursor.count)
         cursor.close()
+        return res
+
+    @scriptfunc('list', group='players', yieldy=True)
+    def global_players_list(loc):
+        """List of players in a location or the instance.
+        """
+        ctx = EvalPropContext.get_current_context()
+        iid = ctx.loctx.iid
+        if not iid:
+            raise Exception('No current instance')
+        if isinstance(loc, two.execute.RealmProxy):
+            cursor = ctx.app.mongodb.playstate.find({'iid':iid},
+                                                    {'_id':1})
+            # Could have a dependency on ('populace', iid, None). But then
+            # we'd have to ping it whenever a player moved in the instance,
+            # and I'm not sure it's worth the effort.
+        elif isinstance(loc, two.execute.LocationProxy):
+            cursor = ctx.app.mongodb.playstate.find({'iid':iid, 'locid':loc.locid},
+                                                    {'_id':1})
+            if ctx.dependencies is not None:
+                ctx.dependencies.add( ('populace', iid, loc.locid) )
+        else:
+            raise TypeError('players.count: must be location or realm')
+        res = []
+        while (yield cursor.fetch_next):
+            player = cursor.next_object()
+            res.append(two.execute.PlayerContext(player['_id']))
+        cursor.close()
+        ctx.app.log.debug('#### res: %s', res)
         return res
 
     @scriptfunc('choice', group='random')
