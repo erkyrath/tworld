@@ -569,6 +569,7 @@ def define_commands():
         conn.write({'cmd':'message', 'text':'Other commands:'})
         conn.write({'cmd':'message', 'text':'/refresh: Reload the current location. (Or you can use your browser\'s refresh button.)'})
         conn.write({'cmd':'message', 'text':'/panic: Jump to your selected panic location. \xA0 /panicstart: Jump back to the start world.'})
+        conn.write({'cmd':'message', 'text':'/playstate: Display your identity and location, with database IDs.'})
         return
 
     @command('meta_refresh')
@@ -576,6 +577,40 @@ def define_commands():
         conn.write({'cmd':'message', 'text':'Refreshing display...'})
         app.queue_command({'cmd':'connrefreshall', 'connid':conn.connid})
 
+    @command('meta_playstate', restrict='debug')
+    def cmd_meta_playstate(app, task, cmd, conn):
+        loctx = yield task.get_loctx(conn.uid)
+
+        player = yield motor.Op(app.mongodb.players.find_one,
+                                {'_id':conn.uid})
+        
+        msg = 'You are "%s" <%s> (%s).' % (player['name'], player['email'], conn.uid,)
+        conn.write({'cmd':'message', 'text':msg})
+
+        if loctx.wid:
+            world = yield motor.Op(app.mongodb.worlds.find_one,
+                                   {'_id':loctx.wid})
+            name = '(none)'
+            if world:
+                name = world.get('name', '???')
+            msg = 'World: "%s" (%s).' % (name, loctx.wid)
+            conn.write({'cmd':'message', 'text':msg})
+        if loctx.iid:
+            msg = 'Instance: (%s).' % (loctx.iid,)
+            conn.write({'cmd':'message', 'text':msg})
+        if loctx.scid:
+            scope = yield motor.Op(app.mongodb.scopes.find_one,
+                                   {'_id':loctx.scid})
+            if scope:
+                msg = 'Scope: %s (%s).' % (scope['type'], loctx.scid)
+                conn.write({'cmd':'message', 'text':msg})
+        if loctx.locid:
+            loc = yield motor.Op(app.mongodb.locations.find_one,
+                                 {'_id':loctx.locid})
+            if loc:
+                msg = 'Location: "%s" (%s).' % (loc['name'], loctx.locid)
+                conn.write({'cmd':'message', 'text':msg})
+        
     @command('meta_scopeaccess', restrict='debug')
     def cmd_meta_scopeaccess(app, task, cmd, conn):
         loctx = yield task.get_loctx(conn.uid)
