@@ -479,9 +479,8 @@ def define_globals():
         res = []
         while (yield cursor.fetch_next):
             player = cursor.next_object()
-            res.append(two.execute.PlayerContext(player['_id']))
+            res.append(two.execute.PlayerProxy(player['_id']))
         cursor.close()
-        ctx.app.log.debug('#### res: %s', res)
         return res
 
     @scriptfunc('choice', group='random')
