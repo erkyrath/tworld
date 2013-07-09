@@ -234,7 +234,7 @@ class Task(object):
             if notself and ostate['_id'] == uid:
                 continue
             people.append(ostate['_id'])
-        cursor.close()
+        # cursor autoclose
             
         return people
         
@@ -248,7 +248,7 @@ class Task(object):
         while (yield cursor.fetch_next):
             ostate = cursor.next_object()
             people.append(ostate['_id'])
-        cursor.close()
+        # cursor autoclose
             
         return people
         

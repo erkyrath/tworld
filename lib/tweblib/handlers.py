@@ -388,7 +388,7 @@ class PlayHandler(MyRequestHandler):
             while (yield cursor.fetch_next):
                 pref = cursor.next_object()
                 uiprefs[pref['key']] = pref['val']
-            cursor.close()
+            # cursor autoclose
         # We could use the client preferred language here.
         localize = self.application.twlocalize.all()
         self.render('play.html',

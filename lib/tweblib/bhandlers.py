@@ -81,7 +81,7 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
         while (yield cursor.fetch_next):
             loc = cursor.next_object()
             locations.append(loc)
-        cursor.close()
+        # cursor autoclose
         locations.sort(key=lambda loc:loc['_id']) ### or other criterion?
 
         return (world, locations)
@@ -174,7 +174,7 @@ class BuildMainHandler(BuildBaseHandler):
         while (yield cursor.fetch_next):
             world = cursor.next_object()
             worlds.append({'name':world['name'], 'id':str(world['_id'])})
-        cursor.close()
+        # cursor autoclose
         worlds.sort(key=lambda world:world['id']) ### or other criterion?
         self.render('build_main.html', worlds=worlds)
         
@@ -194,7 +194,7 @@ class BuildWorldHandler(BuildBaseHandler):
         while (yield cursor.fetch_next):
             prop = cursor.next_object()
             worldprops.append(prop)
-        cursor.close()
+        # cursor autoclose
         worldprops.sort(key=lambda prop:prop['_id']) ### or other criterion?
 
         playerprops = []
@@ -202,7 +202,7 @@ class BuildWorldHandler(BuildBaseHandler):
         while (yield cursor.fetch_next):
             prop = cursor.next_object()
             playerprops.append(prop)
-        cursor.close()
+        # cursor autoclose
         playerprops.sort(key=lambda prop:prop['_id']) ### or other criterion?
 
         encoder = JSONEncoderExtra()
@@ -241,7 +241,7 @@ class BuildLocHandler(BuildBaseHandler):
         while (yield cursor.fetch_next):
             prop = cursor.next_object()
             props.append(prop)
-        cursor.close()
+        # cursor autoclose
         props.sort(key=lambda prop:prop['_id']) ### or other criterion?
 
         encoder = JSONEncoderExtra()

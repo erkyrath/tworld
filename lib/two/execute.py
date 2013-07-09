@@ -877,7 +877,7 @@ def render_focus(task, loctx, conn, focusobj):
             while (yield cursor.fetch_next):
                 portal = cursor.next_object()
                 ls.append(portal)
-            cursor.close()
+            # cursor autoclose
             ls.sort(key=lambda portal:portal.get('listpos', 0))
 
             # Note the dependencies on the world and instance portlist.
@@ -1036,7 +1036,7 @@ def generate_update(task, conn, dirty):
             ostate['_ackey'] = ackey
             conn.populaceactions[ackey] = ('player', ostate['_id'])
             conn.populacedependencies.add( ('playstate', ostate['_id'], 'locid') )
-        cursor.close()
+        # cursor autoclose
         for ostate in people:
             oplayer = yield motor.Op(app.mongodb.players.find_one,
                                      {'_id':ostate['_id']},

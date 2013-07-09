@@ -94,7 +94,7 @@ def define_commands():
             iid = playstate['iid']
             if iid:
                 iidset.add(iid)
-        cursor.close()
+        # cursor autoclose
         iidls = list(iidset)
         iidls.sort()  # Just for consistency
         for iid in iidls:
@@ -132,7 +132,7 @@ def define_commands():
             iid = playstate['iid']
             if iid:
                 iidset.add(iid)
-        cursor.close()
+        # cursor autoclose
         iidls = list(iidset)
         for iid in iidls:
             instance = app.ipool.get(iid)
@@ -171,7 +171,7 @@ def define_commands():
         cursor = app.mongodb.playstate.find({'iid':cmd.iid},
                                             {'_id':1})
         res = yield motor.Op(cursor.count)
-        cursor.close()
+        # cursor autoclose
         if res:
             task.log.warning('sleepinstance: unable to sleep instance because %d players are present', res)
             return
@@ -227,7 +227,7 @@ def define_commands():
             inworld += 1
             if not conncount:
                 ls.append(playstate['_id'])
-        cursor.close()
+        # cursor autoclose
 
         app.log.info('checkdisconnected: %d players in world, %d are disconnected', inworld, len(ls))
         ### Keep a two-strikes list, so that players are knocked out after some minimum interval
@@ -324,7 +324,7 @@ def define_commands():
         while (yield cursor.fetch_next):
             portal = cursor.next_object()
             ls.append(portal)
-        cursor.close()
+        # cursor autoclose
         map = {}
         for portal in ls:
             desc = yield two.execute.portal_description(app, portal, conn.uid, uidiid=iid, location=True, short=True)
@@ -680,7 +680,7 @@ def define_commands():
         while (yield cursor.fetch_next):
             player = cursor.next_object()
             app.queue_command({'cmd':'tovoid', 'uid':player['_id'], 'portin':True})
-        cursor.close()
+        # cursor autoclose
         app.queue_command({'cmd':'sleepinstance', 'iid':loctx.iid})
         
     @command('meta_getprop', restrict='creator')

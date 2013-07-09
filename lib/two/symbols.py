@@ -460,7 +460,7 @@ def define_globals():
         else:
             raise TypeError('players.count: must be location or realm')
         res = yield motor.Op(cursor.count)
-        cursor.close()
+        # cursor autoclose
         return res
 
     @scriptfunc('list', group='players', yieldy=True)
@@ -488,7 +488,7 @@ def define_globals():
         while (yield cursor.fetch_next):
             player = cursor.next_object()
             res.append(two.execute.PlayerProxy(player['_id']))
-        cursor.close()
+        # cursor autoclose
         return res
 
     @scriptfunc('choice', group='random')
