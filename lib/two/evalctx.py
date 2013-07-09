@@ -462,6 +462,9 @@ class EvalPropContext(object):
         if nodtyp is ast.Set:
             res = yield self.execcode_set(nod)
             return res
+        if nodtyp is ast.Dict:
+            res = yield self.execcode_dict(nod)
+            return res
         if nodtyp is ast.UnaryOp:
             res = yield self.execcode_unaryop(nod)
             return res
@@ -508,6 +511,18 @@ class EvalPropContext(object):
             val = yield self.execcode_expr(subnod)
             ls.append(val)
         return set(ls)
+
+    @tornado.gen.coroutine
+    def execcode_dict(self, nod):
+        keyls = []
+        for subnod in nod.keys:
+            val = yield self.execcode_expr(subnod)
+            keyls.append(val)
+        valls = []
+        for subnod in nod.keys:
+            val = yield self.execcode_expr(subnod)
+            valls.append(val)
+        return dict(zip(keyls, valls))
 
     map_unaryop_operators = {
         ast.Not: operator.not_,
