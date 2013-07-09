@@ -145,6 +145,14 @@ def define_globals():
         ctx.accum.append(nod.describe())
         return '' ### tacky
         
+    @scriptfunc('locals', group='_')
+    def global_locals():
+        """Return a dictionary that reflects the current set of local
+        variables. (Not properties or builtins.)
+        """
+        ctx = EvalPropContext.get_current_context()
+        return ctx.frame.locals
+        
     @scriptfunc('log', group='_')
     def global_log(*ls):
         """Log a message to the server log. Only works if debug is set
@@ -594,7 +602,7 @@ def find_symbol(app, loctx, key, locals=None, dependencies=None):
     """Look up a symbol, using the universal laws of symbol-looking-up.
     To wit:
     - "_" and other immutables
-    - locals
+    - locals (which start with "_")
     - instance properties
     - world properties
     - realm-level instance properties
@@ -608,11 +616,14 @@ def find_symbol(app, loctx, key, locals=None, dependencies=None):
         return app.global_symbol_table
     if key in immutable_symbol_table:
         return immutable_symbol_table[key]
-    
-    if locals is not None:
+    if key.startswith('_'):
+        if locals is None:
+            raise NameError('Temporary variables not available ("%s")' % (key,))
         if key in locals:
             return locals[key]
-    
+        raise NameError('Temporary variable "%s" is not found' % (key,))
+
+    # Property cases
     wid = loctx.wid
     iid = loctx.iid
     locid = loctx.locid

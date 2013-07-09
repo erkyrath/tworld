@@ -45,15 +45,16 @@ class EvalPropFrame:
     """
     def __init__(self, depth):
         self.depth = depth
-        # Probably foolish optimization: don't allocate an empty locals
-        # map unless one is specifically requested.
-        self.locals = None
+        self.locals = {}
     def __repr__(self):
         return '<EvalPropFrame depth=%d>' % (self.depth,)
 
 class EvalPropContext(object):
     """EvalPropContext is a context for evaluating one symbol, piece of code,
     or piece of marked-up text, during a task.
+
+    ("EvalPropContext" is a misnomer at this point. The item being evaluated
+    may not be a property.)
 
     When setting up an EvalPropContext you must provide a LocContext, which
     is the identity and location of the player who is the center of the
@@ -458,6 +459,9 @@ class EvalPropContext(object):
         if nodtyp is ast.Tuple:
             res = yield self.execcode_tuple(nod)
             return res
+        if nodtyp is ast.Set:
+            res = yield self.execcode_set(nod)
+            return res
         if nodtyp is ast.UnaryOp:
             res = yield self.execcode_unaryop(nod)
             return res
@@ -496,6 +500,14 @@ class EvalPropContext(object):
             val = yield self.execcode_expr(subnod)
             ls.append(val)
         return tuple(ls)
+
+    @tornado.gen.coroutine
+    def execcode_set(self, nod):
+        ls = []
+        for subnod in nod.elts:
+            val = yield self.execcode_expr(subnod)
+            ls.append(val)
+        return set(ls)
 
     map_unaryop_operators = {
         ast.Not: operator.not_,

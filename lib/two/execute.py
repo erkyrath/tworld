@@ -315,8 +315,9 @@ class BoundNameProxy(object):
 
     That is, BoundNameProxy('name') has methods to set, get, or delete
     the "name" symbol (in a given location context). This respects all
-    the wacky rules: '_' is always the global context, 'name' may be
-    found at the realm level or in the world definition, etc.
+    the wacky rules: "_" is always the global context, symbols starting
+    with "_" are locals, "name" may be found at the realm level or in the
+    world definition, etc.
     """
     
     def __init__(self, key):
@@ -329,34 +330,53 @@ class BoundNameProxy(object):
     
     @tornado.gen.coroutine
     def delete(self, ctx, loctx):
-        if self.key == '_' or two.symbols.is_immutable_symbol(self.key):
-            raise Exception('Cannot delete keyword "%s"' % (self.key,))
+        key = self.key
+        if key == '_' or two.symbols.is_immutable_symbol(key):
+            raise Exception('Cannot delete keyword "%s"' % (key,))
+        
+        if key.startswith('_'):
+            locals = ctx.frame.locals
+            if locals is None:
+                raise NameError('Temporary variables not available ("%s")' % (key,))
+            if key in locals:
+                del locals[key]
+                return
+            raise NameError('Temporary variable "%s" is not found' % (key,))
+            
         if ctx.level != LEVEL_EXECUTE:
             raise Exception('Properties may only be deleted in action code')
         iid = loctx.iid
         locid = loctx.locid
         yield motor.Op(ctx.app.mongodb.instanceprop.remove,
-                       {'iid':iid, 'locid':locid, 'key':self.key})
-        ctx.task.changeset.add( ('instanceprop', iid, locid, self.key) )
+                       {'iid':iid, 'locid':locid, 'key':key})
+        ctx.task.changeset.add( ('instanceprop', iid, locid, key) )
     
     @tornado.gen.coroutine
     def store(self, ctx, loctx, val):
-        if self.key == '_':
+        key = self.key
+        if key == '_':
             # Assignment to _ is silently dropped, to sort-of support
             # Python idiom.
             return
-        if two.symbols.is_immutable_symbol(self.key):
-            raise Exception('Cannot delete keyword "%s"' % (self.key,))
-        ### locals?
+        if two.symbols.is_immutable_symbol(key):
+            raise Exception('Cannot delete keyword "%s"' % (key,))
+
+        if key.startswith('_'):
+            locals = ctx.frame.locals
+            if locals is None:
+                raise NameError('Temporary variables not available ("%s")' % (key,))
+            locals[key] = val
+            return
+            
         if ctx.level != LEVEL_EXECUTE:
             raise Exception('Properties may only be set in action code')
         iid = loctx.iid
         locid = loctx.locid
         yield motor.Op(ctx.app.mongodb.instanceprop.update,
-                       {'iid':iid, 'locid':locid, 'key':self.key},
-                       {'iid':iid, 'locid':locid, 'key':self.key, 'val':val},
+                       {'iid':iid, 'locid':locid, 'key':key},
+                       {'iid':iid, 'locid':locid, 'key':key, 'val':val},
                        upsert=True)
-        ctx.task.changeset.add( ('instanceprop', iid, locid, self.key) )
+        ctx.task.changeset.add( ('instanceprop', iid, locid, key) )
 
 class WorldLocationsProxy(PropertyProxyMixin, object):
     """Represents the collection of locations (in the current world).
