@@ -162,6 +162,25 @@ def define_commands():
                         task.log.warning('Caught exception (sleeping instance): %s', ex, exc_info=app.debugstacktraces)
                 app.ipool.remove_instance(iid)
     
+    @command('sleepinstance', isserver=True)
+    def cmd_sleepinstance(app, task, cmd, stream):
+        inst = app.ipool.get(cmd.iid)
+        if not inst:
+            task.log.warning('sleepinstance: instance is not awake (%s)', cmd.iid)
+            return
+        cursor = app.mongodb.playstate.find({'iid':cmd.iid},
+                                            {'_id':1})
+        res = yield motor.Op(cursor.count)
+        cursor.close()
+        if res:
+            task.log.warning('sleepinstance: unable to sleep instance because %d players are present', res)
+            return
+        # Mark the instance as not having been touched recently. Then
+        # schedule an emergency checkuninhabited event, which should result
+        # in the instance being put to sleep.
+        inst.ancientify()
+        app.queue_command({'cmd':'checkuninhabited'})
+        
     @command('connect', isserver=True, noneedmongo=True)
     def cmd_connect(app, task, cmd, stream):
         assert stream is not None, 'Tweb connect command from no stream.'
@@ -650,6 +669,20 @@ def define_commands():
     def cmd_meta_panicstart(app, task, cmd, conn):
         app.queue_command({'cmd':'portstart'}, connid=task.connid, twwcid=task.twwcid)
 
+    @command('meta_bootinstance', restrict='creator')
+    def cmd_meta_bootinstance(app, task, cmd, conn):
+        # Get a list of all players in this instance.
+        loctx = yield task.get_loctx(conn.uid)
+        if not loctx.iid:
+            raise MessageException('You are not in an instance.')
+        cursor = app.mongodb.playstate.find({'iid':loctx.iid},
+                                            {'_id':1})
+        while (yield cursor.fetch_next):
+            player = cursor.next_object()
+            app.queue_command({'cmd':'tovoid', 'uid':player['_id'], 'portin':True})
+        cursor.close()
+        app.queue_command({'cmd':'sleepinstance', 'iid':loctx.iid})
+        
     @command('meta_getprop', restrict='creator')
     def cmd_meta_getprop(app, task, cmd, conn):
         if len(cmd.args) != 1:

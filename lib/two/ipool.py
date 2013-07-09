@@ -115,6 +115,13 @@ class Instance:
         self.app = None
         self.iid = None
         self.timers = None
+
+    def ancientify(self):
+        """Make this instance appear to not have been touched in a very
+        long time. This is useful for the debug command that puts the
+        instance to sleep.
+        """
+        self.lastinhabited = twcommon.misc.now() - datetime.timedelta(days=10)
         
     def add_timer_event(self, delta, func, repeat=False, cancel=None):
         """Add a timer event to the instance. This is invoked by the
