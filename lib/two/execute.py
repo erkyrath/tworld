@@ -777,8 +777,6 @@ def render_focus(task, loctx, conn, focusobj):
     if focusobj is None:
         return (False, False)
 
-    evaltype = EVALTYPE_SYMBOL
-
     assert conn.uid == loctx.uid
     
     if type(focusobj) is list:
@@ -910,8 +908,14 @@ def render_focus(task, loctx, conn, focusobj):
         focusdesc = '[Focus: %s]' % (focusobj,)
         return (focusdesc, False)
 
+    if type(focusobj) is not str:
+        return (str(focusobj), False)
+
+    if focusobj.startswith('_'):
+        raise Exception('Temporary variable cannot be focus: %s' % (focusobj,))
+
     ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_DISPSPECIAL)
-    focusdesc = yield ctx.eval(focusobj, evaltype=evaltype)
+    focusdesc = yield ctx.eval(focusobj, evaltype=EVALTYPE_SYMBOL)
     if ctx.linktargets:
         conn.focusactions.update(ctx.linktargets)
     if ctx.dependencies:
