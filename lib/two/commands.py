@@ -852,6 +852,24 @@ def define_commands():
 
         yield ctx.perform_move(location['_id'], 'Your location changes.', False, None, False, None, False)
         
+    @command('meta_exec', restrict='creator', doeswrite=True)
+    def cmd_meta_exec(app, task, cmd, conn):
+        if len(cmd.args) == 0:
+            raise MessageException('Usage: /exec code')
+        code = ' '.join(cmd.args)
+        loctx = yield task.get_loctx(conn.uid)
+        ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
+        try:
+            newval = yield ctx.eval(code, evaltype=EVALTYPE_CODE)
+            if newval is None:
+                conn.write({'cmd':'event', 'text':'Exec done.'})
+            else:
+                conn.write({'cmd':'event', 'text':'Exec done: %s' % (repr(newval),)})
+        except Exception as ex:
+            task.log.warning('Exec failed: %s', ex, exc_info=app.debugstacktraces)
+            exmsg = '%s: %s' % (ex.__class__.__name__, ex,)
+            conn.write({'cmd':'event', 'text':'Exec raised exception: %s' % (exmsg,)})
+        
     @command('meta_holler', restrict='admin')
     def cmd_meta_holler(app, task, cmd, conn):
         val = 'Admin broadcast: ' + (' '.join(cmd.args))
