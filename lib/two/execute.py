@@ -109,7 +109,7 @@ class PlayerProxy(PropertyProxyMixin, object):
         """Delete a player instance property, if present.
         """
         if ctx.level != LEVEL_EXECUTE:
-            raise Exception('Properties may only be deleted in action code')
+            raise Exception('Properties may only be deleted in action code (player prop "%s")' % (key,))
         iid = loctx.iid
         uid = self.uid
         yield motor.Op(ctx.app.mongodb.iplayerprop.remove,
@@ -121,7 +121,7 @@ class PlayerProxy(PropertyProxyMixin, object):
         """Set a player instance property.
         """
         if ctx.level != LEVEL_EXECUTE:
-            raise Exception('Properties may only be set in action code')
+            raise Exception('Properties may only be set in action code (player prop "%s")' % (key,))
         iid = loctx.iid
         uid = self.uid
         yield motor.Op(ctx.app.mongodb.iplayerprop.update,
@@ -203,7 +203,7 @@ class LocationProxy(PropertyProxyMixin, object):
         """Delete an instance property, if present.
         """
         if ctx.level != LEVEL_EXECUTE:
-            raise Exception('Properties may only be deleted in action code')
+            raise Exception('Properties may only be deleted in action code (location prop "%s")' % (key,))
         iid = loctx.iid
         locid = self.locid
         yield motor.Op(ctx.app.mongodb.instanceprop.remove,
@@ -215,7 +215,7 @@ class LocationProxy(PropertyProxyMixin, object):
         """Set an instance property.
         """
         if ctx.level != LEVEL_EXECUTE:
-            raise Exception('Properties may only be set in action code')
+            raise Exception('Properties may only be set in action code (location prop "%s")' % (key,))
         iid = loctx.iid
         locid = self.locid
         yield motor.Op(ctx.app.mongodb.instanceprop.update,
@@ -266,7 +266,7 @@ class RealmProxy(PropertyProxyMixin, object):
         """Delete a realm-level instance property, if present.
         """
         if ctx.level != LEVEL_EXECUTE:
-            raise Exception('Properties may only be deleted in action code')
+            raise Exception('Properties may only be deleted in action code (realm prop "%s")' % (key,))
         iid = loctx.iid
         locid = None
         yield motor.Op(ctx.app.mongodb.instanceprop.remove,
@@ -278,7 +278,7 @@ class RealmProxy(PropertyProxyMixin, object):
         """Set a realm-level instance property.
         """
         if ctx.level != LEVEL_EXECUTE:
-            raise Exception('Properties may only be set in action code')
+            raise Exception('Properties may only be set in action code (realm prop "%s")' % (key,))
         iid = loctx.iid
         locid = None
         yield motor.Op(ctx.app.mongodb.instanceprop.update,
@@ -344,7 +344,7 @@ class BoundNameProxy(object):
             raise NameError('Temporary variable "%s" is not found' % (key,))
             
         if ctx.level != LEVEL_EXECUTE:
-            raise Exception('Properties may only be deleted in action code')
+            raise Exception('Properties may only be deleted in action code (prop "%s")' % (key,))
         iid = loctx.iid
         locid = loctx.locid
         yield motor.Op(ctx.app.mongodb.instanceprop.remove,
@@ -369,7 +369,7 @@ class BoundNameProxy(object):
             return
             
         if ctx.level != LEVEL_EXECUTE:
-            raise Exception('Properties may only be set in action code')
+            raise Exception('Properties may only be set in action code (prop "%s")' % (key,))
         iid = loctx.iid
         locid = loctx.locid
         yield motor.Op(ctx.app.mongodb.instanceprop.update,
