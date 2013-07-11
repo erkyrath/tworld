@@ -45,14 +45,19 @@ Accumulated = twcommon.misc.SuiGeneris('Accumulated')
 class EvalPropFrame:
     """One stack frame in the EvalPropContext. Note that depth starts at 1.
 
+    The locals map, if provided, is used "live" (not copied).
+
     We add a stack frame for every function call, {code} invocation, and
     {text} interpolation. Nested sub-contexts have their own stack
     list, so we don't create a frame in that case, but the sub-context
     parentdepth field will be one higher than our total depth.
     """
-    def __init__(self, depth):
+    def __init__(self, depth, locals=None):
         self.depth = depth
-        self.locals = {}
+        if locals is None:
+            self.locals = {}
+        else:
+            self.locals = locals
     def __repr__(self):
         return '<EvalPropFrame depth=%d>' % (self.depth,)
 
@@ -157,12 +162,17 @@ class EvalPropContext(object):
             self.dependencies.update(ctx.dependencies)
 
     @tornado.gen.coroutine
-    def eval(self, key, evaltype=EVALTYPE_SYMBOL):
+    def eval(self, key, evaltype=EVALTYPE_SYMBOL, locals=None):
         """Look up and return a symbol, in this context. If EVALTYPE_TEXT,
         the argument is treated as an already-looked-up {text} value
         (a string with interpolations). If EVALTYPE_CODE, the argument
         is treated as a snippet of {code}. If EVALTYPE_RAW, the argument
         must be a dict object with a meaningful type field.
+
+        The locals (if provided) form the initial locals dict for any
+        invoked stack frame. These currently must be symbols beginning
+        with underscore. ###generalize for function {code} args?
+        The locals dict is used "live", not copied.
 
         This is the top-level entry point to Doing Stuff in this context.
         
@@ -206,7 +216,7 @@ class EvalPropContext(object):
 
         try:
             EvalPropContext.context_stack.append(self)
-            res = yield self.evalobj(key, evaltype=evaltype)
+            res = yield self.evalobj(key, evaltype=evaltype, locals=locals)
         finally:
             assert (self.depth == 0) and (self.frame is None), 'EvalPropContext did not pop all the way!'
             assert (EvalPropContext.context_stack[-1] is self), 'EvalPropContext.context_stack did not nest properly!'
@@ -243,7 +253,7 @@ class EvalPropContext(object):
         raise Exception('unrecognized eval level: %d' % (self.level,))
         
     @tornado.gen.coroutine
-    def evalobj(self, key, evaltype=EVALTYPE_SYMBOL):
+    def evalobj(self, key, evaltype=EVALTYPE_SYMBOL, locals=None):
         """Look up a symbol, adding it to the accumulated content. If the
         result contains interpolated strings, this calls itself recursively.
 
@@ -356,7 +366,7 @@ class EvalPropContext(object):
             # so that they will appear inline in a logical spot.
             try:
                 origframe = self.frame  # may be None
-                self.frame = EvalPropFrame(self.depth+1)
+                self.frame = EvalPropFrame(self.depth+1, locals=locals)
                 self.frames.append(self.frame)
                 if self.parentdepth+self.depth > self.task.STACK_DEPTH_LIMIT:
                     self.task.log.error('ExecRunawayException: User script exceeded depth limit!')
@@ -378,7 +388,7 @@ class EvalPropContext(object):
             # We let execution errors bubble up to the top level.
             try:
                 origframe = self.frame  # may be None
-                self.frame = EvalPropFrame(self.depth+1)
+                self.frame = EvalPropFrame(self.depth+1, locals=locals)
                 self.frames.append(self.frame)
                 if self.parentdepth+self.depth > self.task.STACK_DEPTH_LIMIT:
                     self.task.log.error('ExecRunawayException: User script exceeded depth limit!')
@@ -999,6 +1009,7 @@ class EvalPropContext(object):
 
     @tornado.gen.coroutine
     def perform_move(self, locid, text, texteval, oleave, oleaveeval, oarrive, oarriveeval):
+        assert isinstance(locid, ObjectId)
         if self.level != LEVEL_EXECUTE:
             raise Exception('Moves may only occur in action code')
         if not (self.caps & EVALCAP_MOVE):
@@ -1017,8 +1028,9 @@ class EvalPropContext(object):
         if leavehook and twcommon.misc.is_typed_dict(leavehook, 'code'):
             ctx = EvalPropContext(self.task, loctx=self.loctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
             try:
-                ### next location locid
-                yield ctx.eval(leavehook, evaltype=EVALTYPE_RAW)
+                args = { '_from':two.execute.LocationProxy(self.loctx.locid),
+                         '_to':two.execute.LocationProxy(locid) }
+                yield ctx.eval(leavehook, evaltype=EVALTYPE_RAW, locals=args)
             except Exception as ex:
                 self.task.log.warning('Caught exception (leaving loc, move): %s', ex, exc_info=self.app.debugstacktraces)
             ctx = None
@@ -1076,8 +1088,13 @@ class EvalPropContext(object):
         if enterhook and twcommon.misc.is_typed_dict(enterhook, 'code'):
             ctx = EvalPropContext(self.task, loctx=newloctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
             try:
-                ### previous location lastlocid
-                yield ctx.eval(enterhook, evaltype=EVALTYPE_RAW)
+                if lastlocid:
+                    args = { '_from':two.execute.LocationProxy(lastlocid),
+                             '_to':two.execute.LocationProxy(locid)}
+                else:
+                    args = { '_from':None,
+                             '_to':two.execute.LocationProxy(locid) }
+                yield ctx.eval(enterhook, evaltype=EVALTYPE_RAW, locals=args)
             except Exception as ex:
                 self.task.log.warning('Caught exception (entering loc, move): %s', ex, exc_info=self.app.debugstacktraces)
 

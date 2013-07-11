@@ -245,8 +245,13 @@ def define_commands():
         if leavehook and twcommon.misc.is_typed_dict(leavehook, 'code'):
             ctx = two.evalctx.EvalPropContext(task, loctx=oldloctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
             try:
-                ### next location None
-                yield ctx.eval(leavehook, evaltype=EVALTYPE_RAW)
+                if oldloctx.locid:
+                    args = { '_from':two.execute.LocationProxy(oldloctx.locid),
+                             '_to':None }
+                else:
+                    args = { '_from':None,
+                             '_to':None }
+                yield ctx.eval(leavehook, evaltype=EVALTYPE_RAW, locals=args)
             except Exception as ex:
                 task.log.warning('Caught exception (leaving loc, linkout): %s', ex, exc_info=app.debugstacktraces)
             ctx = None
@@ -583,8 +588,9 @@ def define_commands():
         if enterhook and twcommon.misc.is_typed_dict(enterhook, 'code'):
             ctx = two.evalctx.EvalPropContext(task, loctx=newloctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
             try:
-                ### previous location None
-                yield ctx.eval(enterhook, evaltype=EVALTYPE_RAW)
+                args = { '_from':None,
+                         '_to':two.execute.LocationProxy(newlocid) }
+                yield ctx.eval(enterhook, evaltype=EVALTYPE_RAW, locals=args)
             except Exception as ex:
                 task.log.warning('Caught exception (entering loc, linkin): %s', ex, exc_info=app.debugstacktraces)
         
