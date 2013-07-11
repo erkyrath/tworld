@@ -993,8 +993,8 @@ def generate_update(task, conn, dirty):
         conn.localeactions.clear()
         conn.localedependencies.clear()
 
+        ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_DISPLAY)
         try:
-            ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_DISPLAY)
             localedesc = yield ctx.eval('desc')
         except Exception as ex:
             task.log.warning('Exception rendering locale: %s', ex, exc_info=app.debugstacktraces)
@@ -1303,8 +1303,7 @@ def perform_action(task, cmd, conn, target):
             except:
                 leavehook = None
             if leavehook and twcommon.misc.is_typed_dict(leavehook, 'code'):
-                ### no-move flag?
-                ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
+                ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
                 try:
                     ### next location None
                     yield ctx.eval(leavehook, evaltype=EVALTYPE_RAW)

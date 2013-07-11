@@ -112,7 +112,7 @@ def define_commands():
                 except:
                     awakenhook = None
                 if awakenhook and twcommon.misc.is_typed_dict(awakenhook, 'code'):
-                    ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
+                    ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
                     try:
                         yield ctx.eval(awakenhook, evaltype=EVALTYPE_RAW)
                     except Exception as ex:
@@ -155,7 +155,7 @@ def define_commands():
                 except:
                     sleephook = None
                 if sleephook and twcommon.misc.is_typed_dict(sleephook, 'code'):
-                    ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
+                    ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
                     try:
                         yield ctx.eval(sleephook, evaltype=EVALTYPE_RAW)
                     except Exception as ex:
@@ -243,8 +243,7 @@ def define_commands():
         except:
             leavehook = None
         if leavehook and twcommon.misc.is_typed_dict(leavehook, 'code'):
-            ### no-move flag?
-            ctx = two.evalctx.EvalPropContext(task, loctx=oldloctx, level=LEVEL_EXECUTE)
+            ctx = two.evalctx.EvalPropContext(task, loctx=oldloctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
             try:
                 ### next location None
                 yield ctx.eval(leavehook, evaltype=EVALTYPE_RAW)
@@ -530,7 +529,7 @@ def define_commands():
             except:
                 inithook = None
             if inithook and twcommon.misc.is_typed_dict(inithook, 'code'):
-                ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
+                ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
                 try:
                     yield ctx.eval(inithook, evaltype=EVALTYPE_RAW)
                 except Exception as ex:
@@ -549,7 +548,7 @@ def define_commands():
             except:
                 awakenhook = None
             if awakenhook and twcommon.misc.is_typed_dict(awakenhook, 'code'):
-                ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
+                ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
                 try:
                     yield ctx.eval(awakenhook, evaltype=EVALTYPE_RAW)
                 except Exception as ex:
@@ -582,8 +581,7 @@ def define_commands():
         except:
             enterhook = None
         if enterhook and twcommon.misc.is_typed_dict(enterhook, 'code'):
-            ### no-move flag?
-            ctx = two.evalctx.EvalPropContext(task, loctx=newloctx, level=LEVEL_EXECUTE)
+            ctx = two.evalctx.EvalPropContext(task, loctx=newloctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
             try:
                 ### previous location None
                 yield ctx.eval(enterhook, evaltype=EVALTYPE_RAW)

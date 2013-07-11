@@ -19,10 +19,17 @@ from twcommon.excepts import ReturnException
 from two import interp
 import two.task
 
-EVALTYPE_SYMBOL = 0
-EVALTYPE_RAW = 1
-EVALTYPE_CODE = 2
-EVALTYPE_TEXT = 3
+# Options for evaluating a thingy -- what kind of thingy is it?
+EVALTYPE_SYMBOL = 0 # name of a symbol to look up
+EVALTYPE_RAW = 1    # raw value
+EVALTYPE_CODE = 2   # string containing code
+EVALTYPE_TEXT = 3   # string containing marked-up text
+
+# Bitmask capability flags
+EVALCAP_RUN     = 0x01  # do anything at all
+EVALCAP_DATAMOD = 0x02  # cause data changes
+EVALCAP_MOVE    = 0x04  # move the player
+EVALCAP_ALL     = 0x07  # all of above
 
 LEVEL_EXECUTE = 5
 LEVEL_DISPSPECIAL = 4
@@ -83,11 +90,14 @@ class EvalPropContext(object):
         EvalPropContext.link_code_counter = EvalPropContext.link_code_counter + 1
         return str(EvalPropContext.link_code_counter) + hex(random.getrandbits(32))[2:]
     
-    def __init__(self, task, parent=None, loctx=None, parentdepth=0, level=LEVEL_MESSAGE):
+    def __init__(self, task, parent=None, loctx=None, parentdepth=0, forbid=None, level=LEVEL_MESSAGE):
         """Caller must provide either parent (an EvalPropContext) or
         a loctx and parentdepth. If there is an effective parent context,
         parentdepth should be ctx.parentdepth+ctx.depth+1. If not, leave
         it as zero.
+
+        The forbid argument is a bitmask of EVALCAPs which this context
+        cannot do. The parent's restrictions are also inherited.
 
         ### A way to pass in argument bindings?
         """
@@ -102,13 +112,21 @@ class EvalPropContext(object):
             self.parentdepth = parent.parentdepth + parent.depth + 1
             self.loctx = parent.loctx
             self.uid = parent.uid
+            self.caps = parent.caps
         elif loctx is not None:
             self.parentdepth = parentdepth
             self.loctx = loctx
             self.uid = loctx.uid
+            self.caps = EVALCAP_ALL
 
         # What kind of evaluation is going on.
         self.level = level
+
+        # Any caps modifications.
+        if forbid:
+            self.caps &= (~forbid)
+        if level < LEVEL_EXECUTE:
+            self.caps &= (~(EVALCAP_DATAMOD|EVALCAP_MOVE))
 
         self.frame = None
         self.frames = None
@@ -171,6 +189,8 @@ class EvalPropContext(object):
         also accumulated.
         """
         self.task.tick()
+        if not (self.caps & EVALCAP_RUN):
+            raise Exception('EvalPropContext does not have permissions to do anything!')
         
         # Initialize per-invocation fields.
         self.accum = None
@@ -981,6 +1001,8 @@ class EvalPropContext(object):
     def perform_move(self, locid, text, texteval, oleave, oleaveeval, oarrive, oarriveeval):
         if self.level != LEVEL_EXECUTE:
             raise Exception('Moves may only occur in action code')
+        if not (self.caps & EVALCAP_MOVE):
+            raise Exception('Moves not permitted in this code')
 
         player = yield motor.Op(self.app.mongodb.players.find_one,
                                 {'_id':self.uid},
@@ -993,8 +1015,7 @@ class EvalPropContext(object):
         except:
             leavehook = None
         if leavehook and twcommon.misc.is_typed_dict(leavehook, 'code'):
-            ### no-move flag?
-            ctx = EvalPropContext(self.task, loctx=self.loctx, level=LEVEL_EXECUTE)
+            ctx = EvalPropContext(self.task, loctx=self.loctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
             try:
                 ### next location locid
                 yield ctx.eval(leavehook, evaltype=EVALTYPE_RAW)
@@ -1053,8 +1074,7 @@ class EvalPropContext(object):
         except:
             enterhook = None
         if enterhook and twcommon.misc.is_typed_dict(enterhook, 'code'):
-            ### no-move flag?
-            ctx = EvalPropContext(self.task, loctx=newloctx, level=LEVEL_EXECUTE)
+            ctx = EvalPropContext(self.task, loctx=newloctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
             try:
                 ### previous location lastlocid
                 yield ctx.eval(enterhook, evaltype=EVALTYPE_RAW)
