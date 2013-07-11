@@ -16,6 +16,7 @@ import motor
 
 from twcommon.excepts import MessageException, ErrorMessageException
 from twcommon.excepts import SymbolError, ExecRunawayException, ExecSandboxException
+import twcommon.misc
 from twcommon.misc import MAX_DESCLINE_LENGTH
 import two.task
 
@@ -1296,6 +1297,21 @@ def perform_action(task, cmd, conn, target):
                                  {'name':1})
             playername = res['name']
         
+            # If the location has an on_leave property, run it.
+            try:
+                leavehook = yield two.symbols.find_symbol(app, loctx, 'on_leave')
+            except:
+                leavehook = None
+            if leavehook and twcommon.misc.is_typed_dict(leavehook, 'code'):
+                ### no-move flag?
+                ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
+                try:
+                    ### next location None
+                    yield ctx.eval(leavehook, evaltype=EVALTYPE_RAW)
+                except Exception as ex:
+                    task.log.warning('Caught exception (leaving loc, linkout): %s', ex, exc_info=app.debugstacktraces)
+                ctx = None
+                
             others = yield task.find_locale_players(notself=True)
             if others:
                 # Don't need to dirty populace; everyone here has a

@@ -236,6 +236,22 @@ def define_commands():
 
     @command('tovoid', isserver=True, doeswrite=True)
     def cmd_tovoid(app, task, cmd, stream):
+        oldloctx = yield task.get_loctx(cmd.uid)
+        # If the location has an on_leave property, run it.
+        try:
+            leavehook = yield two.symbols.find_symbol(app, oldloctx, 'on_leave')
+        except:
+            leavehook = None
+        if leavehook and twcommon.misc.is_typed_dict(leavehook, 'code'):
+            ### no-move flag?
+            ctx = two.evalctx.EvalPropContext(task, loctx=oldloctx, level=LEVEL_EXECUTE)
+            try:
+                ### next location None
+                yield ctx.eval(leavehook, evaltype=EVALTYPE_RAW)
+            except Exception as ex:
+                task.log.warning('Caught exception (leaving loc, linkout): %s', ex, exc_info=app.debugstacktraces)
+            ctx = None
+                
         # If portto is None, we'll wind up porting to the player's panic
         # location.
         portto = getattr(cmd, 'portto', None)
@@ -249,7 +265,6 @@ def define_commands():
             playername = res['name']
             task.write_event(others, app.localize('action.oportout') % (playername,)) # '%s disappears.'
         # Move the player to the void.
-        oldloctx = yield task.get_loctx(cmd.uid)
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':cmd.uid},
                        {'$set':{'focus':None, 'iid':None, 'locid':None,
@@ -520,6 +535,7 @@ def define_commands():
                     yield ctx.eval(inithook, evaltype=EVALTYPE_RAW)
                 except Exception as ex:
                     task.log.warning('Caught exception (initing instance): %s', ex, exc_info=app.debugstacktraces)
+                ctx = None
 
         awakening = app.ipool.notify_instance(newiid)
         if awakening:
@@ -538,6 +554,7 @@ def define_commands():
                     yield ctx.eval(awakenhook, evaltype=EVALTYPE_RAW)
                 except Exception as ex:
                     task.log.warning('Caught exception (awakening instance): %s', ex, exc_info=app.debugstacktraces)
+                ctx = None
 
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':cmd.uid},

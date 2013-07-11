@@ -987,6 +987,21 @@ class EvalPropContext(object):
                                 {'name':1})
         playername = player['name']
                 
+        # If the location has an on_leave property, run it.
+        try:
+            leavehook = yield two.symbols.find_symbol(self.app, self.loctx, 'on_leave')
+        except:
+            leavehook = None
+        if leavehook and twcommon.misc.is_typed_dict(leavehook, 'code'):
+            ### no-move flag?
+            ctx = EvalPropContext(self.task, loctx=self.loctx, level=LEVEL_EXECUTE)
+            try:
+                ### next location locid
+                yield ctx.eval(leavehook, evaltype=EVALTYPE_RAW)
+            except Exception as ex:
+                self.task.log.warning('Caught exception (leaving loc, move): %s', ex, exc_info=self.app.debugstacktraces)
+            ctx = None
+            
         msg = oleave
         if msg is None:
             msg = self.app.localize('action.oleave') % (playername,) # '%s leaves.'
@@ -1044,7 +1059,7 @@ class EvalPropContext(object):
                 ### previous location lastlocid
                 yield ctx.eval(enterhook, evaltype=EVALTYPE_RAW)
             except Exception as ex:
-                self.task.log.warning('Caught exception (entering loc, move): %s', ex, exc_info=app.debugstacktraces)
+                self.task.log.warning('Caught exception (entering loc, move): %s', ex, exc_info=self.app.debugstacktraces)
 
                 
 def str_or_null(res):
