@@ -557,6 +557,21 @@ def define_commands():
         if others:
             task.write_event(others, app.localize('action.oportin') % (playername,)) # '%s appears.'
         task.write_event(cmd.uid, app.localize('action.portin')) # 'You are somewhere new.'
+
+        # If the location has an on_enter property, run it.
+        try:
+            newloctx = yield task.get_loctx(cmd.uid)
+            enterhook = yield two.symbols.find_symbol(app, newloctx, 'on_enter')
+        except:
+            enterhook = None
+        if enterhook and twcommon.misc.is_typed_dict(enterhook, 'code'):
+            ### no-move flag?
+            ctx = two.evalctx.EvalPropContext(task, loctx=newloctx, level=LEVEL_EXECUTE)
+            try:
+                ### previous location None
+                yield ctx.eval(enterhook, evaltype=EVALTYPE_RAW)
+            except Exception as ex:
+                task.log.warning('Caught exception (entering loc, linkin): %s', ex, exc_info=app.debugstacktraces)
         
     @command('uiprefs')
     def cmd_uiprefs(app, task, cmd, conn):

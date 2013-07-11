@@ -1031,7 +1031,22 @@ class EvalPropContext(object):
                 msg = yield ctx.eval(msg, evaltype=EVALTYPE_TEXT)
             self.task.write_event(self.uid, msg)
 
+        # If the location has an on_enter property, run it.
+        try:
+            newloctx = yield self.task.get_loctx(self.uid)
+            enterhook = yield two.symbols.find_symbol(self.app, newloctx, 'on_enter')
+        except:
+            enterhook = None
+        if enterhook and twcommon.misc.is_typed_dict(enterhook, 'code'):
+            ### no-move flag?
+            ctx = EvalPropContext(self.task, loctx=newloctx, level=LEVEL_EXECUTE)
+            try:
+                ### previous location lastlocid
+                yield ctx.eval(enterhook, evaltype=EVALTYPE_RAW)
+            except Exception as ex:
+                self.task.log.warning('Caught exception (entering loc, move): %s', ex, exc_info=app.debugstacktraces)
 
+                
 def str_or_null(res):
     if res is None:
         return ''
@@ -1040,4 +1055,5 @@ def str_or_null(res):
 # Late imports, to avoid circularity
 from twcommon.access import ACC_VISITOR, ACC_MEMBER
 import two.execute
+import two.symbols
 from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_POPULACE, DIRTY_FOCUS
