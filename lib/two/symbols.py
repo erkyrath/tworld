@@ -197,9 +197,11 @@ def define_globals():
         ### Or all players in a given location?
         ### Maybe a second argument, for "unfocus if the focus is equal to
         this"? Would let us optimize out the already-null case, too.
-        ### Check for task-writability before updating the DB!
         """
         ctx = EvalPropContext.get_current_context()
+        if ctx.level != LEVEL_EXECUTE:
+            raise Exception('onfocus: may only occur in action code')
+        
         if player is None:
             if not ctx.uid:
                 raise Exception('No current player')
