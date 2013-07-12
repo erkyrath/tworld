@@ -23,6 +23,25 @@ Admin: Player "{{ playername }}"
 <li>pronoun: {{ player['pronoun'] }}
 <li>desc: {{ player['desc'] }}
 
+{% if connlist %}
+
+<li>Connected:
+<ul>
+{% for conn in sorted(connlist, key=lambda conn:conn.uptime()) %}
+  <li>{{ conn.email}},
+      on {{ conn.uptime() }}, idle {{ conn.idletime() }} 
+      (connid {{ conn.connid }}, uid {{ conn.uid }}, sessionid ...{{ conn.sessionid[-4:] }})
+  {% if not conn.available %} (unavailable) {% end %}
+  <form method="post" action="#">
+   {% module xsrf_form_html() %}
+   <input type="hidden" name="connid" value="{{ conn.connid }}">
+   <input name="playerkillconn" type="submit" value="Disconnect">
+  </form>
+{% end %}
+</ul>
+
+{% end %}
+
 <li>playstate:
  <ul>
  <li>world: {{ worldname }}
