@@ -42,6 +42,11 @@ class ConnectionTable(object):
         """
         return dict(self.table)
 
+    def for_uid(self, uid):
+        """A list of player connections for a given player. (May be empty.)
+        """
+        return [ conn for conn in self.table.values() if conn.uid == uid ]
+
     def add(self, handler, uid, email, session):
         """Add the handler to the table, as a new Connection. It will
         initially be unavailable. Returns the Connection.

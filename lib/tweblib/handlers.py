@@ -486,6 +486,7 @@ class AdminPlayerHandler(AdminBaseHandler):
         playername = player.get('name', '???')
         self.render('admin_player.html',
                     player=player, playername=playername,
+                    connlist=self.application.twconntable.for_uid(uid),
                     playstate=playstate,
                     isadmin=player.get('admin', False),
                     isbuild=player.get('build', False),
@@ -496,6 +497,7 @@ class AdminPlayerHandler(AdminBaseHandler):
         uid = ObjectId(uid)
         player = yield motor.Op(self.application.mongodb.players.find_one,
                                 { '_id':uid })
+        
         if (self.get_argument('playerbuildflag', None)):
             newflag = not player.get('build', False)
             yield motor.Op(self.application.mongodb.players.update,
@@ -503,7 +505,15 @@ class AdminPlayerHandler(AdminBaseHandler):
                            { '$set':{'build':newflag} })
         
             self.redirect(self.request.path)
-            
+            return
+
+        if (self.get_argument('playerkillconn', None)):
+            connid = int(self.get_argument('connid'))
+            conn = self.application.twconntable.find(connid)
+            conn.close('Connection closed by administrator.')
+            self.redirect(self.request.path)
+            return
+
         raise Exception('Unknown form type')
         
 class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
