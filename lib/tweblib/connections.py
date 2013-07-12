@@ -119,7 +119,13 @@ class Connection(object):
         if self.handler:
             if (errmsg):
                 self.handler.write_tw_error(errmsg)
-            self.handler.close()
+            try:
+                self.handler.close()
+            except:
+                pass
+            # This doesn't trigger the handler's on_close() method, so
+            # we need additional cleanup.
+            self.handler.on_close()
         
     def write_tw_error(self, msg):
         """Write a JSON error-reporting command through the socket.

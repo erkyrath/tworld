@@ -568,8 +568,9 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
             self.application.twservermgr.tworld_write(self.twconnid, msg)
         except Exception as ex:
             self.application.twlog.error('Could not write playeropen message to tworld socket: %s', ex)
-            self.write_tw_error('Unable to register connection with service: %s' % (ex,))
-            self.close()
+            # The connection is in the table now, so we'll remove it the
+            # fancy way.
+            self.twconn.close('Unable to register connection with service: %s' % (ex,))
             return
 
     def on_message(self, msg):
@@ -611,8 +612,12 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
             self.write_tw_error('Unable to pass command to service: %s' % (ex,))
 
     def on_close(self):
-        """Callback: web socket has closed.
+        """Callback: web socket has closed. (We also call this manually when
+        manually closing the connection.)
         """
+        if self.twconnid is None:
+            self.application.twlog.warning('PlayWebSocketHandler got on_close while not in table.')
+            return
         self.application.twlog.info('Player disconnected from websocket %s', self.twconnid)
         # Tell tworld that the connection is closed. (Maybe it never
         # became available, but we'll send the message anyway.)
