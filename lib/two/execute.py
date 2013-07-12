@@ -134,8 +134,8 @@ class PlayerProxy(PropertyProxyMixin, object):
 class LocationProxy(PropertyProxyMixin, object):
     """Represents a location, in the script environment. The locid argument
     must be an ObjectId.
-
-    ### Support "player in location" containment operator?
+    Note that "PlayerProxy in LocationProxy" does not work, because that
+    requires an async operation to resolve.
     """
     def __init__(self, locid):
         self.locid = locid
