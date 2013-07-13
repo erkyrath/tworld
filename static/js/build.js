@@ -528,7 +528,6 @@ function evhan_button_save(ev) {
             type: 'POST',
             data: msg,
             success: function(data, status, jqhxr) {
-                console.log('### ajax success: ' + JSON.stringify(data));
                 if (data.error) {
                     prop_set_warning(tableref, propref, data.error);
                     prop_set_dirty(tableref, propref, true);
@@ -553,7 +552,6 @@ function evhan_button_save(ev) {
                 }
             },
             error: function(jqxhr, status, error) {
-                console.log('### ajax failure: ' + status + '; ' + error);
                 prop_set_warning(tableref, propref, error);
                 prop_set_dirty(tableref, propref, true);
             },
@@ -583,7 +581,6 @@ function evhan_button_addnew(ev) {
             type: 'POST',
             data: msg,
             success: function(data, status, jqhxr) {
-                console.log('### ajax success: ' + JSON.stringify(data));
                 if (data.error) {
                     console.log('### error: ' + data.error);
                     return;
@@ -617,7 +614,6 @@ function evhan_button_addlocation(ev) {
             type: 'POST',
             data: msg,
             success: function(data, status, jqhxr) {
-                console.log('### ajax success: ' + JSON.stringify(data));
                 if (data.error) {
                     console.log('### error: ' + data.error);
                     return;
@@ -642,7 +638,6 @@ function evhan_button_dellocation(ev) {
             type: 'POST',
             data: msg,
             success: function(data, status, jqhxr) {
-                console.log('### ajax success: ' + JSON.stringify(data));
                 if (data.error) {
                     console.log('### error: ' + data.error);
                     return;
@@ -666,7 +661,6 @@ function evhan_button_addworld(ev) {
             type: 'POST',
             data: msg,
             success: function(data, status, jqhxr) {
-                console.log('### ajax success: ' + JSON.stringify(data));
                 if (data.error) {
                     console.log('### error: ' + data.error);
                     return;
@@ -743,7 +737,6 @@ function evhan_button_geninput_save(ev) {
             type: 'POST',
             data: msg,
             success: function(data, status, jqhxr) {
-                console.log('### ajax success: ' + JSON.stringify(data));
                 if (data.error) {
                     generic_set_warning(cellel, data.error);
                     generic_set_dirty(cellel, true);
@@ -758,7 +751,6 @@ function evhan_button_geninput_save(ev) {
                 generic_set_dirty(cellel, false);
             },
             error: function(jqxhr, status, error) {
-                console.log('### ajax failure: ' + status + '; ' + error);
                 generic_set_warning(cellel, error);
                 generic_set_dirty(cellel, true);
             },
@@ -779,7 +771,6 @@ function evhan_button_copyportal(ev) {
             type: 'POST',
             data: msg,
             success: function(data, status, jqhxr) {
-                console.log('### ajax success: ' + JSON.stringify(data));
                 if (data.error) {
                     return;
                 }
