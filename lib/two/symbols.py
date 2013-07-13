@@ -206,7 +206,7 @@ def define_globals():
             if not ctx.uid:
                 raise Exception('No current player')
             uid = ctx.uid
-        else:
+        elif isinstance(player, two.execute.PlayerProxy):
             res = yield motor.Op(ctx.app.mongodb.playstate.find_one,
                                  {'_id':player.uid},
                                  {'iid':1})
@@ -215,6 +215,8 @@ def define_globals():
             if res['iid'] != ctx.loctx.iid:
                 raise Exception('Player is not in this instance')
             uid = player.uid
+        else:
+            raise TypeError('unfocus: must be player or None')
         yield motor.Op(ctx.app.mongodb.playstate.update,
                        {'_id':uid},
                        {'$set':{'focus':None}})
@@ -440,6 +442,58 @@ def define_globals():
         ctx = EvalPropContext.get_current_context()
         return ctx.task.starttime
 
+    @scriptfunc('name', group='players', yieldy=True)
+    def global_players_name(player=None):
+        ctx = EvalPropContext.get_current_context()
+        if player is None:
+            if not ctx.uid:
+                raise Exception('No current player')
+            uid = ctx.uid
+        elif isinstance(player, two.execute.PlayerProxy):
+            uid = player.uid
+        else:
+            raise TypeError('players.name: must be player or None')
+        res = yield motor.Op(ctx.app.mongodb.players.find_one,
+                             {'_id':ctx.uid},
+                             {'name':1})
+        if not res:
+            raise Exception('No such player')
+        return res.get('name', '???')
+
+    @scriptfunc('ishere', group='players', yieldy=True)
+    def global_players_ishere(player=None):
+        ctx = EvalPropContext.get_current_context()
+        if player is None:
+            if not ctx.uid:
+                raise Exception('No current player')
+            uid = ctx.uid
+        elif isinstance(player, two.execute.PlayerProxy):
+            uid = player.uid
+        else:
+            raise TypeError('players.ishere: must be player or None')
+        res = yield motor.Op(ctx.app.mongodb.playstate.find_one,
+                             {'_id':ctx.uid})
+        if ctx.loctx.iid and ctx.loctx.iid == res.get('iid', None):
+            return True
+        else:
+            return False
+
+    @scriptfunc('focus', group='players', yieldy=True)
+    def global_players_focus(player=None):
+        ctx = EvalPropContext.get_current_context()
+        if player is None:
+            if not ctx.uid:
+                raise Exception('No current player')
+            uid = ctx.uid
+        elif isinstance(player, two.execute.PlayerProxy):
+            uid = player.uid
+        else:
+            raise TypeError('players.focus: must be player or None')
+        res = yield motor.Op(ctx.app.mongodb.playstate.find_one,
+                             {'_id':ctx.uid},
+                             {'focus':1})
+        return res.get('focus', None)
+        
     @scriptfunc('count', group='players', yieldy=True)
     def global_players_count(loc):
         """Number of players in a location or the instance.
@@ -524,8 +578,10 @@ def define_globals():
             if not ctx.uid:
                 raise Exception('No current player')
             uid = ctx.uid
-        else:
+        elif isinstance(player, two.execute.PlayerProxy):
             uid = player.uid
+        else:
+            raise TypeError('access.level: must be player or None')
         acclevel = yield two.execute.scope_access_level(ctx.app, uid, ctx.loctx.wid, ctx.loctx.scid)
         if level is None:
             return acclevel
@@ -549,6 +605,7 @@ def define_globals():
     globmap['random'] = ScriptNamespace(map)
 
     map = dict(ScriptFunc.funcgroups['players'])
+    map['location'] = globmap['location']
     globmap['players'] = ScriptNamespace(map)
 
     map = dict(ScriptFunc.funcgroups['access'])
