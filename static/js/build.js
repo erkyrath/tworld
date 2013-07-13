@@ -689,9 +689,23 @@ function evhan_prop_type_change(ev) {
 
     var valtype = $(ev.target).prop('value');
     var newkey = jQuery.trim(propref.keyel.prop('value'));
-    /* Construct an empty property structure of the given type. We
-       could get fancy with default values, but we won't. */
-    update_prop(tableref, { id:propref.id, key:newkey, val:{ type:valtype } }, true);
+    /* Construct an empty property structure of the given type. */
+    var newprop = { id:propref.id, key:newkey, val:{ type:valtype } };
+
+    /* Make a half-assed effort to clone information from the old property. */
+    var oldtext = null;
+    if (propref.areamap.text)
+        oldtext = propref.areamap.text.prop('value');
+    if (!oldtext && propref.areamap.value)
+        oldtext = propref.areamap.value.prop('value');
+    if (oldtext) {
+        if (valtype == 'value')
+            newprop.val.value = oldtext;
+        else
+            newprop.val.text = oldtext;
+    }
+
+    update_prop(tableref, newprop, true);
     prop_set_dirty(tableref, propref, (valtype == 'delete' ? 'delete' : true));
 }
 
