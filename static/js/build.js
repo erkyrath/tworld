@@ -75,11 +75,11 @@ function setup_event_handlers() {
 /* Construct the contents of a property table. This is called at page-load
    time.
 */
-function build_proptable(tableel, proplist, tablekey, title) {
+function build_proptable(tableel, proplist, tablekey, title, readonly) {
     var tableref = tables[tablekey];
     if (tableref === undefined) {
-        tableref = { tablekey:tablekey, rootel:tableel,
-                         propmap:{}, proplist:[] };
+        tableref = { tablekey:tablekey, rootel:tableel, readonly:readonly,
+                     propmap:{}, proplist:[] };
         tables[tablekey] = tableref;
     }
 
@@ -98,14 +98,16 @@ function build_proptable(tableel, proplist, tablekey, title) {
     /* Add a "add new" row (which will stick at the bottom) */
     var rowel = $('<tr>');
     var cellel = $('<td>', { colspan:3 });
-    var buttonsel = $('<div>', { 'class':'BuildPropButtons' });
-    var buttonel = $('<input>', { 'class':'BuildPropButtonLarge', type:'submit', value:'New Property' });
-    cellel.append(buttonsel);
-    buttonsel.append(buttonel);
     rowel.append(cellel);
     tableel.append(rowel);
-
-    buttonel.on('click', { tablekey:tablekey }, evhan_button_addnew);
+    if (!readonly) {
+        var buttonsel = $('<div>', { 'class':'BuildPropButtons' });
+        var buttonel = $('<input>', { 'class':'BuildPropButtonLarge', type:'submit', value:'New Property' });
+        cellel.append(buttonsel);
+        buttonsel.append(buttonel);
+        
+        buttonel.on('click', { tablekey:tablekey }, evhan_button_addnew);
+    }
 
     for (var ix=0; ix<proplist.length; ix++) {
         update_prop(tableref, proplist[ix]);
@@ -204,6 +206,8 @@ function update_prop(tableref, prop, nocopy) {
     
         var keyel = $('<input>', { 'class':'BuildPropKey', autocapitalize:'off' });
         keyel.prop('value', prop.key);
+        if (tableref.readonly)
+            keyel.prop('readonly', true);
         keyel.data('id', prop.id);
         keyel.data('tablekey', tableref.tablekey);
         keyel.on('input', evhan_input_keyinput);
@@ -214,7 +218,10 @@ function update_prop(tableref, prop, nocopy) {
             selectel.append($('<option>', { value:selector.value }).text(selector.text));
         }
         selectel.prop('value', valtype);
-        selectel.on('change', { tablekey:tableref.tablekey, id:prop.id }, evhan_prop_type_change);
+        if (tableref.readonly)
+            selectel.prop('disabled', true);
+        else
+            selectel.on('change', { tablekey:tableref.tablekey, id:prop.id }, evhan_prop_type_change);
         celltypeel.append(selectel);
 
         var buildres = build_value_cell(cellvalel, tableref.tablekey, prop.key, prop.id, editls);
@@ -291,6 +298,13 @@ function build_value_cell(cellvalel, tablekey, propkey, propid, editls) {
         subpanel.data('subkey', subpane.key);
 
         arealist.push(subpanel);
+    }
+
+    if (tables[tablekey].readonly) {
+        for (var ix=0; ix<arealist.length; ix++) {
+            var subpanel = arealist[ix];
+            subpanel.prop('readonly', true);
+        }
     }
 
     if (initial_setup_done && arealist.length) {
@@ -439,6 +453,8 @@ function evhan_input_textarea(ev) {
     var tableref = tables[tablekey];
     if (!tableref)
         return;
+    if (tableref.readonly)
+        return;
     var propref = tableref.propmap[id];
     if (!propref) {
         console.log('No such property entry: ' + tablekey + ':' + id + ':' + subkey);
@@ -458,6 +474,8 @@ function evhan_input_keyinput(ev) {
 
     var tableref = tables[tablekey];
     if (!tableref)
+        return;
+    if (tableref.readonly)
         return;
     var propref = tableref.propmap[id];
     if (!propref) {
@@ -844,6 +862,9 @@ $(document).ready(function() {
         build_proptable($('#build_world_properties'), db_world_props, '$realm', 'Realm properties');
         build_proptable($('#build_player_properties'), db_player_props, '$player', 'Player default properties');
         build_world_fields();
+    }
+    if (pageid == 'trash') {
+        build_proptable($('#build_trash_properties'), db_trash_props, '$trash', 'Discarded properties', true);
     }
     setup_event_handlers();
 });
