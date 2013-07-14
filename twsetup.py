@@ -159,6 +159,9 @@ db.wplayerprop.create_index([('wid', pymongo.ASCENDING), ('uid', pymongo.ASCENDI
 # Compound index
 db.iplayerprop.create_index([('iid', pymongo.ASCENDING), ('uid', pymongo.ASCENDING), ('key', pymongo.ASCENDING)], unique=True)
 
+db.trashprop.create_index('wid')
+db.trashprop.create_index('changed')
+
 # Compound index
 db.portals.create_index([('plistid', pymongo.ASCENDING), ('iid', pymongo.ASCENDING)])
 
