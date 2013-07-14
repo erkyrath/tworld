@@ -100,6 +100,7 @@ function build_proptable(tableel, proplist, tablekey, title, readonly) {
     var cellel = $('<td>', { colspan:3 });
     rowel.append(cellel);
     tableel.append(rowel);
+    /* It is currently the case that only readonly tables are pageable. */
     if (!readonly) {
         var buttonsel = $('<div>', { 'class':'BuildPropButtons' });
         var buttonel = $('<input>', { 'class':'BuildPropButtonLarge', type:'submit', value:'New Property' });
@@ -107,6 +108,24 @@ function build_proptable(tableel, proplist, tablekey, title, readonly) {
         buttonsel.append(buttonel);
         
         buttonel.on('click', { tablekey:tablekey }, evhan_button_addnew);
+    }
+    else {
+        var buttonsel = $('<div>', { 'class':'BuildPropButtons' });
+        var buttonel;
+        if (pagingprev)
+            buttonel = $('<a>', { href:'?page='+(pagingnum-1) });
+        else
+            buttonel = $('<span>');
+        buttonel.text('\u21D0 Previous'); /* left arrow */
+        buttonsel.append(buttonel);
+        buttonsel.append(' | ');
+        if (pagingnext)
+            buttonel = $('<a>', { href:'?page='+(pagingnum+1) });
+        else
+            buttonel = $('<span>');
+        buttonel.text('Next Page \u21D2'); /* right arrow */
+        buttonsel.append(buttonel);
+        cellel.append(buttonsel);
     }
 
     for (var ix=0; ix<proplist.length; ix++) {

@@ -229,8 +229,19 @@ class BuildTrashHandler(BuildBaseHandler):
         # location menu.
         locarray = [ {'id':str(loc['_id']), 'name':loc['name']} for loc in locations ]
 
+        PER_PAGE = 10
+        try:
+            page = int(self.get_argument('page', 0))
+            page = max(0, page)
+        except:
+            page = 0
+
         trashprops = []
-        cursor = self.application.mongodb.trashprop.find({'wid':wid}) ### sort, limit
+        cursor = self.application.mongodb.trashprop.find(
+            {'wid':wid},
+            sort=[('changed', motor.pymongo.DESCENDING)],
+            skip=page*PER_PAGE,
+            limit=PER_PAGE)
         while (yield cursor.fetch_next):
             prop = cursor.next_object()
             trashprops.append(prop)
@@ -242,6 +253,8 @@ class BuildTrashHandler(BuildBaseHandler):
         self.render('build_trash.html',
                     wid=str(wid), worldname=worldname,
                     locarray=json.dumps(locarray),
+                    pagingnum=page,
+                    hasnext=int(len(trashprops) == PER_PAGE), hasprev=int(page > 0),
                     trashproparray=trashproparray)
 
 class BuildLocHandler(BuildBaseHandler):
