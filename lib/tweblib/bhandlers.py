@@ -16,6 +16,7 @@ import tornado.escape
 import motor
 
 import tweblib.handlers
+import twcommon.misc
 from twcommon.misc import sluggify
 
 # Utility class for JSON-encoding objects that contain ObjectIds.
@@ -281,7 +282,10 @@ class BuildSetPropHandler(BuildBaseHandler):
             else:
                 prop = { '_id':propid, 'key':key, 'wid':wid, 'locid':locid }
                 
+            trashprop = None
+            
             # Fetch the current version of the property (possibly None).
+            # If that exists, create an entry for the trashprop queue.
             # Also check for a version with the same key-name (also may be
             # None).
             if loc == '$player':
@@ -290,16 +294,36 @@ class BuildSetPropHandler(BuildBaseHandler):
                                        { '_id':propid })
                 kprop = yield motor.Op(self.application.mongodb.wplayerprop.find_one,
                                        { 'wid':wid, 'uid':None, 'key':key })
+                if oprop:
+                    try:
+                        trashprop = { 'wid':oprop['wid'], 'uid':oprop['uid'],
+                                      'key':oprop['key'], 'val':oprop['val'],
+                                      'origtype':'wplayerprop',
+                                      'changed':twcommon.misc.now(),
+                                      }
+                    except:
+                        pass
             else:
                 oprop = yield motor.Op(self.application.mongodb.worldprop.find_one,
                                        { '_id':propid })
                 kprop = yield motor.Op(self.application.mongodb.worldprop.find_one,
                                        { 'wid':wid, 'locid':locid, 'key':key })
+                if oprop:
+                    try:
+                        trashprop = { 'wid':oprop['wid'], 'locid':oprop['locid'],
+                                      'key':oprop['key'], 'val':oprop['val'],
+                                      'origtype':'worldprop',
+                                      'changed':twcommon.misc.now(),
+                                      }
+                    except:
+                        pass
 
             if self.get_argument('delete', False):
-                if oprop:
-                    ### push into trash queue
-                    pass ###
+                if trashprop:
+                    try:
+                        yield motor.Op(self.application.mongodb.trashprop.insert, trashprop)
+                    except Exception as ex:
+                        self.application.twlog.warning('Unable to add trashprop: %s', ex)
 
                 # And now we delete it.
                 if loc == '$player':
@@ -337,9 +361,11 @@ class BuildSetPropHandler(BuildBaseHandler):
             if kprop and kprop['_id'] != propid:
                 raise Exception('A property with that key already exists.')
 
-            if oprop:
-                ### push into trash queue
-                pass ###
+            if trashprop:
+                try:
+                    yield motor.Op(self.application.mongodb.trashprop.insert, trashprop)
+                except Exception as ex:
+                    self.application.twlog.warning('Unable to add trashprop: %s', ex)
 
             dependency2 = None
             # And now we write it.
