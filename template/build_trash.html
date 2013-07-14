@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block page_title %}
+Building: {{ worldname }}
+{% end %}
+
+{% block head_ext %}
+<link rel="stylesheet" href="{{ static_url('css/build.css') }}" type="text/css">
+<link rel="stylesheet" href="{{ static_url('css/jquery-ui.css') }}" type="text/css">
+<script src="{{ static_url('js/jquery-1.9.1.js') }}" type="text/javascript"></script>
+<script src="{{ static_url('js/ui/1.10.3/jquery-ui.js') }}" type="text/javascript"></script>
+<script src="{{ static_url('js/jquery.contextMenu.js') }}" type="text/javascript"></script>
+<script src="{{ static_url('js/jquery.autosize.js') }}" type="text/javascript"></script>
+<script src="{{ static_url('js/build.js') }}" type="text/javascript"></script>
+
+<script type="text/javascript">
+/* Which page is this? Cheap way of telling build.js. */
+var pageid = 'trash';
+var pageworldid = "{{wid}}";
+var pagelocid = null;
+/* List of locations in this world. */
+var db_locations = {% raw locarray %};
+/* Paging position, paging through the trash properties. hasprev and hasnext
+   are passed into the templates as ints, for simplicity -- sorry. */
+var pagingnum = {{ pagingnum }};
+var pagingprev = {{ hasprev }};
+var pagingnext = {{ hasnext }};
+/* List of trash properties to display. */
+var db_trash_props = {% raw trashproparray %};
+/* Form verification token. (Tornado checks this against a cookie.) */
+var xsrf_token = "{{ xsrf_token }}";
+</script>
+{% end %}
+
+{% block body %}
+
+<div class="BuildBar">
+<span class="BuildBarItem"><a href="/build">Worlds</a></span>
+<span class="BuildBarSep">&#x2013;</span>
+<span class="BuildBarItem"><a id="build_world_name" href="/build/world/{{wid}}">{{ worldname }}</a></span>
+<span class="BuildBarSep">&#x2013;</span>
+<span class="BuildBarItem"><a id="build_location_menu" href="#"><span style="color: #884">&#x25BE;</span> (select location)</a></span>
+</div>
+
+
+<div class="BuildPropTableBox">
+ <table id="build_trash_properties" class="BuildPropTable" cellspacing="0">
+ </table>
+</div>
+
+{% end %}
