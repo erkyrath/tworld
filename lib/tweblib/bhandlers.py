@@ -598,6 +598,27 @@ class BuildSetDataHandler(BuildBaseHandler):
                 self.write( { 'val':value } )
                 return
             
+            if name == 'worldinstancing':
+                value = value.lower()
+                if value not in ("solo", "shared", "standard"):
+                    raise Exception('Instancing must be "solo", "shared", or "standard"')
+                yield motor.Op(self.application.mongodb.worlds.update,
+                               { '_id':wid },
+                               { '$set':{'instancing':value} })
+                self.write( { 'val':value } )
+                return
+            
+            if name == 'worldcopyable':
+                value = value.lower()
+                if value not in ("true", "false"):
+                    raise Exception('Copyable must be "true" or "false"')
+                value = (value == "true")
+                yield motor.Op(self.application.mongodb.worlds.update,
+                               { '_id':wid },
+                               { '$set':{'copyable':value} })
+                self.write( { 'val':value } )
+                return
+            
             if name == 'copyportal':
                 if not locid:
                     raise Exception('No location declared')

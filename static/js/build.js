@@ -433,10 +433,10 @@ function build_world_fields() {
         });
 
     var cellel = $('#build_world_copyable_cell');
-    cellel.text(''+worldcopyable);
+    build_geninput_cell(cellel, worldcopyable, 'worldcopyable');
 
     var cellel = $('#build_world_instancing_cell');
-    cellel.text(''+worldinstancing);
+    build_geninput_cell(cellel, worldinstancing, 'worldinstancing');
 }
 
 function build_geninput_cell(cellel, origvalue, name, successfunc) {
