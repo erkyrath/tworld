@@ -56,6 +56,20 @@ var xsrf_token = "{{ xsrf_token }}";
  <tr>
   <td colspan="2">
    <div class="BuildPropButtons">
+    <input id="button_copyportal_location" class="BuildPropButtonLarge" type="submit" value="Create Portal to Here">
+   </div>
+   <div id="button_copyportal_confirm" class="BuildPropButtons" style="display:none;">
+    <div class="BuildPropWarning">
+     This will add a portal for this location to your personal collection.
+    </div>
+    <input id="button_copyportal_cancel" type="submit" value="Cancel">
+    <input id="button_copyportal_copyportal" type="submit" value="Create">
+   </div>
+  </td>
+ </tr>
+ <tr>
+  <td colspan="2">
+   <div class="BuildPropButtons">
     <input id="button_delete_location" class="BuildPropButtonLarge" type="submit" value="Delete This Location">
    </div>
    <div id="button_delete_confirm" class="BuildPropButtons" style="display:none;">
