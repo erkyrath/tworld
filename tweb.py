@@ -131,6 +131,7 @@ handlers = [
     (r'/play', tweblib.handlers.PlayHandler),
     (r'/build', tweblib.bhandlers.BuildMainHandler),
     (r'/build/world/([0-9a-f]+)', tweblib.bhandlers.BuildWorldHandler),
+    (r'/build/trash/([0-9a-f]+)', tweblib.bhandlers.BuildTrashHandler),
     (r'/build/loc/([0-9a-f]+)', tweblib.bhandlers.BuildLocHandler),
     (r'/build/addworld', tweblib.bhandlers.BuildAddWorldHandler),
     (r'/build/addloc', tweblib.bhandlers.BuildAddLocHandler),

@@ -218,6 +218,32 @@ class BuildWorldHandler(BuildBaseHandler):
                     locarray=json.dumps(locarray), locations=locations,
                     worldproparray=worldproparray, playerproparray=playerproparray)
 
+class BuildTrashHandler(BuildBaseHandler):
+    @tornado.gen.coroutine
+    def get(self, wid):
+        wid = ObjectId(wid)
+        (world, locations) = yield self.find_build_world(wid)
+
+        worldname = world.get('name', '???')
+        # This array must be handed to the client to construct the pop-up
+        # location menu.
+        locarray = [ {'id':str(loc['_id']), 'name':loc['name']} for loc in locations ]
+
+        trashprops = []
+        cursor = self.application.mongodb.trashprop.find({'wid':wid}) ### sort, limit
+        while (yield cursor.fetch_next):
+            prop = cursor.next_object()
+            trashprops.append(prop)
+        # cursor autoclose
+
+        encoder = JSONEncoderExtra()
+        trashproparray = encoder.encode(self.export_prop_array(trashprops))
+
+        self.render('build_trash.html',
+                    wid=str(wid), worldname=worldname,
+                    locarray=json.dumps(locarray),
+                    trashproparray=trashproparray)
+
 class BuildLocHandler(BuildBaseHandler):
     @tornado.gen.coroutine
     def get(self, locid):
