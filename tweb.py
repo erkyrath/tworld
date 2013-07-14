@@ -204,6 +204,11 @@ class TwebApplication(tornado.web.Application):
         res = tornado.ioloop.PeriodicCallback(self.twsessionmgr.monitor_sessions, 60000)
         res.start()
 
+        # The trashprop expiration monitor. Runs once per hour.
+        res = tornado.ioloop.PeriodicCallback(self.twsessionmgr.monitor_trashprop, 3600050)
+        res.start()
+        
+
     def interrupt_handler(self, signum, stackframe):
         """Signal handler for SIGINT and SIGHUP. We set a flag to prevent
         further requests, and set a timer for final shutdown.

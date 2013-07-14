@@ -326,3 +326,21 @@ class SessionMgr(object):
         except Exception as ex:
             self.app.twlog.error('Error expiring old sessions: %s', ex)
 
+    @tornado.gen.coroutine
+    def monitor_trashprop(self):
+        """
+        This has nothing to do with sessions, but it's an easy place to
+        stick it. Once an hour, we trim out all trashprop entries more than
+        24 hours old.
+        """
+        now = twcommon.misc.now()
+        yesterday = now - datetime.timedelta(days=1)
+
+        try:
+            self.app.twlog.info('Performing trashprop cleanup')
+            res = yield motor.Op(self.app.mongodb.trashprop.remove,
+                                 {'changed': {'$lt': yesterday}})
+        except Exception as ex:
+            self.app.twlog.error('Error expiring old trashprop: %s', ex)
+
+
