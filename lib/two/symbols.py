@@ -629,6 +629,46 @@ def define_globals():
     def global_pronoun_ourself(player=None):
         res = yield global_pronoun_resolve.yieldfunc('ourself', player)
         return res
+    @scriptfunc('They', group='pronoun', yieldy=True)
+    def global_pronoun_They(player=None):
+        res = yield global_pronoun_resolve.yieldfunc('We', player)
+        return res
+    @scriptfunc('they', group='pronoun', yieldy=True)
+    def global_pronoun_they(player=None):
+        res = yield global_pronoun_resolve.yieldfunc('we', player)
+        return res
+    @scriptfunc('Them', group='pronoun', yieldy=True)
+    def global_pronoun_Them(player=None):
+        res = yield global_pronoun_resolve.yieldfunc('Us', player)
+        return res
+    @scriptfunc('them', group='pronoun', yieldy=True)
+    def global_pronoun_them(player=None):
+        res = yield global_pronoun_resolve.yieldfunc('us', player)
+        return res
+    @scriptfunc('Their', group='pronoun', yieldy=True)
+    def global_pronoun_Their(player=None):
+        res = yield global_pronoun_resolve.yieldfunc('Our', player)
+        return res
+    @scriptfunc('their', group='pronoun', yieldy=True)
+    def global_pronoun_their(player=None):
+        res = yield global_pronoun_resolve.yieldfunc('our', player)
+        return res
+    @scriptfunc('Theirs', group='pronoun', yieldy=True)
+    def global_pronoun_Theirs(player=None):
+        res = yield global_pronoun_resolve.yieldfunc('Ours', player)
+        return res
+    @scriptfunc('theirs', group='pronoun', yieldy=True)
+    def global_pronoun_theirs(player=None):
+        res = yield global_pronoun_resolve.yieldfunc('ours', player)
+        return res
+    @scriptfunc('Themself', group='pronoun', yieldy=True)
+    def global_pronoun_Themself(player=None):
+        res = yield global_pronoun_resolve.yieldfunc('Ourself', player)
+        return res
+    @scriptfunc('themself', group='pronoun', yieldy=True)
+    def global_pronoun_themself(player=None):
+        res = yield global_pronoun_resolve.yieldfunc('ourself', player)
+        return res
         
     @scriptfunc('choice', group='random')
     def global_random_choice(seq):
