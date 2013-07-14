@@ -391,6 +391,8 @@ def resolve_pronoun(player, mapkey):
     """
     Work out the pronoun string for a given player and a canonical pronoun.
     ('We', 'us', 'our', etc.)
+    The player argument should be a players DB object -- or at least a
+    dict containing 'name' and 'pronoun' entries. (None is also allowed.)
     """
     if not player:
         player = { 'name': 'nobody', 'pronoun': 'it' }

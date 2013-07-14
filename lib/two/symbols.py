@@ -460,6 +460,25 @@ def define_globals():
             raise Exception('No such player')
         return res.get('name', '???')
 
+    @scriptfunc('pronoun', group='players', yieldy=True)
+    def global_players_pronoun(player=None):
+        ctx = EvalPropContext.get_current_context()
+        if player is None:
+            if not ctx.uid:
+                raise Exception('No current player')
+            uid = ctx.uid
+        elif isinstance(player, two.execute.PlayerProxy):
+            uid = player.uid
+        else:
+            raise TypeError('players.focus: must be player or None')
+        res = yield motor.Op(ctx.app.mongodb.players.find_one,
+                             {'_id':ctx.uid},
+                             {'pronoun':1})
+        if not res:
+            raise Exception('No such player')
+        # Could set up a pronoun dependency here.
+        return res['pronoun']
+        
     @scriptfunc('ishere', group='players', yieldy=True)
     def global_players_ishere(player=None):
         ctx = EvalPropContext.get_current_context()
@@ -473,6 +492,8 @@ def define_globals():
             raise TypeError('players.ishere: must be player or None')
         res = yield motor.Op(ctx.app.mongodb.playstate.find_one,
                              {'_id':ctx.uid})
+        if not res:
+            raise Exception('No such player')
         if ctx.loctx.iid and ctx.loctx.iid == res.get('iid', None):
             return True
         else:
@@ -492,6 +513,8 @@ def define_globals():
         res = yield motor.Op(ctx.app.mongodb.playstate.find_one,
                              {'_id':ctx.uid},
                              {'focus':1})
+        if not res:
+            raise Exception('No such player')
         return res.get('focus', None)
         
     @scriptfunc('count', group='players', yieldy=True)
@@ -547,6 +570,66 @@ def define_globals():
         # cursor autoclose
         return res
 
+    @scriptfunc('resolve', group='pronoun', yieldy=True)
+    def global_pronoun_resolve(pronoun, player=None):
+        ctx = EvalPropContext.get_current_context()
+        if player is None:
+            if not ctx.uid:
+                raise Exception('No current player')
+            uid = ctx.uid
+        elif isinstance(player, two.execute.PlayerProxy):
+            uid = player.uid
+        else:
+            raise TypeError('players.focus: must be player or None')
+        res = yield motor.Op(ctx.app.mongodb.players.find_one,
+                             {'_id':ctx.uid},
+                             {'pronoun':1})
+        if not res:
+            raise Exception('No such player')
+        # Could set up a pronoun dependency here.
+        return two.interp.resolve_pronoun(res, pronoun)
+        
+    @scriptfunc('We', group='pronoun', yieldy=True)
+    def global_pronoun_We(player=None):
+        res = yield global_pronoun_resolve.yieldfunc('We', player)
+        return res
+    @scriptfunc('we', group='pronoun', yieldy=True)
+    def global_pronoun_we(player=None):
+        res = yield global_pronoun_resolve.yieldfunc('we', player)
+        return res
+    @scriptfunc('Us', group='pronoun', yieldy=True)
+    def global_pronoun_Us(player=None):
+        res = yield global_pronoun_resolve.yieldfunc('Us', player)
+        return res
+    @scriptfunc('us', group='pronoun', yieldy=True)
+    def global_pronoun_us(player=None):
+        res = yield global_pronoun_resolve.yieldfunc('us', player)
+        return res
+    @scriptfunc('Our', group='pronoun', yieldy=True)
+    def global_pronoun_Our(player=None):
+        res = yield global_pronoun_resolve.yieldfunc('Our', player)
+        return res
+    @scriptfunc('our', group='pronoun', yieldy=True)
+    def global_pronoun_our(player=None):
+        res = yield global_pronoun_resolve.yieldfunc('our', player)
+        return res
+    @scriptfunc('Ours', group='pronoun', yieldy=True)
+    def global_pronoun_Ours(player=None):
+        res = yield global_pronoun_resolve.yieldfunc('Ours', player)
+        return res
+    @scriptfunc('ours', group='pronoun', yieldy=True)
+    def global_pronoun_ours(player=None):
+        res = yield global_pronoun_resolve.yieldfunc('ours', player)
+        return res
+    @scriptfunc('Ourself', group='pronoun', yieldy=True)
+    def global_pronoun_Ourself(player=None):
+        res = yield global_pronoun_resolve.yieldfunc('Ourself', player)
+        return res
+    @scriptfunc('ourself', group='pronoun', yieldy=True)
+    def global_pronoun_ourself(player=None):
+        res = yield global_pronoun_resolve.yieldfunc('ourself', player)
+        return res
+        
     @scriptfunc('choice', group='random')
     def global_random_choice(seq):
         """Choose a random member of a list.
@@ -607,6 +690,9 @@ def define_globals():
     map = dict(ScriptFunc.funcgroups['players'])
     map['location'] = globmap['location']
     globmap['players'] = ScriptNamespace(map)
+
+    map = dict(ScriptFunc.funcgroups['pronoun'])
+    globmap['pronoun'] = ScriptNamespace(map)
 
     map = dict(ScriptFunc.funcgroups['access'])
     # Add in all the access level names (as uppercase symbols)
