@@ -787,6 +787,8 @@ class EvalPropContext(object):
         if restype == 'move':
             # Set locale to the given symbol
             lockey = res.get('loc', None)
+            if not lockey:
+                raise Exception('Move has no location')
             location = yield motor.Op(self.app.mongodb.locations.find_one,
                                       {'wid':self.loctx.wid, 'key':lockey},
                                       {'_id':1})
