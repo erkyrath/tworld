@@ -752,7 +752,8 @@ class BuildExportWorldHandler(BuildBaseHandler):
         # module isn't set up for yieldy output.
         #
         # Therefore, evil hackery! We make assumptions about the formatting
-        # of json.dump output, and stick in stuff iteratively.
+        # of json.dump output, and stick in stuff iteratively. This requires
+        # care with commas, because the format of JSON is annoying.
 
         rootobj = collections.OrderedDict()
         rootobj['name'] =  world.get('name', '???')
@@ -815,6 +816,43 @@ class BuildExportWorldHandler(BuildBaseHandler):
             self.write(',\n "playerprops": ')
             self.write(res)
 
+        self.write(',\n "locations": [\n')
+        
+        for ix, loc in enumerate(locations):
+            locobj = collections.OrderedDict()
+            locobj['key'] = loc['key']
+            locobj['name'] = loc.get('name', '???')
+            
+            locdump = json.dumps(locobj, indent=True, ensure_ascii=False)
+            assert locdump.endswith('\n}')
+            locdumphead, locdumptail = locdump[0:-2], locdump[-2:]
+
+            self.write(locdumphead)
+
+            locprops = []
+            cursor = self.application.mongodb.worldprop.find({'wid':wid, 'locid':loc['_id']}, {'key':1, 'val':1})
+            while (yield cursor.fetch_next):
+                prop = cursor.next_object()
+                locprops.append(prop)
+            # cursor autoclose
+
+            if locprops:
+                locprops.sort(key=lambda prop:prop['_id']) ### or other criterion?
+                
+                for prop in locprops:
+                    del prop['_id']
+
+                res = encoder.encode(locprops)
+                self.write(',\n "props": ')
+                self.write(res)
+            
+            self.write(locdumptail)
+            if ix < len(locations)-1:
+                self.write(',\n')
+            else:
+                self.write('\n')
+            
+        self.write(' ]')
 
         self.write(rootdumptail)
         self.write('\n')
