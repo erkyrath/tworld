@@ -33,6 +33,7 @@ var property_type_selectors = [
     { value:'move', text:'Move' },
     { value:'event', text:'Event' },
     { value:'panic', text:'Panic' },
+    { value:'editstr', text:'EditStr' },
     { value:'value', text:'Value' },
     { value:'delete', text:'(Delete)' }
 ];
@@ -173,6 +174,14 @@ function update_prop(tableref, prop, nocopy) {
     }
     else if (valtype == 'panic') {
         editls = [ 
+            { key:'text', val:prop.val.text, label:'(Message)' },
+            { key:'otext', val:prop.val.otext, label:'(Message to other players)' } ];
+    }
+    else if (valtype == 'editstr') {
+        editls = [ 
+            { key:'key', val:prop.val.key, label:'Text property' },
+            { key:'editaccess', val:prop.val.editaccess, label:'member' },
+            { key:'label', val:prop.val.label, label:'(Label)' },
             { key:'text', val:prop.val.text, label:'(Message)' },
             { key:'otext', val:prop.val.otext, label:'(Message to other players)' } ];
     }

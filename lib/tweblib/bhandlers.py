@@ -164,11 +164,22 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
                      'text':prop.get('text', None),
                      'otext':prop.get('otext', None) }
         if valtype == 'move':
+            loc = prop.get('loc', '');
+            loc = sluggify(loc)
             return { 'type':valtype,
-                     'loc':prop.get('loc', None),
+                     'loc':loc,
                      'text':prop.get('text', None),
                      'oleave':prop.get('oleave', None),
                      'oarrive':prop.get('oarrive', None) }
+        if valtype == 'editstr':
+            key = prop.get('key', '');
+            key = sluggify(key)
+            return { 'type':valtype,
+                     'key':key,
+                     ### editaccess
+                     'label':prop.get('label', None),
+                     'text':prop.get('text', None),
+                     'otext':prop.get('otext', None) }
         raise Exception('Unknown property type: %s' % (valtype,))
 
 class BuildMainHandler(BuildBaseHandler):
