@@ -323,6 +323,8 @@ class EvalPropContext(object):
         if self.depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'editstr':
             assert self.accum is not None, 'EvalPropContext.accum should not be None here'
             try:
+                if 'key' not in res:
+                    raise Exception('No key given for editstr.')
                 level = yield two.execute.scope_access_level(self.app, self.uid, self.loctx.wid, self.loctx.scid)
                 if level < res.get('editaccess', ACC_MEMBER):
                     return self.app.localize('message.widget_no_access')

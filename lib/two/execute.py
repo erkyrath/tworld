@@ -1121,6 +1121,8 @@ def perform_action(task, cmd, conn, target):
 
         if restype == 'editstr':
             key = target[1]
+            if not key:
+                raise ErrorMessageException('No key given for editstr.')
             text = target[2]
             otext = target[3]
             val = getattr(cmd, 'val', None)

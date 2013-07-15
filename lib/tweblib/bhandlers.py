@@ -186,9 +186,10 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
                 res['otext'] = prop['otext']
             return res
         if valtype == 'move':
-            loc = prop.get('loc', '');
-            loc = sluggify(loc)
-            res = { 'type':valtype, 'loc':loc }
+            res = { 'type':valtype }
+            if 'loc' in prop:
+                loc = sluggify(prop['loc'])
+                res['loc'] = loc
             if 'text' in prop:
                 res['text'] = prop['text']
             if 'oleave' in prop:
@@ -197,9 +198,10 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
                 res['oarrive'] = prop['oarrive']
             return res
         if valtype == 'editstr':
-            key = prop.get('key', '');
-            key = sluggify(key)
-            res = { 'type':valtype, 'key':key }
+            res = { 'type':valtype }
+            if 'key' in prop:
+                key = sluggify(prop['key'])
+                res['key'] = key
             if 'editaccess' in prop:
                 try:
                     editaccess = twcommon.access.level_named(prop['editaccess'])
