@@ -179,7 +179,7 @@ function update_prop(tableref, prop, nocopy) {
     }
     else if (valtype == 'editstr') {
         editls = [ 
-            { key:'key', val:prop.val.key, label:'Text property' },
+            { key:'key', val:prop.val.key, label:'String property' },
             { key:'editaccess', val:prop.val.editaccess, label:'member' },
             { key:'label', val:prop.val.label, label:'(Label)' },
             { key:'text', val:prop.val.text, label:'(Message)' },
