@@ -632,9 +632,9 @@ function toolpane_fill_pane_portal(seg) {
             var portal = focuspane_current_special_portal();
             if (portal) {
                 var msg = { cmd:'action', action:portal.copyable };
-                if (toolsegments['portal']) {
+                if (portal.instancing == 'standard' && toolsegments['portal']) {
                     var scid = toolsegments['portal'].flexselectel.prop('value');
-                    if (scid != portal.scid) 
+                    if (scid && scid != portal.scid) 
                         msg.scid = scid;
                 }
                 websocket_send_json(msg);
@@ -678,8 +678,9 @@ function toolpane_portal_update() {
         seg.nocopyel.show();
         seg.copyel.hide();
     }
+
+    seg.flexselectel.empty();
     if (portal.instancing == 'standard') {
-        seg.flexselectel.empty();
         if (availscopemap[portal.scid] === undefined) {
             var optel = $('<option>', { value:portal.scid }).text('*Original');
             seg.flexselectel.append(optel);
@@ -905,12 +906,14 @@ function focuspane_set_special(ls) {
             extrals.push(el);
             var ael = $('<a>', {href:'#'+target});
             ael.text(localize('client.label.enter_portal'));
-            ael.on('click', {target:target, scid:portalobj.scid}, function(ev) {
+            ael.on('click', {target:target, portal:portalobj}, function(ev) {
                     ev.preventDefault();
+                    var portal = ev.data.portal;
+                    var scid = portal.scid;
                     var msg = { cmd:'action', action:ev.data.target };
-                    if (toolsegments['portal']) {
+                    if (portal.instancing == 'standard' && toolsegments['portal']) {
                         var scid = toolsegments['portal'].flexselectel.prop('value');
-                        if (scid != ev.data.scid) 
+                        if (scid && scid != ev.data.scid) 
                             msg.scid = scid;
                     }
                     websocket_send_json(msg);
