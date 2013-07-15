@@ -129,6 +129,16 @@ class ParaBreak(InterpNode):
     def describe(self):
         return ['para']
 
+class OpenBracket(InterpNode):
+    classname = 'OpenBracket'
+    def describe(self):
+        return '['
+
+class CloseBracket(InterpNode):
+    classname = 'CloseBracket'
+    def describe(self):
+        return ']'
+
 class PlayerRef(InterpNode):
     classname = 'PlayerRef'
     def __init__(self, key, expr=None):
@@ -146,10 +156,11 @@ class PlayerRef(InterpNode):
         return (isinstance(obj, PlayerRef) and self.key == obj.key and self.expr == obj.expr)
 
 ### LineBreak?
-### Bracket, CloseBracket? (for literal '[' ']')
 
 interp_node_table = {
     '$para': (ParaBreak,),
+    '$openbracket': (OpenBracket,),
+    '$closebracket': (CloseBracket,),
     '$if': lambda val: If(val),
     '$elif': lambda val: ElIf(val),
     '$else': (Else,),
