@@ -32,6 +32,7 @@ var property_type_selectors = [
     { value:'code', text:'Code' },
     { value:'move', text:'Move' },
     { value:'event', text:'Event' },
+    { value:'panic', text:'Panic' },
     { value:'value', text:'Value' },
     { value:'delete', text:'(Delete)' }
 ];
@@ -166,6 +167,11 @@ function update_prop(tableref, prop, nocopy) {
             { key:'oarrive', val:prop.val.oarrive, label:'[$name] arrives.' } ];
     }
     else if (valtype == 'event') {
+        editls = [ 
+            { key:'text', val:prop.val.text, label:'(Message)' },
+            { key:'otext', val:prop.val.otext, label:'(Message to other players)' } ];
+    }
+    else if (valtype == 'panic') {
         editls = [ 
             { key:'text', val:prop.val.text, label:'(Message)' },
             { key:'otext', val:prop.val.otext, label:'(Message to other players)' } ];

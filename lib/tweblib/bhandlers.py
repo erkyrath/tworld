@@ -159,6 +159,10 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
             return { 'type':valtype,
                      'text':prop.get('text', None),
                      'otext':prop.get('otext', None) }
+        if valtype == 'panic':
+            return { 'type':valtype,
+                     'text':prop.get('text', None),
+                     'otext':prop.get('otext', None) }
         if valtype == 'move':
             return { 'type':valtype,
                      'loc':prop.get('loc', None),
