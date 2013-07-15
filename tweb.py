@@ -104,6 +104,7 @@ logging.basicConfig(**logconf)
 
 import twcommon.localize
 import twcommon.autoreload
+import twcommon.misc
 import tweblib.session
 import tweblib.handlers
 import tweblib.bhandlers
@@ -190,6 +191,7 @@ class TwebApplication(tornado.web.Application):
         stuff in init_tworld(), but I like keeping this part separate.)
         """
         self.twlog.info('Launching timers')
+        self.twlaunchtime = twcommon.misc.now()
         self.twservermgr.init_timers()
 
         # Catch SIGINT (ctrl-C) and SIGHUP with our own signal handler.

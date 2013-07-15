@@ -432,7 +432,10 @@ class AdminMainHandler(AdminBaseHandler):
     """
     @tornado.gen.coroutine
     def get(self):
+        uptime = (twcommon.misc.now() - self.application.twlaunchtime)
+        uptime = datetime.timedelta(seconds=int(uptime.total_seconds()))
         self.render('admin.html',
+                    uptime=uptime,
                     mongoavailable=(self.application.mongodb is not None),
                     tworldavailable=(self.application.twservermgr.tworldavailable),
                     conntable=self.application.twconntable.as_dict())
