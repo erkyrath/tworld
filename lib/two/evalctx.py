@@ -579,6 +579,13 @@ class EvalPropContext(object):
         ast.Mult: operator.mul,
         ast.Div: operator.truediv,
         ast.Mod: operator.mod,
+        ast.Pow: operator.pow,
+        ast.FloorDiv: operator.floordiv,
+        ast.BitAnd: operator.and_,
+        ast.BitOr: operator.or_,
+        ast.BitXor: operator.xor,
+        ast.LShift: operator.lshift,
+        ast.RShift: operator.rshift,
         }
         
     @tornado.gen.coroutine
