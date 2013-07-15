@@ -7,6 +7,7 @@ import random
 import json
 import ast
 import re
+import collections
 
 from bson.objectid import ObjectId
 import tornado.web
@@ -264,6 +265,7 @@ class BuildWorldHandler(BuildBaseHandler):
         self.render('build_world.html',
                     wid=str(wid), worldname=worldname,
                     worldnamejs=json.dumps(worldname),
+                    worldnameslug=sluggify(worldname),
                     worldcopyable=json.dumps(world.get('copyable', False)),
                     worldinstancing=json.dumps(world.get('instancing', 'standard')),
                     locarray=json.dumps(locarray), locations=locations,
@@ -739,3 +741,81 @@ class BuildAddWorldHandler(BuildBaseHandler):
             self.application.twlog.warning('Caught exception (setting data): %s', ex)
             self.write( { 'error': str(ex) } )
 
+class BuildExportWorldHandler(BuildBaseHandler):
+    @tornado.gen.coroutine
+    def get(self, wid):
+        wid = ObjectId(wid)
+        (world, locations) = yield self.find_build_world(wid)
+        
+        # The handling of this export stuff is a nuisance. I don't want
+        # to load the entire world data set into memory. But the json
+        # module isn't set up for yieldy output.
+        #
+        # Therefore, evil hackery! We make assumptions about the formatting
+        # of json.dump output, and stick in stuff iteratively.
+
+        rootobj = collections.OrderedDict()
+        rootobj['name'] =  world.get('name', '???')
+        rootobj['wid'] = str(wid)
+        
+        if 'creator' in world:
+            rootobj['creator_uid'] = str(world['creator'])
+            player = yield motor.Op(self.application.mongodb.players.find_one,
+                                    { '_id':world['creator'] },
+                                    { 'name':1 })
+            if player:
+                rootobj['creator'] = player['name']
+                
+        if 'copyable' in world:
+            rootobj['copyable'] = world['copyable']
+        if 'instancing' in world:
+            rootobj['instancing'] = world['instancing']
+
+        rootdump = json.dumps(rootobj, indent=True, ensure_ascii=False)
+        assert rootdump.endswith('\n}')
+        rootdumphead, rootdumptail = rootdump[0:-2], rootdump[-2:]
+        slugname = sluggify(rootobj['name'])
+        
+        self.set_header("Content-Type", "application/json; charset=UTF-8")
+        self.set_header("Content-Disposition", "attachment; filename=%s.json" % (slugname,))
+        self.write(rootdumphead)
+        
+        encoder = JSONEncoderExtra(indent=True, sort_keys=True, ensure_ascii=False)
+
+        worldprops = []
+        cursor = self.application.mongodb.worldprop.find({'wid':wid, 'locid':None}, {'key':1, 'val':1})
+        while (yield cursor.fetch_next):
+            prop = cursor.next_object()
+            worldprops.append(prop)
+        # cursor autoclose
+
+        if worldprops:
+            worldprops.sort(key=lambda prop:prop['_id']) ### or other criterion?
+            for prop in worldprops:
+                del prop['_id']
+
+            res = encoder.encode(worldprops)
+            self.write(',\n "realmprops": ')
+            self.write(res)
+
+        playerprops = []
+        cursor = self.application.mongodb.wplayerprop.find({'wid':wid, 'uid':None}, {'key':1, 'val':1})
+        while (yield cursor.fetch_next):
+            prop = cursor.next_object()
+            playerprops.append(prop)
+        # cursor autoclose
+
+        if playerprops:
+            playerprops.sort(key=lambda prop:prop['_id']) ### or other criterion?
+
+            for prop in playerprops:
+                del prop['_id']
+
+            res = encoder.encode(playerprops)
+            self.write(',\n "playerprops": ')
+            self.write(res)
+
+
+        self.write(rootdumptail)
+        self.write('\n')
+        

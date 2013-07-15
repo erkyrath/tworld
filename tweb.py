@@ -134,6 +134,7 @@ handlers = [
     (r'/build/world/([0-9a-f]+)', tweblib.bhandlers.BuildWorldHandler),
     (r'/build/trash/([0-9a-f]+)', tweblib.bhandlers.BuildTrashHandler),
     (r'/build/loc/([0-9a-f]+)', tweblib.bhandlers.BuildLocHandler),
+    (r'/build/export/([0-9a-f]+)', tweblib.bhandlers.BuildExportWorldHandler),
     (r'/build/addworld', tweblib.bhandlers.BuildAddWorldHandler),
     (r'/build/addloc', tweblib.bhandlers.BuildAddLocHandler),
     (r'/build/delloc', tweblib.bhandlers.BuildDelLocHandler),
