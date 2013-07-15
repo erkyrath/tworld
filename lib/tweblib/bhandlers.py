@@ -126,8 +126,18 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
         res = []
         for prop in ls:
             val = prop['val']
-            if type(val) is dict and val.get('type', None):
-                pass
+            if type(val) is dict:
+                valtype = val.get('type', None)
+                if not valtype:
+                    val = { 'type':'value', 'value':repr(val) }
+                elif valtype == 'editstr':
+                    if 'editaccess' in val:
+                        try:
+                            val['editaccess'] = twcommon.access.name_for_level(val['editaccess']).lower()
+                        except:
+                            val['editaccess'] = ''
+                else:
+                    pass
             else:
                 ### If I defaulted to double-quotes for strings, it would be a bit tidier.
                 val = { 'type':'value', 'value':repr(val) }
@@ -152,34 +162,58 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
                 raise Exception('Value entry may not be blank')
             return ast.literal_eval(val)
         if valtype == 'text':
-            return { 'type':valtype, 'text':prop.get('text', None) }
+            res = { 'type':valtype }
+            if 'text' in prop:
+                res['text'] = prop['text']
+            return res
         if valtype == 'code':
-            return { 'type':valtype, 'text':prop.get('text', None) }
+            res = { 'type':valtype }
+            if 'text' in prop:
+                res['text'] = prop['text']
+            return res
         if valtype == 'event':
-            return { 'type':valtype,
-                     'text':prop.get('text', None),
-                     'otext':prop.get('otext', None) }
+            res = { 'type':valtype }
+            if 'text' in prop:
+                res['text'] = prop['text']
+            if 'otext' in prop:
+                res['otext'] = prop['otext']
+            return res
         if valtype == 'panic':
-            return { 'type':valtype,
-                     'text':prop.get('text', None),
-                     'otext':prop.get('otext', None) }
+            res = { 'type':valtype }
+            if 'text' in prop:
+                res['text'] = prop['text']
+            if 'otext' in prop:
+                res['otext'] = prop['otext']
+            return res
         if valtype == 'move':
             loc = prop.get('loc', '');
             loc = sluggify(loc)
-            return { 'type':valtype,
-                     'loc':loc,
-                     'text':prop.get('text', None),
-                     'oleave':prop.get('oleave', None),
-                     'oarrive':prop.get('oarrive', None) }
+            res = { 'type':valtype, 'loc':loc }
+            if 'text' in prop:
+                res['text'] = prop['text']
+            if 'oleave' in prop:
+                res['oleave'] = prop['oleave']
+            if 'oarrive' in prop:
+                res['oarrive'] = prop['oarrive']
+            return res
         if valtype == 'editstr':
             key = prop.get('key', '');
             key = sluggify(key)
-            return { 'type':valtype,
-                     'key':key,
-                     ### editaccess
-                     'label':prop.get('label', None),
-                     'text':prop.get('text', None),
-                     'otext':prop.get('otext', None) }
+            res = { 'type':valtype, 'key':key }
+            if 'editaccess' in prop:
+                try:
+                    editaccess = twcommon.access.level_named(prop['editaccess'])
+                except:
+                    namels = twcommon.access.level_name_list()
+                    raise Exception('Access level must be in %s' % (namels,))
+                res['editaccess'] = editaccess
+            if 'label' in prop:
+                res['label'] = prop['label']
+            if 'text' in prop:
+                res['text'] = prop['text']
+            if 'otext' in prop:
+                res['otext'] = prop['otext']
+            return res
         raise Exception('Unknown property type: %s' % (valtype,))
 
 class BuildMainHandler(BuildBaseHandler):
