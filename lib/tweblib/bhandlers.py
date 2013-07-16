@@ -21,11 +21,12 @@ import twcommon.misc
 from twcommon.misc import sluggify
 
 # Utility class for JSON-encoding objects that contain ObjectIds.
-# I still need to think about datetime objects.
 class JSONEncoderExtra(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, ObjectId):
             return str(obj)
+        if isinstance(obj, datetime.datetime):
+            return {'type':'datetime', 'value':twcommon.misc.gen_datetime_format(obj)}
         return super().default(obj)
 
 # Regexp to match valid Python (2) identifiers. See also sluggify() in
@@ -123,6 +124,9 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
         suitable for handing over to the client for editing. This means
         an array of type-keyed dicts. We wrap all native values as {value}
         objects.
+
+        We leave ObjectId objects alone. They will be translated
+        at the JSONEncoder level.
         """
         res = []
         for prop in ls:
@@ -139,6 +143,8 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
                             val['editaccess'] = ''
                 else:
                     pass
+            elif isinstance(val, datetime.datetime):
+                val = { 'type':'datetime', 'value':twcommon.misc.gen_datetime_format(val) }
             else:
                 ### If I defaulted to double-quotes for strings, it would be a bit tidier.
                 val = { 'type':'value', 'value':repr(val) }
@@ -162,6 +168,12 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
             if not val:
                 raise Exception('Value entry may not be blank')
             return ast.literal_eval(val)
+        if valtype == 'datetime':
+            val = prop.get('value', None)
+            if not val:
+                return twcommon.misc.now().replace(microsecond=0)
+            val = twcommon.misc.gen_datetime_parse(val)
+            return val
         if valtype == 'text':
             res = { 'type':valtype }
             if 'text' in prop:

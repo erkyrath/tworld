@@ -34,6 +34,7 @@ var property_type_selectors = [
     { value:'event', text:'Event' },
     { value:'panic', text:'Panic' },
     { value:'editstr', text:'EditStr' },
+    { value:'datetime', text:'DateTime' },
     { value:'value', text:'Value' },
     { value:'delete', text:'(Delete)' }
 ];
@@ -153,6 +154,9 @@ function update_prop(tableref, prop, nocopy) {
     var valtype = prop.val.type;
     if (valtype == 'value') {
         editls = [ { key:'value', val:prop.val.value, label:'Value' } ];
+    }
+    else if (valtype == 'datetime') {
+        editls = [ { key:'value', val:prop.val.value, label:'YYYY-MM-DD HH:MM:SS' } ];
     }
     else if (valtype == 'text') {
         editls = [ { key:'text', val:prop.val.text, label:'Text' } ];
@@ -751,7 +755,7 @@ function evhan_prop_type_change(ev) {
     if (!oldtext && propref.areamap.value)
         oldtext = propref.areamap.value.prop('value');
     if (oldtext) {
-        if (valtype == 'value')
+        if (valtype == 'value' || valtype == 'datetime')
             newprop.val.value = oldtext;
         else
             newprop.val.text = oldtext;
