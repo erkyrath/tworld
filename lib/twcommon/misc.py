@@ -20,6 +20,37 @@ def now():
     """
     return datetime.datetime.now(datetime.timezone.utc)
 
+def gen_datetime_format(obj):
+    """Utility function: convert a datetime to a clean-looking string.
+    (No timezone part; no time part if there is none.)
+    """
+    obj = obj.replace(tzinfo=None)
+    if obj.hour == 0 and obj.minute == 0 and obj.second == 0 and obj.microsecond == 0:
+        return obj.strftime('%Y-%m-%d')
+    else:
+        return str(obj)
+
+def gen_datetime_parse(val):
+    """Utility function: convert a simple string (as produced by
+    gen_datetime_format) into an aware UTC datetime object.
+    """
+    try:
+        res = datetime.datetime.strptime(val, '%Y-%m-%d')
+        return res.replace(tzinfo=datetime.timezone.utc)
+    except:
+        pass
+    try:
+        res = datetime.datetime.strptime(val, '%Y-%m-%d %H:%M:%S')
+        return res.replace(tzinfo=datetime.timezone.utc)
+    except:
+        pass
+    try:
+        res = datetime.datetime.strptime(val, '%Y-%m-%d %H:%M:%S.%f')
+        return res.replace(tzinfo=datetime.timezone.utc)
+    except:
+        pass
+    raise Exception('Date-time format not recognized: %s' % (val,))
+
 def is_typed_dict(obj, typ):
     """Returns true if obj is a dict and has a field 'type'=typ.
     """
@@ -55,6 +86,22 @@ def sluggify(text):
 import unittest
 
 class TestInterpModule(unittest.TestCase):
+
+    def test_gendatetime(self):
+        date1 = datetime.datetime(year=2013, month=7, day=16, tzinfo=datetime.timezone.utc)
+        self.assertEqual(gen_datetime_parse('2013-07-16'), date1)
+        self.assertEqual(gen_datetime_format(date1), '2013-07-16')
+        
+        date2 = datetime.datetime(year=2001, month=1, day=1, hour=2, minute=3, second=5, tzinfo=datetime.timezone.utc)
+        self.assertEqual(gen_datetime_parse('2001-01-01 02:03:05'), date2)
+        self.assertEqual(gen_datetime_format(date2), '2001-01-01 02:03:05')
+        
+        date3 = datetime.datetime(year=2199, month=12, day=31, hour=23, minute=59, second=59, microsecond=123456, tzinfo=datetime.timezone.utc)
+        self.assertEqual(gen_datetime_parse('2199-12-31 23:59:59.123456'), date3)
+        self.assertEqual(gen_datetime_format(date3), '2199-12-31 23:59:59.123456')
+
+        date4 = now()
+        self.assertEqual(date4, gen_datetime_parse(gen_datetime_format(date4)))
     
     def test_sluggify(self):
         tests = [
