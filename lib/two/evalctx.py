@@ -551,7 +551,7 @@ class EvalPropContext(object):
             val = yield self.execcode_expr(subnod)
             keyls.append(val)
         valls = []
-        for subnod in nod.keys:
+        for subnod in nod.values:
             val = yield self.execcode_expr(subnod)
             valls.append(val)
         return dict(zip(keyls, valls))
