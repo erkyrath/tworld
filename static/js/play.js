@@ -913,7 +913,7 @@ function focuspane_set_special(ls) {
                     var msg = { cmd:'action', action:ev.data.target };
                     if (portal.instancing == 'standard' && toolsegments['portal']) {
                         var scid = toolsegments['portal'].flexselectel.prop('value');
-                        if (scid && scid != ev.data.scid) 
+                        if (scid && scid != portal.scid) 
                             msg.scid = scid;
                     }
                     websocket_send_json(msg);
