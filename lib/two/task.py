@@ -240,10 +240,15 @@ class Task(object):
         
     @tornado.gen.coroutine
     def find_location_players(self, iid, locid):
-        """Generate a list of players in a given location.
+        """Generates a list of players in a given location. If locid
+        is None, generates a list of players in the entire instance.
         """
-        cursor = self.app.mongodb.playstate.find({'iid':iid, 'locid':locid},
-                                                 {'_id':1})
+        if locid:
+            cursor = self.app.mongodb.playstate.find({'iid':iid, 'locid':locid},
+                                                     {'_id':1})
+        else:
+            cursor = self.app.mongodb.playstate.find({'iid':iid},
+                                                     {'_id':1})
         people = []
         while (yield cursor.fetch_next):
             ostate = cursor.next_object()

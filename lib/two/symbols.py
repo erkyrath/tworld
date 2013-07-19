@@ -250,12 +250,14 @@ def define_globals():
     @scriptfunc('eventloc', group='_', yieldy=True)
     def global_eventloc(loc, all):
         """Send an event message to all players in the given location.
-        (Location or key.)
+        (Location or key, or the entire realm.)
         """
         ctx = EvalPropContext.get_current_context()
         iid = ctx.loctx.iid
         
-        if isinstance(loc, two.execute.LocationProxy):
+        if isinstance(loc, two.execute.RealmProxy):
+            locid = None
+        elif isinstance(loc, two.execute.LocationProxy):
             res = yield motor.Op(ctx.app.mongodb.locations.find_one,
                                  {'_id':loc.locid, 'wid':ctx.loctx.wid},
                                  {'_id':1})
