@@ -32,6 +32,11 @@ Typically you will install Python 3 and MongoDB with your package manager;
 on MacOS, I use Homebrew. Python comes with its own package manager, pip3;
 use this to install Tornado, PyMongo, and Motor.
 
+Note: the latest version of Motor (0.1.1) specifies the not-quite-latest
+version of PyMongo (2.5.0). This is a nuisance. I am currently using
+PyMongo 2.5.2 with Motor 0.1, which seems to work with a simple Mongo
+configuration. Do not try this with replica sets.
+
 
 * Installation notes
 
