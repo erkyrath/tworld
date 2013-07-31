@@ -900,7 +900,7 @@ def define_commands():
             if newval is None:
                 conn.write({'cmd':'event', 'text':'Eval done.'})
             else:
-                conn.write({'cmd':'event', 'text':'Eval done: %s' % (repr(newval),)})
+                conn.write({'cmd':'event', 'text':'Eval result: %s' % (repr(newval),)})
         except Exception as ex:
             task.log.warning('Eval failed: %s', ex, exc_info=app.debugstacktraces)
             exmsg = '%s: %s' % (ex.__class__.__name__, ex,)
