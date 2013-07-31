@@ -223,10 +223,12 @@ def define_globals():
         ctx.task.set_dirty(uid, DIRTY_FOCUS)
 
     @scriptfunc('event', group='_', yieldy=True)
-    def global_event(you, others=None):
+    def global_event(you, others=None, player=None):
         """Send an event message to the current player, like {event}.
         The argument(s) must be string or {text}. The optional second
         argument goes to other players in the same location.
+        If the player argument is provided, the event refers to that
+        player instead -- but they must be in-world.
         """
         ctx = EvalPropContext.get_current_context()
         
@@ -244,8 +246,21 @@ def define_globals():
                 otherseval = True
             else:
                 others = str(others)
-                
-        yield ctx.perform_event(you, youeval, others, otherseval)
+
+        if player is None:
+            yield ctx.perform_event(you, youeval, others, otherseval)
+        elif isinstance(player, two.execute.PlayerProxy):
+            res = yield motor.Op(ctx.app.mongodb.playstate.find_one,
+                                 {'_id':player.uid},
+                                 {'iid':1})
+            if not res:
+                raise KeyError('No such player')
+            if res['iid'] != ctx.loctx.iid:
+                raise Exception('Player is not in this instance')
+            yield ctx.perform_event_player(player.uid, you, youeval, others, otherseval)
+        else:
+            raise TypeError('event: must be player or None')
+            
 
     @scriptfunc('eventloc', group='_', yieldy=True)
     def global_eventloc(loc, all):
@@ -444,6 +459,25 @@ def define_globals():
         ctx = EvalPropContext.get_current_context()
         return ctx.task.starttime
 
+    @scriptfunc('player', group='players', yieldy=True)
+    def global_players_player(player=None):
+        ctx = EvalPropContext.get_current_context()
+        if player is None:
+            if not ctx.uid:
+                raise Exception('No current player')
+            return two.execute.PlayerProxy(ctx.uid)
+        elif isinstance(player, two.execute.PlayerProxy):
+            return player
+        elif isinstance(player, ObjectId):
+            res = yield motor.Op(ctx.app.mongodb.players.find_one,
+                                 {'_id':player},
+                                 {'_id':1})
+            if not res:
+                raise Exception('No such player')
+            return two.execute.PlayerProxy(player)
+        else:
+            raise TypeError('players.player: must be player, ObjectId, or None')
+        
     @scriptfunc('name', group='players', yieldy=True)
     def global_players_name(player=None):
         ctx = EvalPropContext.get_current_context()
@@ -456,7 +490,7 @@ def define_globals():
         else:
             raise TypeError('players.name: must be player or None')
         res = yield motor.Op(ctx.app.mongodb.players.find_one,
-                             {'_id':ctx.uid},
+                             {'_id':uid},
                              {'name':1})
         if not res:
             raise Exception('No such player')
@@ -474,7 +508,7 @@ def define_globals():
         else:
             raise TypeError('players.focus: must be player or None')
         res = yield motor.Op(ctx.app.mongodb.players.find_one,
-                             {'_id':ctx.uid},
+                             {'_id':uid},
                              {'pronoun':1})
         if not res:
             raise Exception('No such player')
@@ -493,7 +527,8 @@ def define_globals():
         else:
             raise TypeError('players.ishere: must be player or None')
         res = yield motor.Op(ctx.app.mongodb.playstate.find_one,
-                             {'_id':ctx.uid})
+                             {'_id':uid},
+                             {'iid':1})
         if not res:
             raise Exception('No such player')
         if ctx.loctx.iid and ctx.loctx.iid == res.get('iid', None):
@@ -513,7 +548,7 @@ def define_globals():
         else:
             raise TypeError('players.focus: must be player or None')
         res = yield motor.Op(ctx.app.mongodb.playstate.find_one,
-                             {'_id':ctx.uid},
+                             {'_id':uid},
                              {'focus':1})
         if not res:
             raise Exception('No such player')
@@ -584,8 +619,8 @@ def define_globals():
         else:
             raise TypeError('players.focus: must be player or None')
         res = yield motor.Op(ctx.app.mongodb.players.find_one,
-                             {'_id':ctx.uid},
-                             {'pronoun':1})
+                             {'_id':uid},
+                             {'pronoun':1, 'name':1})
         if not res:
             raise Exception('No such player')
         # Could set up a pronoun dependency here.

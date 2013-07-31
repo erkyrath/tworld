@@ -1019,6 +1019,26 @@ class EvalPropContext(object):
             self.task.write_event(others, val)
 
     @tornado.gen.coroutine
+    def perform_event_player(self, uid, text, texteval, otext, otexteval):
+        if self.level != LEVEL_EXECUTE:
+            raise Exception('Events may only occur in action code')
+        if text:
+            if texteval:
+                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+                val = yield ctx.eval(text, evaltype=EVALTYPE_TEXT)
+            else:
+                val = text
+            self.task.write_event(uid, val)
+        if otext:
+            others = yield self.task.find_locale_players(uid=uid, notself=True)
+            if otexteval:
+                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+                val = yield ctx.eval(otext, evaltype=EVALTYPE_TEXT)
+            else:
+                val = otext
+            self.task.write_event(others, val)
+
+    @tornado.gen.coroutine
     def perform_move(self, locid, text, texteval, oleave, oleaveeval, oarrive, oarriveeval):
         assert isinstance(locid, ObjectId)
         if self.level != LEVEL_EXECUTE:
