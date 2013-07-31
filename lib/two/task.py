@@ -369,7 +369,7 @@ class Task(object):
             if not conn:
                 # Newly-established connection. Only 'playeropen' will be
                 # accepted. (Another twwcid case; we'll have to sneak the
-                # stream in through the object.)
+                # stream in through the command object.)
                 # (It's also possible that the connection closed since we
                 # queued this, in which case we still reject.)
                 if not cmd.preconnection:
