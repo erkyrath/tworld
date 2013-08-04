@@ -440,6 +440,9 @@ class EvalPropContext(object):
         if nodtyp is ast.Assign:
             res = yield self.execcode_assign(nod)
             return res
+        if nodtyp is ast.AugAssign:
+            res = yield self.execcode_augassign(nod)
+            return res
         if nodtyp is ast.Delete:
             res = yield self.execcode_delete(nod)
             return res
@@ -836,6 +839,22 @@ class EvalPropContext(object):
         target = yield self.execcode_expr_store(nod.targets[0])
         val = yield self.execcode_expr(nod.value)
 
+        yield target.store(self, self.loctx, val)
+        return None
+
+    @tornado.gen.coroutine
+    def execcode_augassign(self, nod):
+        target = yield self.execcode_expr(nod.target)
+        optyp = type(nod.op)
+        opfunc = self.map_binop_operators.get(optyp, None)
+        # Not sure if this is complete wrt augop
+        if not opfunc:
+            raise NotImplementedError('Script augop type not implemented: %s' % (optyp.__name__,))
+        val = yield self.execcode_expr(nod.value)
+
+        # My understanding is this should be doable inline.
+        val =  opfunc(target, val)
+        target = yield self.execcode_expr_store(nod.target)
         yield target.store(self, self.loctx, val)
         return None
 
