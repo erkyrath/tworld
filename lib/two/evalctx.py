@@ -459,9 +459,10 @@ class EvalPropContext(object):
     @tornado.gen.coroutine
     def execcode_expr_store(self, nod):
         """Does not evaluate a complete expression. Instead, returns a
-        wrapper object with store() and delete() methods.
-        (The nod.ctx lets us know whether store or delete is coming up,
-        but the way our proxies work, we don't much care.)
+        wrapper object with load(), store(), and delete() methods.
+        (The load() accessor supports augment "x += 1" operations.)
+        (The nod.ctx lets us know whether store/augment or delete is
+        coming up; but the way our proxies work, we don't much care.)
         """
         assert type(nod.ctx) is not ast.Load, 'target of assignment has Load context'
         nodtyp = type(nod)
@@ -842,16 +843,16 @@ class EvalPropContext(object):
 
     @tornado.gen.coroutine
     def execcode_augassign(self, nod):
-        target = yield self.execcode_expr(nod.target)
         optyp = type(nod.op)
         opfunc = self.map_binop_operators.get(optyp, None)
         if not opfunc:
             raise NotImplementedError('Script augop type not implemented: %s' % (optyp.__name__,))
-        val = yield self.execcode_expr(nod.value)
-
-        # My understanding is this should be doable inline.
-        val = opfunc(target, val)
         target = yield self.execcode_expr_store(nod.target)
+        rightval = yield self.execcode_expr(nod.value)
+
+        leftval = yield target.load(self, self.loctx)
+        val = opfunc(leftval, rightval)
+        
         yield target.store(self, self.loctx, val)
         return None
 
