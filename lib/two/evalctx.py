@@ -846,13 +846,12 @@ class EvalPropContext(object):
         target = yield self.execcode_expr(nod.target)
         optyp = type(nod.op)
         opfunc = self.map_binop_operators.get(optyp, None)
-        # Not sure if this is complete wrt augop
         if not opfunc:
             raise NotImplementedError('Script augop type not implemented: %s' % (optyp.__name__,))
         val = yield self.execcode_expr(nod.value)
 
         # My understanding is this should be doable inline.
-        val =  opfunc(target, val)
+        val = opfunc(target, val)
         target = yield self.execcode_expr_store(nod.target)
         yield target.store(self, self.loctx, val)
         return None
