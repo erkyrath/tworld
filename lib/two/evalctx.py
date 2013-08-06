@@ -617,8 +617,7 @@ class EvalPropContext(object):
                 if val:
                     return val
             return val
-        else:
-            raise NotImplementedError('Script boolop type not implemented: %s' % (optyp.__name__,))
+        raise NotImplementedError('Script boolop type not implemented: %s' % (optyp.__name__,))
 
     map_compare_operators = {
         ast.Is: operator.is_,
