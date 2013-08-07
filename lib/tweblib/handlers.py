@@ -447,7 +447,35 @@ class AdminMainHandler(AdminBaseHandler):
             self.application.twservermgr.tworld_write(0, msg)
         self.redirect('/admin')
 
+class AdminSessionsHandler(AdminBaseHandler):
+    """Handler for the Admin page which displays recent sessions.
+    """
+    @tornado.gen.coroutine
+    def get(self):
+        now = twcommon.misc.now()
+        PER_PAGE = 16
+        page = 0
+        sessions = []
+        cursor = self.application.mongodb.sessions.find(
+            {},
+            sort=[('starttime', motor.pymongo.DESCENDING)],
+            skip=page*PER_PAGE,
+            limit=PER_PAGE)
+        while (yield cursor.fetch_next):
+            prop = cursor.next_object()
+            sessions.append(prop)
+            try:
+                delta = now - prop['starttime']
+                prop['sincestarttime'] = datetime.timedelta(seconds=int(delta.total_seconds()))
+            except:
+                pass
+        # cursor autoclose
+        self.render('admin_sessions.html',
+                    sessions=sessions)
+
 class AdminPlayerHandler(AdminBaseHandler):
+    """Handler for the Admin page which displays a player record.
+    """
     @tornado.gen.coroutine
     def get(self, uid):
         uid = ObjectId(uid)

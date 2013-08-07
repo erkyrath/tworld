@@ -142,6 +142,7 @@ handlers = [
     (r'/build/setprop', tweblib.bhandlers.BuildSetPropHandler),
     (r'/build/setdata', tweblib.bhandlers.BuildSetDataHandler),
     (r'/admin', tweblib.handlers.AdminMainHandler),
+    (r'/admin/sessions', tweblib.handlers.AdminSessionsHandler),
     (r'/admin/player/([0-9a-f]+)', tweblib.handlers.AdminPlayerHandler),
     (r'/websocket', tweblib.handlers.PlayWebSocketHandler),
     ]
