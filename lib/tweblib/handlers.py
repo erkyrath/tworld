@@ -473,6 +473,33 @@ class AdminSessionsHandler(AdminBaseHandler):
         self.render('admin_sessions.html',
                     sessions=sessions)
 
+class AdminPlayersHandler(AdminBaseHandler):
+    """Handler for the Admin page which displays the players list.
+    """
+    @tornado.gen.coroutine
+    def get(self):
+        now = twcommon.misc.now()
+        PER_PAGE = 5 ###16
+        try:
+            page = int(self.get_argument('page', 0))
+            page = max(0, page)
+        except:
+            page = 0
+        players = []
+        cursor = self.application.mongodb.players.find(
+            {},
+            sort=[('createtime', motor.pymongo.DESCENDING)],
+            skip=page*PER_PAGE,
+            limit=PER_PAGE)
+        while (yield cursor.fetch_next):
+            prop = cursor.next_object()
+            players.append(prop)
+        # cursor autoclose
+        self.render('admin_players.html',
+                    page=page,
+                    hasnext=int(len(players) == PER_PAGE), hasprev=int(page > 0),
+                    players=players)
+
 class AdminPlayerHandler(AdminBaseHandler):
     """Handler for the Admin page which displays a player record.
     """

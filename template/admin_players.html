@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block page_title %}
+Admin: Players
+{% end %}
+
+{% block body %}
+
+<h2>Admin View: Players</h2>
+
+<p>
+<a href="/admin">Admin</a> -
+<a href="/admin/sessions">Sessions</a> -
+<a href="/admin/players">Players</a>
+</p>
+
+<h3>Players</h3>
+<ul>
+{% for player in players %}
+  <li><a href="/admin/player/{{ player['_id'] }}">{{ player['name'] }}</a>
+  ({{ player['email'] }}),
+  created {{ player['createtime'] }}
+{% end %}
+</ul>
+
+<p>
+{% if hasprev %}
+<a href="?page={{ page-1 }}">&#x21D0; Previous</a>
+{% else %}
+&#x21D0; Previous
+{% end %}
+|
+{% if hasnext %}
+<a href="?page={{ page+1 }}">Next Page &#x21D2;</a>
+{% else %}
+Next Page &#x21D2;
+{% end %}
+</p>
+
+
+{% end %}
