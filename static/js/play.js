@@ -218,12 +218,12 @@ function setup_event_handlers() {
 function open_websocket() {
     try {
         var url = 'ws://' + window.location.host + '/websocket';
-        console.log('### creating WebSocket ' + url);
+        console.log('### creating websocket ' + url);
         websocket = new WebSocket(url);
     }
     catch (ex) {
         eventpane_add('Unable to open websocket: ' + ex, 'EventError');
-        display_error('The connection to the server could not be created. Possibly your browser does not support WebSockets.');
+        display_error('The connection to the server could not be created. Possibly your browser does not support websockets.');
         return;
     }
 
@@ -1853,7 +1853,10 @@ function evhan_websocket_close(ev) {
     websocket = null;
     connected = false;
 
-    if (!everconnected) {
+    if (ev.code === undefined && ev.reason === undefined) {
+        display_error('The connection to the server could not be opened. Your web browser may contain an obsolete version of websockets. Try the most recent version of Safari, Firefox, or Chrome. (There have also been reports that Privoxy blocks websockets.)');
+    }
+    else if (!everconnected) {
         display_error('The connection to the server could not be opened. (' + ev.code + ',' + ev.reason + ')');
     }
     else {
