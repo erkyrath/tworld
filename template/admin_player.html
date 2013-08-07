@@ -6,7 +6,13 @@ Admin: Player "{{ playername }}"
 
 {% block body %}
 
-<h2><a href="/admin">Admin</a>: Player "{{ playername }}"</h2>
+<h2>Admin View: Player "{{ playername }}"</h2>
+
+<p>
+<a href="/admin">Admin</a> -
+<a href="/admin/sessions">sessions</a>
+</p>
+
 
 <ul>
 <li>uid: {{ player['_id'] }}

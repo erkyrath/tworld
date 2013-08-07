@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block page_title %}
+Admin: Sessions
+{% end %}
+
+{% block body %}
+
+<h2>Admin View: Sessions</h2>
+
+<p>
+<a href="/admin">Admin</a> -
+<a href="/admin/sessions">sessions</a>
+</p>
+
+<h3>Recent sessions</h3>
+<ul>
+{% for session in sessions %}
+  <li><a href="/admin/player/{{ session['uid'] }}">{{ session['name'] }}</a>
+  ({{ session['email'] }}),
+  signed in {{ session['sincestarttime'] }} ago,
+  sessionid ...{{ str(session['sid'])[-5:-1] }}
+{% end %}
+</ul>
+
+{% end %}
