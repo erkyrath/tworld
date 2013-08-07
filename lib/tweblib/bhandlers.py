@@ -357,7 +357,8 @@ class BuildLocHandler(BuildBaseHandler):
                     locarray=json.dumps(locarray), locations=locations,
                     locname=locname, locnamejs=json.dumps(locname),
                     locid=str(locid), lockey=json.dumps(lockey),
-                    proparray=proparray)
+                    proparray=proparray,
+                    withblurb=(len(props) <= 1))
 
 class BuildSetPropHandler(BuildBaseHandler):
     @tornado.gen.coroutine

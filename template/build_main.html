@@ -25,6 +25,19 @@ var xsrf_token = "{{ xsrf_token }}";
 <span class="BuildBarItem"><a href="/build">Worlds</a></span>
 </div>
 
+{% if worlds %}
+<p>
+This is an overview of all the worlds you have created in
+{{ tworld_app_title() }}.
+Select one to edit it, or press &#x201C;Create New World&#x201D;.
+</p>
+{% else %}
+<p>
+Welcome to the {{ tworld_app_title() }} world creator. To begin,
+press the &#x201C;Create New World&#x201D; button.
+</p>
+{% end %}
+
 <div class="BuildPropTableBox">
  <table class="BuildPropTable" cellspacing="0">
  <tr>

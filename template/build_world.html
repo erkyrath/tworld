@@ -43,6 +43,17 @@ var xsrf_token = "{{ xsrf_token }}";
 <span class="BuildBarItem"><a id="build_location_menu" href="#"><span style="color: #884">&#x25BE;</span> (select location)</a></span>
 </div>
 
+{% if not locations %}
+<p>
+To begin your world, select the name below (initially
+&#x201C;New World&#x201D;). Type a new name; then hit
+&#x201C;Save&#x201D;.
+</p>
+<p>
+Then press the &#x201C;New Location&#x201D; button at the end of the
+page.
+</p>
+{% end %}
 
 <div class="BuildPropTableBox">
  <table class="BuildPropTable" cellspacing="0">

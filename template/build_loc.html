@@ -39,6 +39,18 @@ var xsrf_token = "{{ xsrf_token }}";
 <span class="BuildBarItem"><a id="build_location_menu" href="#"><span style="color: #884">&#x25BE;</span> <span id="build_location_name">{{ locname }}</span></a></span>
 </div>
 
+{% if withblurb %}
+<p>
+Set this location's name by selecting the name (initially
+&#x201C;New Location&#x201D;) and typing something new.
+Then customize the description (&#x201C;You are here&#x201D;).
+</p>
+<p>
+You will then add new properties to describe the location's
+scenery and exits.
+</p>
+{% end %}
+
 <div class="BuildPropTableBox">
  <table class="BuildPropTable" cellspacing="0">
  <colgroup><col width="30%"><col width="70%"></colgroup>
