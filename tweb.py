@@ -108,6 +108,7 @@ import twcommon.misc
 import tweblib.session
 import tweblib.handlers
 import tweblib.bhandlers
+import tweblib.admhandlers
 import tweblib.connections
 import tweblib.servers
 
@@ -141,10 +142,10 @@ handlers = [
     (r'/build/addprop', tweblib.bhandlers.BuildAddPropHandler),
     (r'/build/setprop', tweblib.bhandlers.BuildSetPropHandler),
     (r'/build/setdata', tweblib.bhandlers.BuildSetDataHandler),
-    (r'/admin', tweblib.handlers.AdminMainHandler),
-    (r'/admin/sessions', tweblib.handlers.AdminSessionsHandler),
-    (r'/admin/players', tweblib.handlers.AdminPlayersHandler),
-    (r'/admin/player/([0-9a-f]+)', tweblib.handlers.AdminPlayerHandler),
+    (r'/admin', tweblib.admhandlers.AdminMainHandler),
+    (r'/admin/sessions', tweblib.admhandlers.AdminSessionsHandler),
+    (r'/admin/players', tweblib.admhandlers.AdminPlayersHandler),
+    (r'/admin/player/([0-9a-f]+)', tweblib.admhandlers.AdminPlayerHandler),
     (r'/websocket', tweblib.handlers.PlayWebSocketHandler),
     ]
 
