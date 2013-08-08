@@ -34,6 +34,7 @@ var property_type_selectors = [
     { value:'event', text:'Event' },
     { value:'panic', text:'Panic' },
     { value:'editstr', text:'EditStr' },
+    { value:'portlist', text:'PortList' },
     { value:'datetime', text:'DateTime' },
     { value:'value', text:'Value' },
     { value:'delete', text:'(Delete)' }
@@ -188,6 +189,14 @@ function update_prop(tableref, prop, nocopy) {
             { key:'label', val:prop.val.label, label:'(Label)' },
             { key:'text', val:prop.val.text, label:'(Message)' },
             { key:'otext', val:prop.val.otext, label:'(Message to other players)' } ];
+    }
+    else if (valtype == 'portlist') {
+        editls = [ 
+            { key:'plistkey', val:prop.val.plistkey, label:'Portlist key' },
+            { key:'focus', val:prop.val.focus, label:'false' },
+            { key:'readaccess', val:prop.val.readaccess, label:'visitor' },
+            { key:'editaccess', val:prop.val.editaccess, label:'member' },
+            { key:'text', val:prop.val.text, label:'(Label)' } ];
     }
     else if (valtype == 'delete') {
         /* No subpanes, just the "delete" button */

@@ -140,7 +140,18 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
                         try:
                             val['editaccess'] = twcommon.access.name_for_level(val['editaccess']).lower()
                         except:
-                            val['editaccess'] = ''
+                            del val['editaccess']
+                elif valtype == 'portlist':
+                    if 'editaccess' in val:
+                        try:
+                            val['editaccess'] = twcommon.access.name_for_level(val['editaccess']).lower()
+                        except:
+                            del val['editaccess']
+                    if 'readaccess' in val:
+                        try:
+                            val['readaccess'] = twcommon.access.name_for_level(val['readaccess']).lower()
+                        except:
+                            del val['readaccess']
                 else:
                     pass
             elif isinstance(val, datetime.datetime):
@@ -228,6 +239,36 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
                 res['text'] = prop['text']
             if 'otext' in prop:
                 res['otext'] = prop['otext']
+            return res
+        if valtype == 'portlist':
+            res = { 'type':valtype }
+            if 'plistkey' in prop:
+                plistkey = sluggify(prop['plistkey'])
+                res['plistkey'] = plistkey
+            if 'editaccess' in prop:
+                try:
+                    editaccess = twcommon.access.level_named(prop['editaccess'])
+                except:
+                    namels = twcommon.access.level_name_list()
+                    raise Exception('Access level must be in %s' % (namels,))
+                res['editaccess'] = editaccess
+            if 'readaccess' in prop:
+                try:
+                    readaccess = twcommon.access.level_named(prop['readaccess'])
+                except:
+                    namels = twcommon.access.level_name_list()
+                    raise Exception('Access level must be in %s' % (namels,))
+                res['readaccess'] = readaccess
+            if 'text' in prop:
+                res['text'] = prop['text']
+            if 'focus' in prop:
+                try:
+                    if twcommon.misc.gen_bool_parse(prop['focus']):
+                        res['focus'] = True
+                    else:
+                        res.pop('focus', None)
+                except:
+                    raise Exception('Focus flag must be true or false')
             return res
         raise Exception('Unknown property type: %s' % (valtype,))
 

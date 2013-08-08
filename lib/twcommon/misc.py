@@ -15,6 +15,20 @@ class SuiGeneris(object):
     def __repr__(self):
         return '<%s>' % (self.name,)
 
+def gen_bool_parse(val):
+    """Convert a string, as a human might type it, to a boolean. Unrecognized
+    values raise an exception.
+    """
+    val = val.strip()
+    if not val:
+        return False
+    ch = val[0]
+    if ch in {'t', 'T', 'y', 'Y', '1'}:
+        return True
+    if ch in {'f', 'F', 'n', 'N', '0'}:
+        return False
+    raise ValueError('"%s" does not look like a boolean' % (val,))
+    
 def now():
     """Utility function: return "now" as an aware UTC datetime object.
     """
