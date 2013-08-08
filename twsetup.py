@@ -13,7 +13,7 @@ schema to the current version. Use the --upgradedb option in this case.
 """
 
 # The database version created by this version of the script.
-DBVERSION = 4
+DBVERSION = 5
 
 import sys
 import os
@@ -107,6 +107,35 @@ def upgrade_to_v4():
     db.portals.drop_index('plistid_1')
     db.portals.update({}, {'$set':{'iid':None}}, multi=True)
 
+def upgrade_to_v5():
+    print('Upgrading to v5...')
+    plists = {}
+    cursor = db.portlists.find({'type':'world'})
+    for plist in cursor:
+        plists[plist['_id']] = plist
+    print('...%d world portlists found' % (len(plists),))
+    plistids = sorted(plists.keys())
+    for (ix, plistid) in enumerate(plistids):
+        plist = plists[plistid]
+        key = 'pkey_%s' % (ix,)
+        plist['key'] = key
+        db.portlists.update({'_id':plistid}, {'$set':{'key':key}})
+    props = []
+    cursor = db.worldprop.find()
+    for prop in cursor:
+        val = prop['val']
+        if type(val) is dict and val.get('type') == 'portlist':
+            props.append(prop)
+    print('...%d world portlist properties found' % (len(props),))
+    for prop in props:
+        val = prop['val']
+        plist = plists.get(val['plistid'], None)
+        if plist:
+            val['plistkey'] = plist['key']
+            if 'focusport' in val:
+                val['focus'] = True
+            db.worldprop.update({'_id':prop['_id']}, {'$set':{'val':val}})
+
 # if curversion is None, we're brand-new.
 if curversion is not None and curversion < DBVERSION:
     if not opts.upgradedb:
@@ -118,6 +147,8 @@ if curversion is not None and curversion < DBVERSION:
         upgrade_to_v3()
     if curversion < 4:
         upgrade_to_v4()
+    if curversion < 5:
+        upgrade_to_v5()
     db.config.update({'key':'dbversion'},
                      {'key':'dbversion', 'val':DBVERSION}, upsert=True)
 else:
@@ -164,6 +195,10 @@ db.trashprop.create_index('changed')
 
 # Compound index
 db.portals.create_index([('plistid', pymongo.ASCENDING), ('iid', pymongo.ASCENDING)])
+
+# Sparse index
+# (I'd make a unique sparse compound (wid, key) index, if mongodb supported it)
+db.portlists.create_index('wid', sparse=True)
 
 # Compound index
 db.scopeaccess.create_index([('uid', pymongo.ASCENDING), ('scid', pymongo.ASCENDING)], unique=True)

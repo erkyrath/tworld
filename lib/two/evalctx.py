@@ -758,7 +758,7 @@ class EvalPropContext(object):
                 raise MessageException(self.app.localize('message.widget_no_access'))
             editable = (level >= res.get('editaccess', ACC_MEMBER))
             extratext = res.get('text', None)
-            focusport = res.get('focusport', None)
+            focusport = res.get('focusport', None) #### 'focus', and we'll have to query for the (first) portal in the list
             withback = (focusport is None)
             arr = ['portlist', plistid, editable, extratext, withback, focusport]
             yield motor.Op(self.app.mongodb.playstate.update,
