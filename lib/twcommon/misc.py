@@ -22,10 +22,14 @@ def gen_bool_parse(val):
     val = val.strip()
     if not val:
         return False
+    try:
+        return bool(int(val))
+    except:
+        pass
     ch = val[0]
-    if ch in {'t', 'T', 'y', 'Y', '1'}:
+    if ch in {'t', 'T', 'y', 'Y'}:
         return True
-    if ch in {'f', 'F', 'n', 'N', '0'}:
+    if ch in {'f', 'F', 'n', 'N'}:
         return False
     raise ValueError('"%s" does not look like a boolean' % (val,))
     
@@ -100,6 +104,28 @@ def sluggify(text):
 import unittest
 
 class TestInterpModule(unittest.TestCase):
+
+    def test_genboolparse(self):
+        self.assertEqual(gen_bool_parse(''), False)
+        self.assertEqual(gen_bool_parse('  '), False)
+        self.assertEqual(gen_bool_parse('0'), False)
+        self.assertEqual(gen_bool_parse('1'), True)
+        self.assertEqual(gen_bool_parse('2'), True)
+        self.assertEqual(gen_bool_parse('01'), True)
+        self.assertEqual(gen_bool_parse('t'), True)
+        self.assertEqual(gen_bool_parse('true'), True)
+        self.assertEqual(gen_bool_parse('  TRUE  '), True)
+        self.assertEqual(gen_bool_parse('f'), False)
+        self.assertEqual(gen_bool_parse(' false '), False)
+        self.assertEqual(gen_bool_parse('False'), False)
+        self.assertEqual(gen_bool_parse('yes'), True)
+        self.assertEqual(gen_bool_parse('Y'), True)
+        self.assertEqual(gen_bool_parse('no'), False)
+        self.assertEqual(gen_bool_parse('N'), False)
+        self.assertRaises(ValueError, gen_bool_parse, 'x')
+        self.assertRaises(ValueError, gen_bool_parse, '?')
+        self.assertRaises(ValueError, gen_bool_parse, '1.1')
+        self.assertRaises(ValueError, gen_bool_parse, '.')
 
     def test_gendatetime(self):
         date1 = datetime.datetime(year=2013, month=7, day=16, tzinfo=datetime.timezone.utc)
