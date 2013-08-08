@@ -87,7 +87,7 @@ class AdminPlayersHandler(AdminBaseHandler):
     @tornado.gen.coroutine
     def get(self):
         now = twcommon.misc.now()
-        PER_PAGE = 5 ###16
+        PER_PAGE = 16
         try:
             page = int(self.get_argument('page', 0))
             page = max(0, page)
