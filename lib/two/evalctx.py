@@ -749,18 +749,31 @@ class EvalPropContext(object):
 
         if restype == 'portlist':
             # Set focus to an ugly special-case array
-            plistid = res.get('plistid', None)
-            if not plistid:
-                raise ErrorMessageException('portlist property has no plistid')
+            plistkey = res.get('plistkey', None)
+            if not plistkey:
+                raise ErrorMessageException('portlist property has no plistkey')
+            plist = yield motor.Op(self.app.mongodb.portlists.find_one,
+                                   {'wid':self.loctx.wid, 'key':plistkey, 'type':'world'},
+                                   {'_id':1})
+            if not plist:
+                raise ErrorMessageException('portlist not found: %s' % (plistkey,))
+            plistid = plist['_id']
             
             level = yield two.execute.scope_access_level(self.app, self.uid, self.loctx.wid, self.loctx.scid)
             if level < res.get('readaccess', ACC_VISITOR):
                 raise MessageException(self.app.localize('message.widget_no_access'))
             editable = (level >= res.get('editaccess', ACC_MEMBER))
             extratext = res.get('text', None)
-            focusport = res.get('focusport', None) #### 'focus', and we'll have to query for the (first) portal in the list
-            withback = (focusport is None)
-            arr = ['portlist', plistid, editable, extratext, withback, focusport]
+
+            focusportid = None
+            if res.get('focus', False):
+                focusport = yield motor.Op(self.app.mongodb.portals.find_one,
+                                           {'plistid':plistid, 'iid':None},
+                                           {'_id':1})
+                if focusport:
+                    focusportid = focusport['_id']
+            withback = (focusportid is None)
+            arr = ['portlist', plistid, editable, extratext, withback, focusportid]
             yield motor.Op(self.app.mongodb.playstate.update,
                            {'_id':uid},
                            {'$set':{'focus':arr}})

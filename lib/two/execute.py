@@ -750,7 +750,7 @@ def create_portal_for_plist(task, iid, plistid, newwid, newscid, newlocid):
     if res:
         raise MessageException(app.localize('message.plist_add_already_have')) # 'This portal is already in this collection.'
 
-    # Look through the list (both intance and world) and find the
+    # Look through the list (both instance and world) and find the
     # entry with the highest listpos.
     res = yield motor.Op(app.mongodb.portals.aggregate, [
             {'$match': {'plistid':plistid, '$or':[{'iid':None}, {'iid':iid}]}},
@@ -868,7 +868,6 @@ def render_focus(task, loctx, conn, focusobj):
                 return (specres, True)
 
             # Render the portlist.
-            query = { 'plistid':plistid }
             if not loctx.iid:
                 query = {'plistid':plistid, 'iid':None}
             else:
