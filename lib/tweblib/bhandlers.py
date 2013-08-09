@@ -295,6 +295,14 @@ class BuildWorldHandler(BuildBaseHandler):
         # location menu.
         locarray = [ {'id':str(loc['_id']), 'name':loc['name']} for loc in locations ]
 
+        portlists = []
+        cursor = self.application.mongodb.portlists.find({'wid':wid, 'iid':None, 'type':'world'})
+        while (yield cursor.fetch_next):
+            plist = cursor.next_object()
+            portlists.append(plist)
+        # cursor autoclose
+        portlists.sort(key=lambda plist:plist['_id']) ### or other criterion?
+
         worldprops = []
         cursor = self.application.mongodb.worldprop.find({'wid':wid, 'locid':None}, {'key':1, 'val':1})
         while (yield cursor.fetch_next):
@@ -322,9 +330,10 @@ class BuildWorldHandler(BuildBaseHandler):
                     worldcopyable=json.dumps(world.get('copyable', False)),
                     worldinstancing=json.dumps(world.get('instancing', 'standard')),
                     locarray=json.dumps(locarray), locations=locations,
+                    portlists=portlists,
                     worldproparray=worldproparray, playerproparray=playerproparray)
 
-class BuildTrashHandler(BuildBaseHandler):
+class BuildTrashWorldHandler(BuildBaseHandler):
     @tornado.gen.coroutine
     def get(self, wid):
         wid = ObjectId(wid)
@@ -362,6 +371,37 @@ class BuildTrashHandler(BuildBaseHandler):
                     pagingnum=page,
                     hasnext=int(len(trashprops) == PER_PAGE), hasprev=int(page > 0),
                     trashproparray=trashproparray)
+
+class BuildPortListHandler(BuildBaseHandler):
+    @tornado.gen.coroutine
+    def get(self, plistid):
+        plistid = ObjectId(plistid)
+        plist = yield motor.Op(self.application.mongodb.portlists.find_one,
+                               { '_id':plistid })
+        if not plist:
+            raise Exception('No such portlist')
+        if plist['type'] != 'world' or 'wid' not in plist:
+            raise Exception('Portlist is not in a world')
+        plistkey = plist.get('key')
+            
+        wid = plist['wid']
+        (world, locations) = yield self.find_build_world(wid)
+
+        worldname = world.get('name', '???')
+        # This array must be handed to the client to construct the pop-up
+        # location menu.
+        locarray = [ {'id':str(loc['_id']), 'name':loc['name']} for loc in locations ]
+
+        portals = []
+        ####
+        
+        self.render('build_portlist.html',
+                    wid=str(wid), worldname=worldname,
+                    locarray=json.dumps(locarray), locations=locations,
+                    plistid=str(plistid), plistkey=json.dumps(plistkey),
+                    portarray=[],
+                    withblurb=(len(portals) <= 1))
+
 
 class BuildLocHandler(BuildBaseHandler):
     @tornado.gen.coroutine
@@ -836,6 +876,8 @@ class BuildExportWorldHandler(BuildBaseHandler):
         self.write(rootdumphead)
         
         encoder = JSONEncoderExtra(indent=True, sort_keys=True, ensure_ascii=False)
+
+        #### portals and portlists
 
         worldprops = []
         cursor = self.application.mongodb.worldprop.find({'wid':wid, 'locid':None}, {'key':1, 'val':1})
