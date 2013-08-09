@@ -116,6 +116,8 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
                                  { '_id':locid })
             if not loc:
                 raise Exception('No such location')
+            if loc['wid'] != wid:
+                raise Exception('Location is not in this world')
 
         return (world, loc)
 
@@ -539,6 +541,8 @@ class BuildSetPropHandler(BuildBaseHandler):
                 kprop = yield motor.Op(self.application.mongodb.wplayerprop.find_one,
                                        { 'wid':wid, 'uid':None, 'key':key })
                 if oprop:
+                    if oprop['wid'] != wid:
+                        raise Exception('Property not in this world')
                     try:
                         trashprop = { 'wid':oprop['wid'], 'uid':oprop['uid'],
                                       'key':oprop['key'], 'val':oprop['val'],
@@ -553,6 +557,8 @@ class BuildSetPropHandler(BuildBaseHandler):
                 kprop = yield motor.Op(self.application.mongodb.worldprop.find_one,
                                        { 'wid':wid, 'locid':locid, 'key':key })
                 if oprop:
+                    if oprop['wid'] != wid:
+                        raise Exception('Property not in this world')
                     try:
                         trashprop = { 'wid':oprop['wid'], 'locid':oprop['locid'],
                                       'key':oprop['key'], 'val':oprop['val'],
@@ -923,7 +929,7 @@ class BuildSetDataHandler(BuildBaseHandler):
                 if oplist and oplist['_id'] != plistid:
                     raise Exception('A portlist with this key already exists.')
                 yield motor.Op(self.application.mongodb.portlists.update,
-                               { '_id':plistid },
+                               { '_id':plistid, 'wid':wid },
                                { '$set':{'key':value} })
                 self.write( { 'val':value } )
                 return
