@@ -272,6 +272,55 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
             return res
         raise Exception('Unknown property type: %s' % (valtype,))
 
+    @tornado.gen.coroutine
+    def export_portal_array(self, ls):
+        """Given an array of portal objects (from the db), return an array
+        suitable for handing over to the client for editing.
+        (This has to be yieldy, because we're looking up the names of
+        everything.)
+        """
+        res = []
+        for portal in ls:
+            try:
+                world = yield motor.Op(self.application.mongodb.worlds.find_one,
+                                       {'_id':portal['wid']})
+                worldname = world.get('name', '???')
+                creator = yield motor.Op(self.application.mongodb.players.find_one,
+                                         {'_id':world['creator']}, {'name':1})
+                if creator:
+                    creatorname = creator.get('name', '???')
+                else:
+                    creatorname = '???'
+                if portal['scid'] in ('personal', 'global', 'same'):
+                    scope = None
+                    scopetype = None
+                else:
+                    scope = yield motor.Op(self.application.mongodb.scopes.find_one,
+                                           {'_id':portal['scid']})
+                    scopetype = scope['type']
+                loc = yield motor.Op(self.application.mongodb.locations.find_one,
+                                     {'_id':portal['locid']})
+                if loc:
+                    locname = loc.get('name', '???')
+                else:
+                    locname = '???'
+                newprop = { 'id':str(portal['_id']),
+                            'listpos':portal.get('listpos', 0.0),
+                            'wid':str(portal['wid']),
+                            'scid':str(portal['scid']),
+                            'locid':str(portal['locid']),
+                            'worldname':worldname,
+                            'locname':locname,
+                            'creatorname':creatorname,
+                            'instancing':world.get('instancing', 'standard'),
+                            'scopetype':scopetype,
+                            }
+                res.append(newprop)
+            except Exception as ex:
+                self.application.twlog.warning('Unable to convert portal: %s', ex)
+            
+        return res
+
 class BuildMainHandler(BuildBaseHandler):
     @tornado.gen.coroutine
     def get(self):
@@ -393,13 +442,22 @@ class BuildPortListHandler(BuildBaseHandler):
         locarray = [ {'id':str(loc['_id']), 'name':loc['name']} for loc in locations ]
 
         portals = []
-        ####
-        
+        cursor = self.application.mongodb.portals.find({'plistid':plistid, 'iid':None})
+        while (yield cursor.fetch_next):
+            port = cursor.next_object()
+            portals.append(port)
+        # cursor autoclose
+        portals.sort(key=lambda port:port.get('listpos', 0.0))
+
+        encoder = JSONEncoderExtra()
+        clientls = yield self.export_portal_array(portals)
+        portarray = encoder.encode(clientls)
+            
         self.render('build_portlist.html',
                     wid=str(wid), worldname=worldname,
                     locarray=json.dumps(locarray), locations=locations,
                     plistid=str(plistid), plistkey=json.dumps(plistkey),
-                    portarray=[],
+                    portarray=portarray,
                     withblurb=(len(portals) <= 1))
 
 
