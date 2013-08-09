@@ -944,11 +944,11 @@ def define_commands():
         
     @command('plistselect', doeswrite=True)
     def cmd_plistselect(app, task, cmd, conn):
+        # Called when the player selects a booklet link.
         player = yield motor.Op(app.mongodb.players.find_one,
                                 {'_id':conn.uid},
                                 {'plistid':1})
         plistid = player['plistid']
-        #### not necessarily your collection!
         portal = yield motor.Op(app.mongodb.portals.find_one,
                                 {'_id':ObjectId(cmd.portid), 'plistid':plistid, 'iid':None})
         if not portal:
