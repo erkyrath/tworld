@@ -92,7 +92,7 @@ function build_proptable(tableel, proplist, tablekey, title, readonly) {
     tableel.empty();
 
     /* Add a colgroup, defining the column widths. */
-    tableel.append($('<colgroup><col width="20%"><col width="5%"></col><col width="70%"></col></colgroup>'));
+    tableel.append($('<colgroup><col width="20%"></col><col width="5%"></col><col width="70%"></col></colgroup>'));
 
     var rowel = $('<tr>');
     var cellel = $('<th>', { colspan:3 });
@@ -314,7 +314,7 @@ function delete_prop(tableref, prop, nocopy) {
     }
 }
 
-/* Construct the contents of a property value cell (the second column
+/* Construct the contents of a property value cell (the third column
    of the table). The cell must be initially empty.
 
    Returns an object containing references to some of the constructed
@@ -503,6 +503,125 @@ function build_geninput_cell(cellel, origvalue, name, successfunc) {
     cellel.append(buttonsel);
 }
 
+/* Construct the contents of a property table. This is called at page-load
+   time.
+*/
+function build_portaltable(tableel, portlist, tablekey) {
+    var tableref = tables[tablekey];
+    if (tableref === undefined) {
+        tableref = { tablekey:tablekey, rootel:tableel,
+                     portmap:{}, portlist:[] };
+        tables[tablekey] = tableref;
+    }
+
+    /* Empty out the table. */
+    tableel.empty();
+
+    /* Add a colgroup, defining the column widths. */
+    tableel.append($('<colgroup><col width="25%"></col><col width="70%"></col></colgroup>'));
+
+    var rowel = $('<tr>');
+    var cellel = $('<th>', { colspan:2 });
+    cellel.text('Portals');
+    rowel.append(cellel);
+    tableel.append(rowel);
+
+    /* Add a "add new" row (which will stick at the bottom) */
+    var rowel = $('<tr>');
+    var cellel = $('<td>', { colspan:3 });
+    rowel.append(cellel);
+    tableel.append(rowel);
+    if (true) {
+        var buttonsel = $('<div>', { 'class':'BuildPropButtons' });
+        var buttonel = $('<input>', { 'class':'BuildPropButtonLarge', type:'submit', value:'New Portal' });
+        cellel.append(buttonsel);
+        buttonsel.append(buttonel);
+        
+        buttonel.on('click', { tablekey:tablekey }, evhan_button_addportal);
+    }
+
+    for (var ix=0; ix<portlist.length; ix++) {
+        update_portal(tableref, portlist[ix]);
+    }
+}
+
+function update_portal(tableref, port, nocopy) {
+    if (tableref === undefined) {
+        console.log('No table for this portal group!');
+        return;
+    }
+
+    var tableel = tableref.rootel;
+
+    var desc = [];
+    desc.push($('<span>').text(port.worldname + ' \u2013 '  + port.locname));
+    desc.push($('<br>'));
+    desc.push($('<em>').text(NBSP + NBSP + '(creator: ' + port.creatorname + ')'));
+
+    var portref = tableref.portmap[port.id];
+    if (portref !== undefined) {
+        /* Portal is already present in table. */
+        if (!nocopy)
+            portref.val = port;
+        portref.textel.empty();
+        for (var ix=0; ix<desc.length; ix++) {
+            portref.textel.append(desc[ix]);
+        }
+    }
+    else {
+        /* Portal is not in table. Add a row. */
+        var rowel = $('<tr>', { valign:'top' });
+        var cellctel = $('<td>');
+        var cellvalel = $('<td>');
+
+        var buildres = build_portal_cell(cellvalel, tableref.tablekey, port);
+
+        for (var ix=0; ix<desc.length; ix++) {
+            buildres.textel.append(desc[ix]);
+        }
+
+        rowel.append(cellctel);
+        rowel.append(cellvalel);
+        tableel.find('tr').filter(':last').before(rowel);
+
+        var portref = {
+            id: port.id,
+            tablekey: tableref.tablekey,
+            rowel: rowel, cellvalel: cellvalel, buttonsel: buildres.buttonsel,
+            warningel: buildres.warningel, textel: buildres.textel
+        };
+
+        tableref.portlist.push(port.id);
+        tableref.portmap[port.id] = portref;
+    }
+}
+
+/* Construct the contents of a portal value cell (the second column
+   of the table). The cell must be initially empty.
+
+   Returns an object containing references to some of the constructed
+   DOM elements: the row of buttons, the warning line, the div where the
+   description goes.
+*/
+function build_portal_cell(cellvalel, tablekey, port) {
+    var textel = $('<div>');
+    cellvalel.append(textel);
+
+    var warningel = $('<div>', { 'class':'BuildPropWarning', style:'display: none;' });
+    cellvalel.append(warningel);
+    
+    var buttonsel = $('<div>', { 'class':'BuildPropButtons', style:'display: none;' });
+    var buttonel = $('<input>', { type:'submit', value:'Revert' });
+    //####buttonel.on('click', { tablekey:tablekey, id:port.id }, evhan_button_revert);
+    buttonsel.append(buttonel);
+    var buttonel = $('<input>', { type:'submit', value:'Save' });
+    //####buttonel.on('click', { tablekey:tablekey, id:port.id }, evhan_button_save);
+    buttonsel.append(buttonel);
+    cellvalel.append(buttonsel);
+    
+    return { textel:textel, buttonsel:buttonsel, warningel:warningel };
+}
+
 /* Callback invoked whenever the user edits the contents of a textarea.
 */
 function evhan_input_textarea(ev) {
@@ -680,6 +799,17 @@ function evhan_button_addnew(ev) {
             },
             dataType: 'json'
         });
+}
+
+function evhan_button_addportal(ev) {
+    ev.preventDefault();
+    var tablekey = ev.data.tablekey;
+
+    var tableref = tables[tablekey];
+    if (!tableref)
+        return;
+
+    /*####*/
 }
 
 function evhan_button_addlocation(ev) {
@@ -971,7 +1101,7 @@ $(document).ready(function() {
         build_location_fields();
     }
     if (pageid == 'portlist') {
-        /*####*/
+        build_portaltable($('#build_portals'), db_portals, '$portlist');
         build_portlist_fields();
     }
     if (pageid == 'world') {
