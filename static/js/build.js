@@ -454,6 +454,19 @@ function build_location_fields() {
     $('#button_delete_delete').on('click', evhan_button_dellocation);
 }
 
+function build_portlist_fields() {
+    var cellel = $('#build_plist_key_cell');
+    build_geninput_cell(cellel, pageplistkey, 'plistkey');
+
+    $('#button_delete_portlist').on('click', function() {
+            $('#button_delete_confirm').filter(":hidden").slideDown(200);
+        });
+    $('#button_delete_cancel').on('click', function() {
+            $('#button_delete_confirm').filter(":visible").slideUp(200);
+        });
+    $('#button_delete_delete').on('click', evhan_button_delportlist);
+}
+
 function build_world_fields() {
     var cellel = $('#build_world_name_cell');
     build_geninput_cell(cellel, pageworldname, 'worldname', function (val) {
@@ -716,6 +729,30 @@ function evhan_button_dellocation(ev) {
         });
 }
 
+function evhan_button_delportlist(ev) {
+    ev.preventDefault();
+
+    msg = { world:pageworldid, plist:pageplistid,
+            _xsrf: xsrf_token };
+
+    jQuery.ajax({
+            url: '/build/delportlist',
+            type: 'POST',
+            data: msg,
+            success: function(data, status, jqhxr) {
+                if (data.error) {
+                    console.log('### error: ' + data.error);
+                    return;
+                }
+                window.location = '/build/world/' + pageworldid;
+            },
+            error: function(jqxhr, status, error) {
+                console.log('### ajax failure: ' + status + '; ' + error);
+            },
+            dataType: 'json'
+        });
+}
+
 function evhan_button_addworld(ev) {
     ev.preventDefault();
 
@@ -809,6 +846,9 @@ function evhan_button_geninput_save(ev) {
                 _xsrf: xsrf_token };
     if (pageid == 'loc') {
         msg.loc = pagelocid;
+    }
+    if (pageid == 'portlist') {
+        msg.plist = pageplistid;
     }
 
     jQuery.ajax({
@@ -904,6 +944,10 @@ $(document).ready(function() {
     if (pageid == 'loc') {
         build_proptable($('#build_loc_properties'), db_props, pagelockey, 'Location properties');
         build_location_fields();
+    }
+    if (pageid == 'portlist') {
+        /*####*/
+        build_portlist_fields();
     }
     if (pageid == 'world') {
         build_proptable($('#build_world_properties'), db_world_props, '$realm', 'Realm properties');

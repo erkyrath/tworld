@@ -836,6 +836,24 @@ class BuildSetDataHandler(BuildBaseHandler):
                 self.write( { 'ok':True } )
                 return
 
+            if name == 'plistkey':
+                value = sluggify(value)
+                if not re_valididentifier.match(value):
+                    raise Exception('Invalid key name')
+                plistid = self.get_argument('plist', None)
+                if not plistid:
+                    raise Exception('No portlist declared')
+                plistid = ObjectId(plistid)
+                oplist = yield motor.Op(self.application.mongodb.portlists.find_one,
+                                     { 'wid':wid, 'key':value, 'type':'world' })
+                if oplist and oplist['_id'] != plistid:
+                    raise Exception('A portlist with this key already exists.')
+                yield motor.Op(self.application.mongodb.portlists.update,
+                               { '_id':plistid },
+                               { '$set':{'key':value} })
+                self.write( { 'val':value } )
+                return
+
             raise Exception('Data not recognized: %s' % (name,))
         except Exception as ex:
             # Any exception that occurs, return as an error message.
