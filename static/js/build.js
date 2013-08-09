@@ -73,6 +73,7 @@ function setup_event_handlers() {
 
     if (pageid == 'world') {
         $('#button_add_new_location').on('click', evhan_button_addlocation);
+        $('#button_add_new_portlist').on('click', evhan_button_addportlist);
     }
 }
 
@@ -721,6 +722,30 @@ function evhan_button_dellocation(ev) {
                     return;
                 }
                 window.location = '/build/world/' + pageworldid;
+            },
+            error: function(jqxhr, status, error) {
+                console.log('### ajax failure: ' + status + '; ' + error);
+            },
+            dataType: 'json'
+        });
+}
+
+function evhan_button_addportlist(ev) {
+    ev.preventDefault();
+
+    msg = { world:pageworldid,
+            _xsrf: xsrf_token };
+
+    jQuery.ajax({
+            url: '/build/addportlist',
+            type: 'POST',
+            data: msg,
+            success: function(data, status, jqhxr) {
+                if (data.error) {
+                    console.log('### error: ' + data.error);
+                    return;
+                }
+                window.location = '/build/portlist/' + data.id;
             },
             error: function(jqxhr, status, error) {
                 console.log('### ajax failure: ' + status + '; ' + error);

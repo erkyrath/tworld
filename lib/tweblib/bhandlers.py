@@ -345,7 +345,7 @@ class BuildWorldHandler(BuildBaseHandler):
         locarray = [ {'id':str(loc['_id']), 'name':loc['name']} for loc in locations ]
 
         portlists = []
-        cursor = self.application.mongodb.portlists.find({'wid':wid, 'iid':None, 'type':'world'})
+        cursor = self.application.mongodb.portlists.find({'wid':wid, 'type':'world'})
         while (yield cursor.fetch_next):
             plist = cursor.next_object()
             portlists.append(plist)
@@ -755,6 +755,39 @@ class BuildAddLocHandler(BuildBaseHandler):
         except Exception as ex:
             # Any exception that occurs, return as an error message.
             self.application.twlog.warning('Caught exception (adding location): %s', ex)
+            self.write( { 'error': str(ex) } )
+
+class BuildAddPortListHandler(BuildBaseHandler):
+    @tornado.gen.coroutine
+    def post(self):
+        try:
+            wid = ObjectId(self.get_argument('world'))
+    
+            (world, dummy) = yield self.check_world_arguments(wid, None)
+
+            # Now we have to invent a fresh new plist key. This is kind
+            # of a nuisance.
+            counter = 0
+            while True:
+                key = 'portlist_%d' % (counter,)
+                oplist = yield motor.Op(self.application.mongodb.portlists.find_one,
+                                        { 'wid':wid, 'key':key, 'type':'world' })
+                if not oplist:
+                    break
+                counter = counter+1
+                if counter >= 5:
+                    # Getting trapped in a linear loop is dumb.
+                    counter = counter + random.randrange(50)
+
+            plist = { 'key':key, 'wid':wid, 'type':'world' }
+            plistid = yield motor.Op(self.application.mongodb.portlists.insert,
+                                   plist)
+
+            self.write( { 'id':str(plistid) } )
+            
+        except Exception as ex:
+            # Any exception that occurs, return as an error message.
+            self.application.twlog.warning('Caught exception (adding portlist): %s', ex)
             self.write( { 'error': str(ex) } )
 
 class BuildSetDataHandler(BuildBaseHandler):
