@@ -379,6 +379,36 @@ class BoundNameProxy(object):
                        upsert=True)
         ctx.task.changeset.add( ('instanceprop', iid, locid, key) )
 
+class MultiBoundProxy(object):
+    """A load/delete/store object for a tuple of l/d/s objects. This
+    represents the left-hand side of an "(x, y, z) = (1, 2, 3)" statement.
+    """
+    
+    def __init__(self, args):
+        self.tuple = tuple(args)
+        
+    @tornado.gen.coroutine
+    def load(self, ctx, loctx):
+        res = []
+        for proxy in self.tuple:
+            val = yield proxy.load(ctx, loctx)
+            res.append(val)
+        return tuple(res)
+
+    @tornado.gen.coroutine
+    def delete(self, ctx, loctx):
+        for proxy in self.tuple:
+            yield proxy.delete(ctx, loctx)
+    
+    @tornado.gen.coroutine
+    def store(self, ctx, loctx, val):
+        vals = tuple(val)
+        if len(vals) != len(self.tuple):
+            raise ValueError('wrong number of values to unpack (expected %d)' % (len(self.tuple),))
+        for proxy, val in zip(self.tuple, vals):
+            yield proxy.store(ctx, loctx, val)
+            
+    
 class WorldLocationsProxy(PropertyProxyMixin, object):
     """Represents the collection of locations (in the current world).
     Has read-only properties, since you can't invent new locations or

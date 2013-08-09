@@ -474,6 +474,12 @@ class EvalPropContext(object):
             if isinstance(argument, two.execute.PropertyProxyMixin):
                 return two.execute.BoundPropertyProxy(argument, key)
             raise ExecSandboxException('%s.%s: setattr not allowed' % (type(argument).__name__, key))
+        if nodtyp is ast.Tuple:
+            ls = []
+            for subnod in nod.elts:
+                val = yield self.execcode_expr_store(subnod)
+                ls.append(val)
+            return two.execute.MultiBoundProxy(ls)
         raise NotImplementedError('Script store-expression type not implemented: %s' % (nodtyp.__name__,))
         
         
