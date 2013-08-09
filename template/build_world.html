@@ -97,6 +97,27 @@ page.
 
 <div class="BuildPropTableBox">
  <table class="BuildPropTable" cellspacing="0">
+ <colgroup><col width="100%"></colgroup>
+ <tr>
+  <th colspan="1">Portal lists</th>
+ </tr>
+ {% for plist in portlists %}
+  <tr>
+   <td><a href="/build/portlist/{{ plist['_id'] }}">{{ plist['key'] }}</a></td>
+  </tr>
+ {% end %}
+ <tr>
+  <td colspan="2">
+   <div class="BuildPropButtons">
+    <input id="button_add_new_portlist" class="BuildPropButtonLarge" type="submit" value="New Portal List">
+   </div>
+  </td>
+ </tr>
+ </table>
+</div>
+
+<div class="BuildPropTableBox">
+ <table class="BuildPropTable" cellspacing="0">
  <colgroup><col width="30%"><col width="70%"></colgroup>
  <tr>
   <th colspan="2">Locations</th>
