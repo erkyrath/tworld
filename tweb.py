@@ -143,6 +143,7 @@ handlers = [
     (r'/build/addprop', tweblib.bhandlers.BuildAddPropHandler),
     (r'/build/setprop', tweblib.bhandlers.BuildSetPropHandler),
     (r'/build/addportlist', tweblib.bhandlers.BuildAddPortListHandler),
+    (r'/build/delportlist', tweblib.bhandlers.BuildDelPortListHandler),
     (r'/build/setdata', tweblib.bhandlers.BuildSetDataHandler),
     (r'/admin', tweblib.admhandlers.AdminMainHandler),
     (r'/admin/sessions', tweblib.admhandlers.AdminSessionsHandler),

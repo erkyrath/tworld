@@ -790,6 +790,47 @@ class BuildAddPortListHandler(BuildBaseHandler):
             self.application.twlog.warning('Caught exception (adding portlist): %s', ex)
             self.write( { 'error': str(ex) } )
 
+class BuildDelPortListHandler(BuildBaseHandler):
+    @tornado.gen.coroutine
+    def post(self):
+        try:
+            wid = ObjectId(self.get_argument('world'))
+            plistid = self.get_argument('plist', None)
+            if plistid:
+                plistid = ObjectId(plistid)
+
+            (world, loc) = yield self.check_world_arguments(wid, None)
+
+            if not plistid:
+                raise Exception('No portlist declared')
+
+            plist = yield motor.Op(self.application.mongodb.portlists.find_one,
+                                     { '_id':plistid })
+            if not plist:
+                raise Exception('Portlist not found')
+            if plist['type'] != 'world':
+                raise Exception('Portlist is not world-level')
+            if plist['wid'] != wid:
+                raise Exception('Portlist not in this world')
+
+            # First delete all portals associated with this list.
+            # (This includes instance members.)
+            yield motor.Op(self.application.mongodb.portals.remove,
+                           { 'plistid':plistid })
+
+            # Then the list itself.
+            yield motor.Op(self.application.mongodb.portlists.remove,
+                           { '_id':plistid })
+
+            # The result value isn't used for anything.
+            self.write( { 'ok':True } )
+            
+        except Exception as ex:
+            # Any exception that occurs, return as an error message.
+            self.application.twlog.warning('Caught exception (setting data): %s', ex)
+            self.write( { 'error': str(ex) } )
+
+            
 class BuildSetDataHandler(BuildBaseHandler):
     @tornado.gen.coroutine
     def post(self):
@@ -913,6 +954,8 @@ class BuildDelLocHandler(BuildBaseHandler):
             # First delete all world properties in this location.
             yield motor.Op(self.application.mongodb.worldprop.remove,
                            { 'wid':wid, 'locid':locid })
+
+            ### And also instance properties?
 
             # Then the location itself.
             yield motor.Op(self.application.mongodb.locations.remove,
