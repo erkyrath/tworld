@@ -626,6 +626,7 @@ function update_portal(tableref, port, nocopy) {
             id: port.id, val: port,
             tablekey: tableref.tablekey,
             rowel: rowel, cellvalel: cellvalel, buttonsel: buildres.buttonsel,
+            controlel: buildres.controlel,
             warningel: buildres.warningel, textel: buildres.textel
         };
 
@@ -648,16 +649,22 @@ function build_portal_cell(cellvalel, tablekey, port) {
     var warningel = $('<div>', { 'class':'BuildPropWarning', style:'display: none;' });
     cellvalel.append(warningel);
     
-    var buttonsel = $('<div>', { 'class':'BuildPropButtons', style:'display: none;' });
+    var buttonsel = $('<div>', { style:'display: none;' });
+    var controlel = $('<div>');
+    buttonsel.append(controlel);
+    var subbuttonsel = $('<div>', { 'class':'BuildPropButtons' });
+    buttonsel.append(subbuttonsel);
+
     var buttonel = $('<input>', { type:'submit', value:'Revert' });
     buttonel.on('click', { tablekey:tablekey, id:port.id }, evhan_button_portal_revert);
-    buttonsel.append(buttonel);
+    subbuttonsel.append(buttonel);
     var buttonel = $('<input>', { type:'submit', value:'Save' });
     buttonel.on('click', { tablekey:tablekey, id:port.id }, evhan_button_portal_save);
-    buttonsel.append(buttonel);
+    subbuttonsel.append(buttonel);
     cellvalel.append(buttonsel);
     
-    return { textel:textel, buttonsel:buttonsel, warningel:warningel };
+    return { textel:textel, controlel:controlel, 
+            buttonsel:buttonsel, warningel:warningel };
 }
 
 /* Callback invoked whenever the user edits the contents of a textarea.
@@ -803,6 +810,15 @@ function evhan_button_portal_set_world(ev) {
     var tableref = tables[tablekey];
     if (!tableref)
         return;
+    var portref = tableref.portmap[id];
+    if (!portref) {
+        console.log('No such portal entry: ' + tablekey + ':' + id);
+    }
+
+    portref.controlel.empty();
+    /*####*/
+
+    prop_set_dirty(tableref, portref, true);
 }
 
 function evhan_button_portal_set_instance(ev) {
@@ -813,6 +829,15 @@ function evhan_button_portal_set_instance(ev) {
     var tableref = tables[tablekey];
     if (!tableref)
         return;
+    var portref = tableref.portmap[id];
+    if (!portref) {
+        console.log('No such portal entry: ' + tablekey + ':' + id);
+    }
+
+    portref.controlel.empty();
+    /*####*/
+
+    prop_set_dirty(tableref, portref, true);
 }
 
 function evhan_button_portal_set_delete(ev) {
@@ -827,6 +852,10 @@ function evhan_button_portal_set_delete(ev) {
     if (!portref) {
         console.log('No such portal entry: ' + tablekey + ':' + id);
     }
+
+    portref.controlel.empty();
+    var el = $('<span>', { 'class':'BuildPropWarning' }).text('Delete this portal?');
+    portref.controlel.append(el);
 
     prop_set_dirty(tableref, portref, true);
 }
