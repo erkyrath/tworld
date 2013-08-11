@@ -598,6 +598,15 @@ function update_portal(tableref, port, nocopy) {
         var cellctel = $('<td>');
         var cellvalel = $('<td>');
 
+        var buttonsel = $('<div>', { });
+        var buttonel = $('<input>', { type:'submit', value:'World' });
+        buttonsel.append(buttonel);
+        var buttonel = $('<input>', { type:'submit', value:'Instance' });
+        buttonsel.append(buttonel);
+        var buttonel = $('<input>', { type:'submit', value:'Delete' });
+        buttonsel.append(buttonel);
+        cellctel.append(buttonsel);
+
         var buildres = build_portal_cell(cellvalel, tableref.tablekey, port);
 
         for (var ix=0; ix<desc.length; ix++) {
