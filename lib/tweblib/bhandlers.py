@@ -90,7 +90,7 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
         return (world, locations)
 
     @tornado.gen.coroutine
-    def check_world_arguments(self, wid, locid, playerok=False):
+    def check_world_arguments(self, wid, locid, plistid=None, playerok=False):
         """Given a world ObjectId (and optional location too), look
         them up and make sure this player is the creator. This is similar
         to find_build_world, but tuned for the AJAX POST handlers rather
@@ -118,6 +118,16 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
                 raise Exception('No such location')
             if loc['wid'] != wid:
                 raise Exception('Location is not in this world')
+
+        if plistid is not None:
+            plist = yield motor.Op(self.application.mongodb.portlists.find_one,
+                                     { '_id':plistid })
+            if not plist:
+                raise Exception('Portlist not found')
+            if plist['type'] != 'world':
+                raise Exception('Portlist is not world-level')
+            if plist['wid'] != wid:
+                raise Exception('Portlist not in this world')
 
         return (world, loc)
 
@@ -815,20 +825,10 @@ class BuildDelPortListHandler(BuildBaseHandler):
             plistid = self.get_argument('plist', None)
             if plistid:
                 plistid = ObjectId(plistid)
-
-            (world, loc) = yield self.check_world_arguments(wid, None)
-
             if not plistid:
                 raise Exception('No portlist declared')
 
-            plist = yield motor.Op(self.application.mongodb.portlists.find_one,
-                                     { '_id':plistid })
-            if not plist:
-                raise Exception('Portlist not found')
-            if plist['type'] != 'world':
-                raise Exception('Portlist is not world-level')
-            if plist['wid'] != wid:
-                raise Exception('Portlist not in this world')
+            (world, dummy) = yield self.check_world_arguments(wid, None, plistid=plistid)
 
             # First delete all portals associated with this list.
             # (This includes instance members.)
@@ -844,7 +844,52 @@ class BuildDelPortListHandler(BuildBaseHandler):
             
         except Exception as ex:
             # Any exception that occurs, return as an error message.
-            self.application.twlog.warning('Caught exception (setting data): %s', ex)
+            self.application.twlog.warning('Caught exception (deleting portlist): %s', ex)
+            self.write( { 'error': str(ex) } )
+
+class BuildAddPortHandler(BuildBaseHandler):
+    @tornado.gen.coroutine
+    def post(self):
+        try:
+            wid = ObjectId(self.get_argument('world'))
+            plistid = self.get_argument('plist', None)
+            if plistid:
+                plistid = ObjectId(plistid)
+            if not plistid:
+                raise Exception('No portlist declared')
+
+            (world, dummy) = yield self.check_world_arguments(wid, None, plistid=plistid)
+
+            # Newly-created portal is always to the start location, because
+            # that's easier.
+            res = yield motor.Op(self.application.mongodb.config.find_one,
+                                 {'key':'startworldloc'})
+            lockey = res['val']
+            res = yield motor.Op(self.application.mongodb.config.find_one,
+                                 {'key':'startworldid'})
+            newwid = res['val']
+            res = yield motor.Op(self.application.mongodb.locations.find_one,
+                                 {'wid':newwid, 'key':lockey})
+            newlocid = res['_id']
+            
+            portal = { 'plistid':plistid, 'iid':None,
+                       'wid':newwid, 'scid':'personal', 'locid':newlocid,
+                       ### 'listpos':,
+                       }
+
+            portid = yield motor.Op(self.application.mongodb.portals.insert,
+                                    portal)
+            portal['_id'] = portid
+            
+            # Converting the value for the javascript client goes through
+            # this array-based call, because I am sloppy like that.
+            returnportal = yield self.export_portal_array([portal])
+            returnportal = returnportal[0]
+            self.write( { 'port':returnportal } )
+            
+        except Exception as ex:
+            # Any exception that occurs, return as an error message.
+            self.application.twlog.warning('Caught exception (adding portal): %s', ex)
             self.write( { 'error': str(ex) } )
 
             

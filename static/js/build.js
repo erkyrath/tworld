@@ -833,7 +833,31 @@ function evhan_button_addportal(ev) {
     if (!tableref)
         return;
 
-    /*####*/
+    /* No parameters here -- we always create a portal to the start world. */
+    msg = { world:pageworldid, plist:pageplistid,
+            _xsrf: xsrf_token };
+
+    jQuery.ajax({
+            url: '/build/addport',
+            type: 'POST',
+            data: msg,
+            success: function(data, status, jqhxr) {
+                if (data.error) {
+                    console.log('### error: ' + data.error);
+                    return;
+                }
+                var tableref = tables['$portlist'];
+                if (!tableref) {
+                    console.log('No such table: ' + '$portlist' + '!');
+                    return;
+                }
+                update_portal(tableref, data.port);
+            },
+            error: function(jqxhr, status, error) {
+                console.log('### ajax failure: ' + status + '; ' + error);
+            },
+            dataType: 'json'
+        });
 }
 
 function evhan_button_addlocation(ev) {
