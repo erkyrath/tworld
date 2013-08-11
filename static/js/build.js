@@ -387,6 +387,7 @@ function build_value_cell(cellvalel, tablekey, propkey, propid, editls) {
 /* Make the revert/save buttons appear or disappear on a table row.
    Special case: if dirty is the string 'delete', change the 'save' button
    to say that.
+   This is also used for portal tables (despite the name).
 */
 function prop_set_dirty(tableref, propref, dirty) {
     if (dirty) {
@@ -405,6 +406,7 @@ function prop_set_dirty(tableref, propref, dirty) {
 
 /* Make the red "you screwed up" warning line appear or disappear on
    a table row.
+   This is also used for portal tables (despite the name).
 */
 function prop_set_warning(tableref, propref, message) {
     if (message) {
@@ -600,10 +602,13 @@ function update_portal(tableref, port, nocopy) {
 
         var buttonsel = $('<div>', { });
         var buttonel = $('<input>', { type:'submit', value:'World' });
+        buttonel.on('click', { tablekey:tableref.tablekey, id:port.id }, evhan_button_portal_set_world);
         buttonsel.append(buttonel);
         var buttonel = $('<input>', { type:'submit', value:'Instance' });
+        buttonel.on('click', { tablekey:tableref.tablekey, id:port.id }, evhan_button_portal_set_instance);
         buttonsel.append(buttonel);
         var buttonel = $('<input>', { type:'submit', value:'Delete' });
+        buttonel.on('click', { tablekey:tableref.tablekey, id:port.id }, evhan_button_portal_set_delete);
         buttonsel.append(buttonel);
         cellctel.append(buttonsel);
 
@@ -618,7 +623,7 @@ function update_portal(tableref, port, nocopy) {
         tableel.find('tr').filter(':last').before(rowel);
 
         var portref = {
-            id: port.id,
+            id: port.id, val: port,
             tablekey: tableref.tablekey,
             rowel: rowel, cellvalel: cellvalel, buttonsel: buildres.buttonsel,
             warningel: buildres.warningel, textel: buildres.textel
@@ -645,10 +650,10 @@ function build_portal_cell(cellvalel, tablekey, port) {
     
     var buttonsel = $('<div>', { 'class':'BuildPropButtons', style:'display: none;' });
     var buttonel = $('<input>', { type:'submit', value:'Revert' });
-    //####buttonel.on('click', { tablekey:tablekey, id:port.id }, evhan_button_revert);
+    buttonel.on('click', { tablekey:tablekey, id:port.id }, evhan_button_portal_revert);
     buttonsel.append(buttonel);
     var buttonel = $('<input>', { type:'submit', value:'Save' });
-    //####buttonel.on('click', { tablekey:tablekey, id:port.id }, evhan_button_save);
+    buttonel.on('click', { tablekey:tablekey, id:port.id }, evhan_button_portal_save);
     buttonsel.append(buttonel);
     cellvalel.append(buttonsel);
     
@@ -788,6 +793,76 @@ function evhan_button_save(ev) {
             },
             dataType: 'json'
         });
+}
+
+function evhan_button_portal_set_world(ev) {
+    ev.preventDefault();
+    var tablekey = ev.data.tablekey;
+    var id = ev.data.id;
+
+    var tableref = tables[tablekey];
+    if (!tableref)
+        return;
+}
+
+function evhan_button_portal_set_instance(ev) {
+    ev.preventDefault();
+    var tablekey = ev.data.tablekey;
+    var id = ev.data.id;
+
+    var tableref = tables[tablekey];
+    if (!tableref)
+        return;
+}
+
+function evhan_button_portal_set_delete(ev) {
+    ev.preventDefault();
+    var tablekey = ev.data.tablekey;
+    var id = ev.data.id;
+
+    var tableref = tables[tablekey];
+    if (!tableref)
+        return;
+    var portref = tableref.portmap[id];
+    if (!portref) {
+        console.log('No such portal entry: ' + tablekey + ':' + id);
+    }
+
+    prop_set_dirty(tableref, portref, true);
+}
+
+function evhan_button_portal_revert(ev) {
+    ev.preventDefault();
+    var tablekey = ev.data.tablekey;
+    var id = ev.data.id;
+
+    var tableref = tables[tablekey];
+    if (!tableref)
+        return;
+    var portref = tableref.portmap[id];
+    if (!portref) {
+        console.log('No such portal entry: ' + tablekey + ':' + id);
+    }
+
+    update_portal(tableref, portref.val);
+    prop_set_dirty(tableref, portref, false);
+    prop_set_warning(tableref, portref, null);
+}
+
+function evhan_button_portal_save(ev) {
+    ev.preventDefault();
+    var tablekey = ev.data.tablekey;
+    var id = ev.data.id;
+
+    var tableref = tables[tablekey];
+    if (!tableref)
+        return;
+    var portref = tableref.portmap[id];
+    if (!portref) {
+        console.log('No such portal entry: ' + tablekey + ':' + id);
+    }
+
+    /*####*/
 }
 
 function evhan_button_addnew(ev) {
