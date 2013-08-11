@@ -554,9 +554,33 @@ function update_portal(tableref, port, nocopy) {
     var tableel = tableref.rootel;
 
     var desc = [];
-    desc.push($('<span>').text(port.worldname + ' \u2013 '  + port.locname));
+    desc.push($('<span>').text(port.worldname + ' \u2013 ' + port.locname + ' \u00A0 '));
+    if (port.instancing == 'solo') {
+        desc.push($('<em>').text('(solo world)'));
+    }
+    else if (port.instancing == 'shared') {
+        desc.push($('<em>').text('(shared world)'));
+    }
+    else {
+        if (port.scid == 'global')
+            desc.push($('<em>').text('(player\'s global instance)'));
+        else if (port.scid == 'personal')
+            desc.push($('<em>').text('(player\'s personal instance)'));
+        else if (port.scid == 'same')
+            desc.push($('<em>').text('(player\'s current instance)'));
+        else {
+            if (port.scopetype == 'glob')
+                desc.push($('<em>').text('(global)'));
+            else if (port.scopetype == 'pers')
+                desc.push($('<em>').text('(personal: '+port.scopename+')'));
+            else if (port.scopetype == 'grp')
+                desc.push($('<em>').text('(group: '+port.scopename+')'));
+            else
+                desc.push($('<em>').text('(???)'));
+        }
+    }
     desc.push($('<br>'));
-    desc.push($('<em>').text(NBSP + NBSP + '(creator: ' + port.creatorname + ')'));
+    desc.push($('<em>').text(NBSP + NBSP + '(by ' + port.creatorname + ')'));
 
     var portref = tableref.portmap[port.id];
     if (portref !== undefined) {

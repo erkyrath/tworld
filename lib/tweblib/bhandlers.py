@@ -296,10 +296,21 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
                 if portal['scid'] in ('personal', 'global', 'same'):
                     scope = None
                     scopetype = None
+                    scopename = None
                 else:
                     scope = yield motor.Op(self.application.mongodb.scopes.find_one,
                                            {'_id':portal['scid']})
                     scopetype = scope['type']
+                    scopename = None
+                    if scopetype == 'grp':
+                        scopename = scope.get('group', '???')
+                    elif scopetype == 'pers':
+                        scopeplayer = yield motor.Op(self.application.mongodb.players.find_one,
+                                                     {'_id':scope['uid']},
+                                                     {'name':1})
+                        scopename = '???'
+                        if scopeplayer:
+                            scopename = scopeplayer.get('name', '???')
                 loc = yield motor.Op(self.application.mongodb.locations.find_one,
                                      {'_id':portal['locid']})
                 if loc:
@@ -315,7 +326,7 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
                             'locname':locname,
                             'creatorname':creatorname,
                             'instancing':world.get('instancing', 'standard'),
-                            'scopetype':scopetype,
+                            'scopetype':scopetype, 'scopename':scopename,
                             }
                 res.append(newprop)
             except Exception as ex:
