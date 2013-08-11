@@ -869,6 +869,7 @@ def render_focus(task, loctx, conn, focusobj):
                     backkey = None
                 
                 yield two.execute.portal_in_reach(task.app, portal, conn.uid, loctx.wid)
+
                 portalobj = yield two.execute.portal_description(task.app, portal, conn.uid, uidiid=loctx.iid, location=True)
                 portalobj['portid'] = str(portal['_id'])
                 ackey = 'port' + EvalPropContext.build_action_key()

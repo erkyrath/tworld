@@ -755,6 +755,7 @@ class EvalPropContext(object):
 
         if restype == 'portlist':
             # Set focus to an ugly special-case array
+            ### We should get the symbol name into the focus dependencies!
             plistkey = res.get('plistkey', None)
             if not plistkey:
                 raise ErrorMessageException('portlist property has no plistkey')

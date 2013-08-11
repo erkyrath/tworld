@@ -881,6 +881,14 @@ class BuildAddPortHandler(BuildBaseHandler):
                                     portal)
             portal['_id'] = portid
             
+            try:
+                dependency = ('portlist', plistid, None)
+                encoder = JSONEncoderExtra()
+                depmsg = encoder.encode({ 'cmd':'notifydatachange', 'change':dependency })
+                self.application.twservermgr.tworld_write(0, depmsg)
+            except Exception as ex:
+                self.application.twlog.warning('Unable to notify tworld of data change: %s', ex)
+                
             # Converting the value for the javascript client goes through
             # this array-based call, because I am sloppy like that.
             returnportal = yield self.export_portal_array([portal])
