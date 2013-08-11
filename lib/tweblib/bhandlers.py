@@ -653,7 +653,8 @@ class BuildSetPropHandler(BuildBaseHandler):
                 if oprop and key != oprop['key']:
                     dependency2 = ('worldprop', wid, locid, oprop['key'])
 
-            # Send dependency key to tworld
+            # Send dependency key to tworld. (Two of them, if we changed the
+            # property key!)
             try:
                 encoder = JSONEncoderExtra()
                 depmsg = encoder.encode({ 'cmd':'notifydatachange', 'change':dependency })
@@ -839,6 +840,14 @@ class BuildDelPortListHandler(BuildBaseHandler):
             yield motor.Op(self.application.mongodb.portlists.remove,
                            { '_id':plistid })
 
+            try:
+                dependency = ('portlist', plistid, None)
+                encoder = JSONEncoderExtra()
+                depmsg = encoder.encode({ 'cmd':'notifydatachange', 'change':dependency })
+                self.application.twservermgr.tworld_write(0, depmsg)
+            except Exception as ex:
+                self.application.twlog.warning('Unable to notify tworld of data change: %s', ex)
+                
             # The result value isn't used for anything.
             self.write( { 'ok':True } )
             
