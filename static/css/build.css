@@ -122,6 +122,10 @@
   text-align: right;
 }
 
+.BuildPropButtonsFloat {
+  float: right;
+}
+
 .BuildPropButtonLarge {
   font-size: 1.0em;
 }

@@ -650,10 +650,10 @@ function build_portal_cell(cellvalel, tablekey, port) {
     cellvalel.append(warningel);
     
     var buttonsel = $('<div>', { style:'display: none;' });
+    var subbuttonsel = $('<div>', { 'class':'BuildPropButtonsFloat' });
+    buttonsel.append(subbuttonsel);
     var controlel = $('<div>');
     buttonsel.append(controlel);
-    var subbuttonsel = $('<div>', { 'class':'BuildPropButtons' });
-    buttonsel.append(subbuttonsel);
 
     var buttonel = $('<input>', { type:'submit', value:'Revert' });
     buttonel.on('click', { tablekey:tablekey, id:port.id }, evhan_button_portal_revert);
