@@ -23,6 +23,10 @@ var pageplistkey = {% raw plistkey %};
 var db_locations = {% raw locarray %};
 /* List of portals in the portlist. */
 var db_portals = {% raw portarray %};
+/* List of portals in the player's personal collection. */
+var db_selfportals = {% raw selfportarray %};
+/* List of scopes that the player has access to. */
+var db_selfscopes = {% raw selfscopes %};
 /* Form verification token. (Tornado checks this against a cookie.) */
 var xsrf_token = "{{ xsrf_token }}";
 </script>
