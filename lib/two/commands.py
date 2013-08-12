@@ -406,9 +406,9 @@ def define_commands():
         plistid = player['plistid']
         
         # This command comes from the build interface; the player is creating
-        # a new link to his own world. We go with a personal-scope link,
-        # unless the world is global-only.
-        if world['instancing'] == 'shared':
+        # a new link to his own world. We go with a global-scope link,
+        # unless the world is personal-only.
+        if world['instancing'] != 'solo':
             config = yield motor.Op(app.mongodb.config.find_one,
                                     {'key':'globalscopeid'})
             scid = config['val']
