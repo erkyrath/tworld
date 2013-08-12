@@ -327,11 +327,10 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
                     locname = loc.get('name', '???')
                 else:
                     locname = '???'
+                # wid, locid are not used by the client (scid is)
                 newprop = { 'id':str(portal['_id']),
                             'listpos':portal.get('listpos', 0.0),
-                            'wid':str(portal['wid']),
                             'scid':str(portal['scid']),
-                            'locid':str(portal['locid']),
                             'worldname':worldname,
                             'locname':locname,
                             'creatorname':creatorname,
@@ -472,15 +471,31 @@ class BuildPortListHandler(BuildBaseHandler):
         # cursor autoclose
         portals.sort(key=lambda port:port.get('listpos', 0.0))
 
+        # Fetch the player's personal list (for available options in the
+        # build screen)
+        selfportals = []
+        player = yield motor.Op(self.application.mongodb.players.find_one,
+                                {'_id':self.twsession['uid']},
+                                {'plistid':1})
+        if player and 'plistid' in player:
+            cursor = self.application.mongodb.portals.find({'plistid':player['plistid'], 'iid':None})
+            while (yield cursor.fetch_next):
+                port = cursor.next_object()
+                selfportals.append(port)
+            # cursor autoclose
+        selfportals.sort(key=lambda port:port.get('listpos', 0.0))
+
         encoder = JSONEncoderExtra()
         clientls = yield self.export_portal_array(portals)
         portarray = encoder.encode(clientls)
+        clientls = yield self.export_portal_array(selfportals)
+        selfportarray = encoder.encode(clientls)
             
         self.render('build_portlist.html',
                     wid=str(wid), worldname=worldname,
                     locarray=json.dumps(locarray), locations=locations,
                     plistid=str(plistid), plistkey=json.dumps(plistkey),
-                    portarray=portarray,
+                    portarray=portarray, selfportarray=selfportarray,
                     withblurb=(len(portals) <= 1))
 
 
