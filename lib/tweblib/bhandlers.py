@@ -472,11 +472,12 @@ class BuildPortListHandler(BuildBaseHandler):
         portals.sort(key=lambda port:port.get('listpos', 0.0))
 
         # Fetch the player's personal list (for available options in the
-        # build screen)
+        # build screen). Also the player's list of available scopes.
         selfportals = []
+        selfscopes = []
         player = yield motor.Op(self.application.mongodb.players.find_one,
                                 {'_id':self.twsession['uid']},
-                                {'plistid':1})
+                                {'plistid':1, 'scid':1})
         if player and 'plistid' in player:
             cursor = self.application.mongodb.portals.find({'plistid':player['plistid'], 'iid':None})
             while (yield cursor.fetch_next):
@@ -484,6 +485,14 @@ class BuildPortListHandler(BuildBaseHandler):
                 selfportals.append(port)
             # cursor autoclose
         selfportals.sort(key=lambda port:port.get('listpos', 0.0))
+
+        config = yield motor.Op(self.application.mongodb.config.find_one,
+                                {'key':'globalscopeid'})
+        selfscopes.append({'id':str(config['val']), 'name':'global'})
+        if player and 'scid' in player:
+            selfscopes.append({'id':str(player['scid']), 'name':'personal: (you)'})
+        ### And any personal scopes you have access to
+        ### And any group scopes you have access to
 
         encoder = JSONEncoderExtra()
         clientls = yield self.export_portal_array(portals)
@@ -496,6 +505,7 @@ class BuildPortListHandler(BuildBaseHandler):
                     locarray=json.dumps(locarray), locations=locations,
                     plistid=str(plistid), plistkey=json.dumps(plistkey),
                     portarray=portarray, selfportarray=selfportarray,
+                    selfscopes=selfscopes,
                     withblurb=(len(portals) <= 1))
 
 
