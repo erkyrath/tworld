@@ -1250,7 +1250,34 @@ class BuildExportWorldHandler(BuildBaseHandler):
         
         encoder = JSONEncoderExtra(indent=True, sort_keys=True, ensure_ascii=False)
 
-        #### portals and portlists
+        portlists = []
+        cursor = self.application.mongodb.portlists.find({'wid':wid, 'type':'world'})
+        while (yield cursor.fetch_next):
+            plist = cursor.next_object()
+            portlists.append(plist)
+        # cursor autoclose
+        if portlists:
+            portlists.sort(key=lambda plist:plist['_id']) ### or other criterion?
+            for plist in portlists:
+                ls = []
+                cursor = self.application.mongodb.portals.find({'plistid':plist['_id'], 'iid':None})
+                while (yield cursor.fetch_next):
+                    port = cursor.next_object()
+                    ls.append(port)
+                # cursor autoclose
+                ls.sort(key=lambda port:port.get('listpos', 0.0))
+                for port in ls:
+                    ### The locid, scid, wid values are not actually good for anything
+                    del port['_id']
+                    del port['iid']
+                    del port['plistid']  # always gonna be this list
+                del plist['_id']
+                del plist['wid']  # always gonna be this world
+                plist['portals'] = ls
+                
+            res = encoder.encode(portlists)
+            self.write(',\n "portlists": ')
+            self.write(res)
 
         worldprops = []
         cursor = self.application.mongodb.worldprop.find({'wid':wid, 'locid':None}, {'key':1, 'val':1})
