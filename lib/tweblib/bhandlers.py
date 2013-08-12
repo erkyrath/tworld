@@ -488,9 +488,9 @@ class BuildPortListHandler(BuildBaseHandler):
 
         config = yield motor.Op(self.application.mongodb.config.find_one,
                                 {'key':'globalscopeid'})
-        selfscopes.append({'id':str(config['val']), 'name':'global'})
+        selfscopes.append({'id':str(config['val']), 'name':'Global'})
         if player and 'scid' in player:
-            selfscopes.append({'id':str(player['scid']), 'name':'personal: (you)'})
+            selfscopes.append({'id':str(player['scid']), 'name':'Personal: (you)'})
         ### And any personal scopes you have access to
         ### And any group scopes you have access to
 

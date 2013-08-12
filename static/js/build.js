@@ -816,7 +816,14 @@ function evhan_button_portal_set_world(ev) {
     }
 
     portref.controlel.empty();
-    /*####*/
+    var selectel = $('<select>', { 'class':'BuildPropListSelect' });
+    selectel.append($('<option>', { value:'' }).text('(select from your collection)'));
+    for (var ix=0; ix<db_selfportals.length; ix++) {
+        var port = db_selfportals[ix];
+        var name = port.worldname+' - '+port.locname;
+        selectel.append($('<option>', { value:port.id }).text(name));
+    }
+    portref.controlel.append(selectel);
 
     prop_set_dirty(tableref, portref, true);
 }
@@ -835,7 +842,16 @@ function evhan_button_portal_set_instance(ev) {
     }
 
     portref.controlel.empty();
-    /*####*/
+    var selectel = $('<select>', { 'class':'BuildPropListSelect' });
+    selectel.append($('<option>', { value:'personal' }).text('Player\'s personal'));
+    selectel.append($('<option>', { value:'same' }).text('Player\'s current'));
+    selectel.append($('<option>', { value:'global' }).text('Player\'s global'));
+    for (var ix=0; ix<db_selfscopes.length; ix++) {
+        var scope = db_selfscopes[ix];
+        selectel.append($('<option>', { value:scope.id }).text(scope.name));
+    }
+    selectel.prop('value', portref.val.scid);
+    portref.controlel.append(selectel);
 
     prop_set_dirty(tableref, portref, true);
 }
