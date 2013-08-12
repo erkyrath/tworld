@@ -969,6 +969,36 @@ class BuildSetPortHandler(BuildBaseHandler):
                 self.write( { 'delete':True, 'port':returnport } )
                 return
 
+            if action == 'world':
+                copyportid = self.get_argument('copyport', None)
+                if not copyportid:
+                    raise Exception('No portal selected')
+                copyportid = ObjectId(copyportid)
+                copyport = yield motor.Op(self.application.mongodb.portals.find_one,
+                                          { '_id':copyportid })
+                if not copyport:
+                    raise Exception('Portal not found')
+                player = yield motor.Op(self.application.mongodb.players.find_one,
+                                        {'_id':self.twsession['uid']},
+                                        {'plistid':1})
+                if player['plistid'] != copyport['plistid']:
+                    raise Exception('Portal is not in your personal collection')
+                port['wid'] = copyport['wid']
+                port['scid'] = copyport['scid']
+                port['locid'] = copyport['locid']
+                yield motor.Op(self.application.mongodb.portals.update,
+                               { '_id':portid },
+                               { '$set':{'wid':copyport['wid'],
+                                         'scid':copyport['scid'],
+                                         'locid':copyport['locid']} })
+
+                # Converting the value for the javascript client goes through
+                # this array-based call, because I am sloppy like that.
+                returnportal = yield self.export_portal_array([port])
+                returnportal = returnportal[0]
+                self.write( { 'port':returnportal } )
+                return
+
             if action == 'instance':
                 newscid = self.get_argument('scope')
                 if newscid in ('personal', 'global', 'same'):
@@ -993,7 +1023,6 @@ class BuildSetPortHandler(BuildBaseHandler):
                     else:
                         raise Exception('Unknown scope type')
                 port['scid'] = newscid
-                self.application.twlog.debug('### setting %s to %s', portid, newscid)
                 yield motor.Op(self.application.mongodb.portals.update,
                                { '_id':portid },
                                { '$set':{'scid':newscid} })
