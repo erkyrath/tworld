@@ -943,11 +943,11 @@ function evhan_button_portal_save(ev) {
     }
     else if (portref.action == 'world') {
         msg.action = 'world';
-        msg.copyport = portref.val.id;
+        msg.copyport = portref.controlel.find('select').prop('value');
     }
     else if (portref.action == 'instance') {
         msg.action = 'instance';
-        msg.scope = portref.val.scid;
+        msg.scope = portref.controlel.find('select').prop('value');
     }
     else {
         return;

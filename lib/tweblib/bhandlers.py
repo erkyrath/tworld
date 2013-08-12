@@ -969,6 +969,42 @@ class BuildSetPortHandler(BuildBaseHandler):
                 self.write( { 'delete':True, 'port':returnport } )
                 return
 
+            if action == 'instance':
+                newscid = self.get_argument('scope')
+                if newscid in ('personal', 'global', 'same'):
+                    pass  # always okay
+                else:
+                    newscid = ObjectId(newscid)
+                    scope = yield motor.Op(self.application.mongodb.scopes.find_one,
+                                           { '_id':newscid })
+                    if not scope:
+                        raise Exception('No scope selected')
+                    scopetype = scope['type']
+                    if scopetype == 'glob':
+                        pass  # global scope always okay
+                    elif scopetype == 'pers':
+                        if scope['uid'] == self.twsession['uid']:
+                            pass  # your personal scope always okay
+                        else:
+                            ### or any personal scopes you have access to
+                            raise Exception('Not your personal scope')
+                    elif scopetype == 'grp':
+                        raise Exception('Group scopes not yet available')
+                    else:
+                        raise Exception('Unknown scope type')
+                port['scid'] = newscid
+                self.application.twlog.debug('### setting %s to %s', portid, newscid)
+                yield motor.Op(self.application.mongodb.portals.update,
+                               { '_id':portid },
+                               { '$set':{'scid':newscid} })
+
+                # Converting the value for the javascript client goes through
+                # this array-based call, because I am sloppy like that.
+                returnportal = yield self.export_portal_array([port])
+                returnportal = returnportal[0]
+                self.write( { 'port':returnportal } )
+                return
+            
             raise Exception('Action not understood.')
         except Exception as ex:
             # Any exception that occurs, return as an error message.
