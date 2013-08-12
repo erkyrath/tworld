@@ -286,17 +286,19 @@ def parse_prop(prop):
     if prop.startswith('*'):
         key, dummy, val = prop[1:].partition(' ')
         
-        if key == 'portlist':
-            order = World.portlist_define_order
-            World.portlist_define_order += 1
-            res = {'type':'portlist', '_templist':[], '_temporder':order}
-            if 'single' in val.split():
-                res['single'] = True
-            return res
-        
         if not val and key != 'code':
             error('%s must be followed by a value' % (key,))
             return None
+        
+        if key == 'portlist':
+            plistkey, dummy, val = val.partition(' ')
+            order = World.portlist_define_order
+            World.portlist_define_order += 1
+            res = {'type':'portlist', 'plistkey':plistkey,
+                   '_templist':[], '_temporder':order}
+            if 'single' in val.split():
+                res['focus'] = True
+            return res
         
         if key == 'move':
             val = sluggify(val.strip())
@@ -385,8 +387,8 @@ def transform_prop(world, db, val):
         if val['_temporder'] < len(world.allportlists):
             plistid = world.allportlists[val['_temporder']]['_id']
         else:
-            plistid = db.portlists.insert({'type':'world', 'wid':world.wid})
-            print('Created portlist (%s)' % (plistid,))
+            plistid = db.portlists.insert({'type':'world', 'wid':world.wid, 'key':val['plistkey']})
+            print('Created portlist %s (%s)' % (val['plistkey'], plistid,))
         # Clean out the portlist and rebuild it
         db.portals.remove({'plistid':plistid, 'iid':None})
         listpos = 0.0
@@ -413,11 +415,11 @@ def transform_prop(world, db, val):
             listpos += 1.0
             portid = db.portals.insert(query)
             print('Created portal %s (%s)' % (quad, portid,))
-        newval = { 'type':'portlist', 'plistid':plistid }
+        newval = { 'type':'portlist', 'plistkey':val['plistkey'] }
         if 'text' in val:
             newval['text'] = val['text']
-        if 'single' in val and portid:
-            newval['focusport'] = portid
+        if 'focus' in val:
+            newval['focus'] = True
         if 'editaccess' in val:
             newval['editaccess'] = twcommon.access.level_named(val['editaccess'])
         if 'readaccess' in val:
