@@ -506,7 +506,7 @@ class BuildPortListHandler(BuildBaseHandler):
                     plistid=str(plistid), plistkey=json.dumps(plistkey),
                     portarray=portarray, selfportarray=selfportarray,
                     selfscopes=selfscopes,
-                    withblurb=(len(portals) <= 1))
+                    withblurb=(len(portals) == 0))
 
 
 class BuildLocHandler(BuildBaseHandler):
@@ -932,6 +932,47 @@ class BuildAddPortHandler(BuildBaseHandler):
         except Exception as ex:
             # Any exception that occurs, return as an error message.
             self.application.twlog.warning('Caught exception (adding portal): %s', ex)
+            self.write( { 'error': str(ex) } )
+
+class BuildSetPortHandler(BuildBaseHandler):
+    @tornado.gen.coroutine
+    def post(self):
+        try:
+            wid = ObjectId(self.get_argument('world'))
+            plistid = self.get_argument('plist', None)
+            if plistid:
+                plistid = ObjectId(plistid)
+            if not plistid:
+                raise Exception('No portlist declared')
+
+            action = self.get_argument('action', None)
+            portid = self.get_argument('id', None)
+            if not portid:
+                raise Exception('No portal declared')
+            portid = ObjectId(portid)
+
+            (world, dummy) = yield self.check_world_arguments(wid, None, plistid=plistid)
+
+            port = yield motor.Op(self.application.mongodb.portals.find_one,
+                                     { '_id':portid })
+            if not port:
+                raise Exception('No such portal')
+            if port['plistid'] != plistid:
+                raise Exception('Portal is not in this portlist')
+
+            if action == 'delete':
+                yield motor.Op(self.application.mongodb.portals.remove,
+                               { '_id':portid })
+                # We have to return enough of the portal information that
+                # the client knows what row to delete.
+                returnport = { 'id':str(portid) }
+                self.write( { 'delete':True, 'port':returnport } )
+                return
+
+            raise Exception('Action not understood.')
+        except Exception as ex:
+            # Any exception that occurs, return as an error message.
+            self.application.twlog.warning('Caught exception (setting portal): %s', ex)
             self.write( { 'error': str(ex) } )
 
             

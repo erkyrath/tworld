@@ -635,6 +635,28 @@ function update_portal(tableref, port, nocopy) {
     }
 }
 
+/* Delete a row of the table, if it exists.
+*/
+function delete_portal(tableref, port, nocopy) {
+    if (tableref === undefined) {
+        console.log('No table for this portal group!');
+        return;
+    }
+
+    var tableel = tableref.rootel;
+    var portref = tableref.portmap[port.id];
+    if (portref !== undefined) {
+        delete tableref.portmap[port.id];
+        /* Is this really the best way to delete one entry from a JS array? */
+        var ix = tableref.portlist.indexOf(port.id);
+        if (ix >= 0)
+            tableref.portlist.splice(ix, 1);
+        portref.rowel.slideUp(200, function() {
+                portref.rowel.remove();
+            });
+    }
+}
+
 /* Construct the contents of a portal value cell (the second column
    of the table). The cell must be initially empty.
 
@@ -815,6 +837,7 @@ function evhan_button_portal_set_world(ev) {
         console.log('No such portal entry: ' + tablekey + ':' + id);
     }
 
+    portref.action = 'world';
     portref.controlel.empty();
     var selectel = $('<select>', { 'class':'BuildPropListSelect' });
     selectel.append($('<option>', { value:'' }).text('(select from your collection)'));
@@ -841,6 +864,7 @@ function evhan_button_portal_set_instance(ev) {
         console.log('No such portal entry: ' + tablekey + ':' + id);
     }
 
+    portref.action = 'instance';
     portref.controlel.empty();
     var selectel = $('<select>', { 'class':'BuildPropListSelect' });
     selectel.append($('<option>', { value:'personal' }).text('Player\'s personal'));
@@ -869,6 +893,7 @@ function evhan_button_portal_set_delete(ev) {
         console.log('No such portal entry: ' + tablekey + ':' + id);
     }
 
+    portref.action = 'delete';
     portref.controlel.empty();
     var el = $('<span>', { 'class':'BuildPropWarning' }).text('Delete this portal?');
     portref.controlel.append(el);
@@ -889,6 +914,7 @@ function evhan_button_portal_revert(ev) {
         console.log('No such portal entry: ' + tablekey + ':' + id);
     }
 
+    portref.action = null;
     update_portal(tableref, portref.val);
     prop_set_dirty(tableref, portref, false);
     prop_set_warning(tableref, portref, null);
@@ -907,7 +933,57 @@ function evhan_button_portal_save(ev) {
         console.log('No such portal entry: ' + tablekey + ':' + id);
     }
 
-    /*####*/
+    msg = { id:portref.id,
+            plist:pageplistid,
+            world:pageworldid,
+            _xsrf: xsrf_token };
+
+    if (portref.action == 'delete') {
+        msg.action = 'delete';
+    }
+    else if (portref.action == 'world') {
+        msg.action = 'world';
+        msg.copyport = portref.val.id;
+    }
+    else if (portref.action == 'instance') {
+        msg.action = 'instance';
+        msg.scope = portref.val.scid;
+    }
+    else {
+        return;
+    }
+
+    jQuery.ajax({
+            url: '/build/setport',
+            type: 'POST',
+            data: msg,
+            success: function(data, status, jqhxr) {
+                if (data.error) {
+                    prop_set_warning(tableref, portref, data.error);
+                    prop_set_dirty(tableref, portref, true);
+                    return;
+                }
+                var tableref = tables['$portlist'];
+                if (!tableref) {
+                    console.log('No such table: ' + '$portlist' + '!');
+                    return;
+                }
+                if (data.delete) {
+                    delete_portal(tableref, data.port);
+                }
+                else {
+                    portref.action = null;
+                    update_portal(tableref, data.port);
+                    prop_set_warning(tableref, portref, null);
+                    prop_set_dirty(tableref, portref, false);
+                }
+            },
+            error: function(jqxhr, status, error) {
+                prop_set_warning(tableref, portref, error);
+                prop_set_dirty(tableref, portref, true);
+            },
+            dataType: 'json'
+        });
 }
 
 function evhan_button_addnew(ev) {
