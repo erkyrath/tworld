@@ -906,9 +906,20 @@ class BuildAddPortHandler(BuildBaseHandler):
                                  {'wid':newwid, 'key':lockey})
             newlocid = res['_id']
             
+            # Look through the list and find the entry with the
+            # highest listpos.
+            res = yield motor.Op(self.application.mongodb.portals.aggregate, [
+                    {'$match': {'plistid':plistid, 'iid':None}},
+                    {'$sort': {'listpos':-1}},
+                    {'$limit': 1},
+                    ])
+            listpos = 0.0
+            if res and res['result']:
+                listpos = res['result'][0].get('listpos', 0.0)
+        
             portal = { 'plistid':plistid, 'iid':None,
                        'wid':newwid, 'scid':'personal', 'locid':newlocid,
-                       ### 'listpos':,
+                       'listpos':listpos+1.0,
                        }
 
             portid = yield motor.Op(self.application.mongodb.portals.insert,
