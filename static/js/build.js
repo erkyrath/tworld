@@ -593,6 +593,7 @@ function update_portal(tableref, port, nocopy) {
         for (var ix=0; ix<desc.length; ix++) {
             portref.textel.append(desc[ix]);
         }
+        portref.ibuttonel.prop('disabled', port.instancing != 'standard');
     }
     else {
         /* Portal is not in table. Add a row. */
@@ -607,6 +608,8 @@ function update_portal(tableref, port, nocopy) {
         var buttonel = $('<input>', { type:'submit', value:'Instance' });
         buttonel.on('click', { tablekey:tableref.tablekey, id:port.id }, evhan_button_portal_set_instance);
         buttonsel.append(buttonel);
+        ibuttonel = buttonel;
+        ibuttonel.prop('disabled', port.instancing != 'standard');
         var buttonel = $('<input>', { type:'submit', value:'Delete' });
         buttonel.on('click', { tablekey:tableref.tablekey, id:port.id }, evhan_button_portal_set_delete);
         buttonsel.append(buttonel);
@@ -626,6 +629,7 @@ function update_portal(tableref, port, nocopy) {
             id: port.id, val: port,
             tablekey: tableref.tablekey,
             rowel: rowel, cellvalel: cellvalel, buttonsel: buildres.buttonsel,
+            ibuttonel: ibuttonel,
             controlel: buildres.controlel,
             warningel: buildres.warningel, textel: buildres.textel
         };
@@ -898,7 +902,7 @@ function evhan_button_portal_set_delete(ev) {
     var el = $('<span>', { 'class':'BuildPropWarning' }).text('Delete this portal?');
     portref.controlel.append(el);
 
-    prop_set_dirty(tableref, portref, true);
+    prop_set_dirty(tableref, portref, 'delete');
 }
 
 function evhan_button_portal_revert(ev) {
