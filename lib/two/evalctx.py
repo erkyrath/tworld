@@ -895,7 +895,7 @@ class EvalPropContext(object):
         """
         self.task.tick()
         
-        nodls = two.interp.parse(text)
+        nodls = twcommon.interp.parse(text)
         
         # While trawling through nodls, we may encounter $if/$end
         # nodes. This keeps track of them. Specifically: a 0 value
@@ -1180,9 +1180,9 @@ def str_or_null(res):
 
 # Late imports, to avoid circularity
 from twcommon.access import ACC_VISITOR, ACC_MEMBER
+import twcommon.interp
+from twcommon.interp import InterpNode
 import two.execute
 import two.symbols
 import two.grammar
-import two.interp
-from two.interp import InterpNode
 from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_POPULACE, DIRTY_FOCUS

@@ -1,7 +1,5 @@
 import re
 
-from twcommon.misc import sluggify
-
 class InterpNode(object):
     """Base class for special objects parsed out of a string by the
     parse() method.
@@ -342,6 +340,9 @@ def parse(text):
     return res
 
 
+# Late imports
+from twcommon.misc import sluggify
+
 
 import unittest
 
@@ -409,7 +410,7 @@ class TestInterpModule(unittest.TestCase):
         self.assertRaises(ValueError, parse, '[bar')
         self.assertRaises(ValueError, parse, '[[bar')
         self.assertRaises(ValueError, parse, '[ [x] ]')
-        
+
 
 if __name__ == '__main__':
     unittest.main()

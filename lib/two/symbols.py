@@ -132,7 +132,7 @@ def define_globals():
         ctx = EvalPropContext.get_current_context()
         if ctx.accum is None:
             raise Exception('style() in non-printing context')
-        nod = two.interp.Style(style)
+        nod = twcommon.interp.Style(style)
         ctx.accum.append(nod.describe())
         return '' ### tacky
         
@@ -141,7 +141,7 @@ def define_globals():
         ctx = EvalPropContext.get_current_context()
         if ctx.accum is None:
             raise Exception('endstyle() in non-printing context')
-        nod = two.interp.EndStyle(style)
+        nod = twcommon.interp.EndStyle(style)
         ctx.accum.append(nod.describe())
         return '' ### tacky
         
@@ -898,7 +898,7 @@ def find_symbol(app, loctx, key, locals=None, dependencies=None):
 # Late imports, to avoid circularity
 from twcommon.misc import is_typed_dict
 import twcommon.access
-import two.interp
+import twcommon.interp
 import two.grammar
 import two.execute
 import two.ipool
