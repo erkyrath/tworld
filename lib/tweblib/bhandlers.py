@@ -18,6 +18,7 @@ import motor
 
 import tweblib.handlers
 import twcommon.misc
+import twcommon.interp
 from twcommon.misc import sluggify
 
 # Utility class for JSON-encoding objects that contain ObjectIds.
@@ -201,6 +202,7 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
             res = { 'type':valtype }
             if 'text' in prop:
                 res['text'] = prop['text']
+                twcommon.interp.parse(res['text'])
             return res
         if valtype == 'code':
             res = { 'type':valtype }
@@ -212,15 +214,19 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
             res = { 'type':valtype }
             if 'text' in prop:
                 res['text'] = prop['text']
+                twcommon.interp.parse(res['text'])
             if 'otext' in prop:
                 res['otext'] = prop['otext']
+                twcommon.interp.parse(res['otext'])
             return res
         if valtype == 'panic':
             res = { 'type':valtype }
             if 'text' in prop:
                 res['text'] = prop['text']
+                twcommon.interp.parse(res['text'])
             if 'otext' in prop:
                 res['otext'] = prop['otext']
+                twcommon.interp.parse(res['otext'])
             return res
         if valtype == 'move':
             res = { 'type':valtype }
@@ -229,10 +235,13 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
                 res['loc'] = loc
             if 'text' in prop:
                 res['text'] = prop['text']
+                twcommon.interp.parse(res['text'])
             if 'oleave' in prop:
                 res['oleave'] = prop['oleave']
+                twcommon.interp.parse(res['oleave'])
             if 'oarrive' in prop:
                 res['oarrive'] = prop['oarrive']
+                twcommon.interp.parse(res['oarrive'])
             return res
         if valtype == 'editstr':
             res = { 'type':valtype }
@@ -248,10 +257,13 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
                 res['editaccess'] = editaccess
             if 'label' in prop:
                 res['label'] = prop['label']
+                twcommon.interp.parse(res['label'])
             if 'text' in prop:
                 res['text'] = prop['text']
+                twcommon.interp.parse(res['text'])
             if 'otext' in prop:
                 res['otext'] = prop['otext']
+                twcommon.interp.parse(res['otext'])
             return res
         if valtype == 'portlist':
             res = { 'type':valtype }
@@ -274,6 +286,7 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
                 res['readaccess'] = readaccess
             if 'text' in prop:
                 res['text'] = prop['text']
+                twcommon.interp.parse(res['text'])
             if 'focus' in prop:
                 try:
                     if twcommon.misc.gen_bool_parse(prop['focus']):
