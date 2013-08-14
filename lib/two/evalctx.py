@@ -435,7 +435,15 @@ class EvalPropContext(object):
         nodtyp = type(nod)
         ### This should be a faster lookup table
         if nodtyp is ast.Expr:
-            res = yield self.execcode_expr(nod.value, baresymbol=True)
+            res = yield self.execcode_expr(nod.value)
+            if res is not None and type(res) is dict and 'type' in res:
+                # Top-level expression has returned a typed dict. Try
+                # invoking it.
+                symbol = None
+                if type(nod.value) is ast.Name:
+                    symbol = nod.value.id
+                res = yield self.invoke_typed_dict(res, symbol)
+                return res
             return res
         if nodtyp is ast.Assign:
             res = yield self.execcode_assign(nod)
@@ -484,12 +492,12 @@ class EvalPropContext(object):
         
         
     @tornado.gen.coroutine
-    def execcode_expr(self, nod, baresymbol=False):
+    def execcode_expr(self, nod):
         self.task.tick()
         nodtyp = type(nod)
         ### This should be a faster lookup table
         if nodtyp is ast.Name:
-            res = yield self.execcode_name(nod, baresymbol=baresymbol)
+            res = yield self.execcode_name(nod)
             return res
         if nodtyp is ast.Str:
             return nod.s
@@ -716,15 +724,63 @@ class EvalPropContext(object):
         return funcval(*args, **kwargs)
         
     @tornado.gen.coroutine
-    def execcode_name(self, nod, baresymbol=False):
+    def execcode_name(self, nod):
         symbol = nod.id
         res = yield two.symbols.find_symbol(self.app, self.loctx, symbol, locals=self.frame.locals, dependencies=self.dependencies)
+        return res
+
+    @tornado.gen.coroutine
+    def execcode_if(self, nod):
+        testval = yield self.execcode_expr(nod.test)
+        if testval:
+            body = nod.body
+        else:
+            body = nod.orelse
+        res = None
+        for nod in body:
+            res = yield self.execcode_statement(nod)
+        return res
         
-        if not baresymbol:
-            return res
-        if type(res) is not dict:
-            return res
+    @tornado.gen.coroutine
+    def execcode_return(self, nod):
+        if nod.value is None:
+            val = None
+        else:
+            val = yield self.execcode_expr(nod.value)
+        raise ReturnException(returnvalue=val)
         
+    @tornado.gen.coroutine
+    def execcode_assign(self, nod):
+        val = yield self.execcode_expr(nod.value)
+        for tarnod in nod.targets:
+            target = yield self.execcode_expr_store(tarnod)
+            yield target.store(self, self.loctx, val)
+        return None
+
+    @tornado.gen.coroutine
+    def execcode_augassign(self, nod):
+        optyp = type(nod.op)
+        opfunc = self.map_binop_operators.get(optyp, None)
+        if not opfunc:
+            raise NotImplementedError('Script augop type not implemented: %s' % (optyp.__name__,))
+        target = yield self.execcode_expr_store(nod.target)
+        rightval = yield self.execcode_expr(nod.value)
+
+        leftval = yield target.load(self, self.loctx)
+        val = opfunc(leftval, rightval)
+        
+        yield target.store(self, self.loctx, val)
+        return None
+
+    @tornado.gen.coroutine
+    def execcode_delete(self, nod):
+        for subnod in nod.targets:
+            target = yield self.execcode_expr_store(subnod)
+            yield target.delete(self, self.loctx)
+        return None
+
+    @tornado.gen.coroutine
+    def invoke_typed_dict(self, res, symbol=None):
         restype = res.get('type', None)
         uid = self.uid
 
@@ -747,6 +803,8 @@ class EvalPropContext(object):
         
         if restype in ('text', 'selfdesc', 'editstr'):
             # Set focus to this symbol-name
+            if not symbol:
+                raise ErrorMessageException('typed dict (%s) cannot be focussed; not a bare symbol' % (restype,))
             yield motor.Op(self.app.mongodb.playstate.update,
                            {'_id':uid},
                            {'$set':{'focus':symbol}})
@@ -816,7 +874,7 @@ class EvalPropContext(object):
             return None
 
         if restype == 'move':
-            # Set locale to the given symbol
+            # Move the player.
             lockey = res.get('loc', None)
             if not lockey:
                 raise Exception('Move has no location')
@@ -830,56 +888,6 @@ class EvalPropContext(object):
             return None
 
         raise ErrorMessageException('Code invoked unsupported property type: %s' % (restype,))
-
-    @tornado.gen.coroutine
-    def execcode_if(self, nod):
-        testval = yield self.execcode_expr(nod.test)
-        if testval:
-            body = nod.body
-        else:
-            body = nod.orelse
-        res = None
-        for nod in body:
-            res = yield self.execcode_statement(nod)
-        return res
-        
-    @tornado.gen.coroutine
-    def execcode_return(self, nod):
-        if nod.value is None:
-            val = None
-        else:
-            val = yield self.execcode_expr(nod.value)
-        raise ReturnException(returnvalue=val)
-        
-    @tornado.gen.coroutine
-    def execcode_assign(self, nod):
-        val = yield self.execcode_expr(nod.value)
-        for tarnod in nod.targets:
-            target = yield self.execcode_expr_store(tarnod)
-            yield target.store(self, self.loctx, val)
-        return None
-
-    @tornado.gen.coroutine
-    def execcode_augassign(self, nod):
-        optyp = type(nod.op)
-        opfunc = self.map_binop_operators.get(optyp, None)
-        if not opfunc:
-            raise NotImplementedError('Script augop type not implemented: %s' % (optyp.__name__,))
-        target = yield self.execcode_expr_store(nod.target)
-        rightval = yield self.execcode_expr(nod.value)
-
-        leftval = yield target.load(self, self.loctx)
-        val = opfunc(leftval, rightval)
-        
-        yield target.store(self, self.loctx, val)
-        return None
-
-    @tornado.gen.coroutine
-    def execcode_delete(self, nod):
-        for subnod in nod.targets:
-            target = yield self.execcode_expr_store(subnod)
-            yield target.delete(self, self.loctx)
-        return None
 
     @tornado.gen.coroutine
     def interpolate_text(self, text):
