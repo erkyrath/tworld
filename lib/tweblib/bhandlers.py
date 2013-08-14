@@ -206,6 +206,7 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
             res = { 'type':valtype }
             if 'text' in prop:
                 res['text'] = prop['text']
+                ast.parse(res['text'], filename='property')
             return res
         if valtype == 'event':
             res = { 'type':valtype }

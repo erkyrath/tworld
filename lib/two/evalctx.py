@@ -412,6 +412,7 @@ class EvalPropContext(object):
         self.task.tick()
 
         ### This originlabel stuff is pretty much wrong. Also slow.
+        ### And unnecessary, now that the build interface test-parses?
         if originlabel:
             if type(originlabel) is dict and 'text' in originlabel:
                 originlabel = originlabel['text']
