@@ -712,14 +712,23 @@ class EvalPropContext(object):
         if nod.kwargs:
             starargs = yield self.execcode_expr(nod.kwargs)
             # Python semantics say we should reject duplicate kwargs here
-            kwargs.extend(starargs)
+            kwargs.update(starargs)
         if isinstance(funcval, two.symbols.ScriptFunc):
             if not funcval.yieldy:
                 return funcval.func(*args, **kwargs)
             else:
                 res = yield funcval.yieldfunc(*args, **kwargs)
                 return res
-        ### Special case for {code} dicts...
+        if funcval and twcommon.misc.is_typed_dict(funcval, 'code'):
+            # {code} dicts are considered callable by courtesy.
+            ### how do arguments work?
+            if args or kwargs:
+                raise TypeError('code property does not take arguments, but was given %d' % (len(args)+len(kwargs),))
+            val = funcval.get('text', None)
+            if not val:
+                return None
+            newval = yield self.evalobj(val, evaltype=EVALTYPE_CODE)
+            return newval
         # This will raise TypeError if funcval is not callable.
         return funcval(*args, **kwargs)
         
