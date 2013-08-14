@@ -190,37 +190,84 @@ def define_globals():
         ### RealmProxy? (wid or iid?)
         return ObjectId(oid)
 
+    @scriptfunc('setfocus', group='_', yieldy=True)
+    def global_setfocus(symbol, player=None):
+        """Set the given player's focus to this symbol. (If player is None,
+        the current player; if a location, then every player in it; if
+        the realm, then every player in the instance.)
+        """
+        raise Exception('###')
+        
     @scriptfunc('unfocus', group='_', yieldy=True)
-    def global_unfocus(player=None):
-        """Defocus the given player (or the current player, if none given).
+    def global_unfocus(symbol=None, player=None):
+        """Defocus the given player. (If player is None,
+        the current player; if a location, then every player in it; if
+        the realm, then every player in the instance.)
         This closes the focus pane, if it's open.
-        ### Or all players in a given location?
-        ### Maybe a second argument, for "unfocus if the focus is equal to
-        this"? Would let us optimize out the already-null case, too.
+        If the symbol argument is not None, only defocus players with the
+        given focus string value.
         """
         ctx = EvalPropContext.get_current_context()
         if ctx.level != LEVEL_EXECUTE:
-            raise Exception('onfocus: may only occur in action code')
+            raise Exception('unfocus: may only occur in action code')
+        if symbol and type(symbol) is not str:
+            raise TypeError('unfocus: symbol must be string')
+
+        uid = None
+        query = None
         
         if player is None:
             if not ctx.uid:
                 raise Exception('No current player')
             uid = ctx.uid
         elif isinstance(player, two.execute.PlayerProxy):
+            uid = player.uid
+        elif isinstance(player, two.execute.RealmProxy):
+            query = { 'iid':ctx.loctx.iid }
+            if symbol:
+                query['focus'] = symbol
+            else:
+                query['focus'] = { '$ne':None }
+        elif isinstance(player, two.execute.LocationProxy):
+            query = { 'iid':ctx.loctx.iid, 'locid':player.locid }
+            if symbol:
+                query['focus'] = symbol
+            else:
+                query['focus'] = { '$ne':None }
+        else:
+            raise TypeError('unfocus: must be player, location, realm, or None')
+        if uid is not None:
+            # Unfocus at most one player.
             res = yield motor.Op(ctx.app.mongodb.playstate.find_one,
-                                 {'_id':player.uid},
-                                 {'iid':1})
+                                 {'_id':uid},
+                                 {'iid':1, 'focus':1})
             if not res:
                 raise KeyError('No such player')
             if res['iid'] != ctx.loctx.iid:
                 raise Exception('Player is not in this instance')
-            uid = player.uid
-        else:
-            raise TypeError('unfocus: must be player or None')
-        yield motor.Op(ctx.app.mongodb.playstate.update,
-                       {'_id':uid},
-                       {'$set':{'focus':None}})
-        ctx.task.set_dirty(uid, DIRTY_FOCUS)
+            if symbol and res['focus'] != symbol:
+                pass  # Do nothing
+            elif res['focus'] == None:
+                pass  # Do nothing
+            else:
+                yield motor.Op(ctx.app.mongodb.playstate.update,
+                               {'_id':uid},
+                               {'$set':{'focus':None}})
+                ctx.task.set_dirty(uid, DIRTY_FOCUS)
+        elif query is not None:
+            # Unfocus all matching players
+            uids = []
+            cursor = ctx.app.mongodb.playstate.find(query,
+                                                    {'_id':1})
+            while (yield cursor.fetch_next):
+                player = cursor.next_object()
+                uids.append(player['_id'])
+            # cursor autoclose
+            if uids:
+                yield motor.Op(ctx.app.mongodb.playstate.update,
+                               query,
+                               {'$set':{'focus':None}}, multi=True)
+                ctx.task.set_dirty(uids, DIRTY_FOCUS)
 
     @scriptfunc('event', group='_', yieldy=True)
     def global_event(you, others=None, player=None):
