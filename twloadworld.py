@@ -81,7 +81,7 @@ if opts.python_path:
     sys.path.insert(0, opts.python_path)
 
 import twcommon.access
-import two.interp
+import twcommon.interp
 from twcommon.misc import sluggify
 
 if not args:
@@ -138,10 +138,10 @@ class World(object):
                 print('Warning: code prop "%s" in %s does not parse: %s' % (key, lockey, ex))
 
         for (text, lockey) in all_interptext_props:
-            for nod in two.interp.parse(text):
-                if isinstance(nod, two.interp.Link):
+            for nod in twcommon.interp.parse(text):
+                if isinstance(nod, twcommon.interp.Link):
                     self.symbolsused.add( (nod.target, lockey) )
-                if isinstance(nod, two.interp.Interpolate):
+                if isinstance(nod, twcommon.interp.Interpolate):
                     self.symbolsused.add( (nod.expr, lockey) )
 
         for (symbol, lockey) in self.symbolsused:
