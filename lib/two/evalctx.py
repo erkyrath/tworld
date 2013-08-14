@@ -16,7 +16,6 @@ import twcommon.misc
 from twcommon.excepts import MessageException, ErrorMessageException
 from twcommon.excepts import SymbolError, ExecRunawayException, ExecSandboxException
 from twcommon.excepts import ReturnException
-from two import interp
 import two.task
 
 # Options for evaluating a thingy -- what kind of thingy is it?
@@ -896,7 +895,7 @@ class EvalPropContext(object):
         """
         self.task.tick()
         
-        nodls = interp.parse(text)
+        nodls = two.interp.parse(text)
         
         # While trawling through nodls, we may encounter $if/$end
         # nodes. This keeps track of them. Specifically: a 0 value
@@ -909,7 +908,7 @@ class EvalPropContext(object):
         suppressed = 0
         
         for nod in nodls:
-            if not (isinstance(nod, interp.InterpNode)):
+            if not (isinstance(nod, InterpNode)):
                 # String.
                 if nod and not suppressed:
                     self.accum.append(nod)
@@ -1032,7 +1031,7 @@ class EvalPropContext(object):
                 if nod.key == 'name':
                     self.accum.append(player['name'])
                 else:
-                    self.accum.append(interp.resolve_pronoun(player, nod.key))
+                    self.accum.append(two.grammar.resolve_pronoun(player, nod.key))
                 continue
 
             # Otherwise...
@@ -1183,4 +1182,7 @@ def str_or_null(res):
 from twcommon.access import ACC_VISITOR, ACC_MEMBER
 import two.execute
 import two.symbols
+import two.grammar
+import two.interp
+from two.interp import InterpNode
 from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_POPULACE, DIRTY_FOCUS

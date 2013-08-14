@@ -624,7 +624,7 @@ def define_globals():
         if not res:
             raise Exception('No such player')
         # Could set up a pronoun dependency here.
-        return two.interp.resolve_pronoun(res, pronoun)
+        return two.grammar.resolve_pronoun(res, pronoun)
         
     @scriptfunc('We', group='pronoun', yieldy=True)
     def global_pronoun_We(player=None):
@@ -899,6 +899,7 @@ def find_symbol(app, loctx, key, locals=None, dependencies=None):
 from twcommon.misc import is_typed_dict
 import twcommon.access
 import two.interp
+import two.grammar
 import two.execute
 import two.ipool
 from two.evalctx import EvalPropContext
