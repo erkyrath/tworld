@@ -122,10 +122,21 @@ def scriptfunc(name, group=None, **kwargs):
 
 def define_globals():
     
-    @scriptfunc('print', group='_')
+    @scriptfunc('print', group='_', yieldy=True)
     def global_print(*ls):
-        res = ' '.join(str(val) for val in ls)
-        ###?
+        ctx = EvalPropContext.get_current_context()
+        if ctx.accum is None:
+            raise Exception('print() in non-printing context')
+        first = True
+        for obj in ls:
+            if first:
+                first = False
+            else:
+                ctx.accum.append(' ')
+            res = yield ctx.evalobj(obj, evaltype=EVALTYPE_RAW)
+            if res is not two.evalctx.Accumulated:
+                ctx.accum.append(str(res))
+        return '' ### tacky
 
     @scriptfunc('style', group='_')
     def global_style(style):
