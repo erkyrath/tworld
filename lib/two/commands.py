@@ -897,6 +897,9 @@ def define_commands():
         ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
         try:
             newval = yield ctx.eval(code, evaltype=EVALTYPE_CODE)
+            if ctx.accum:
+                printed = ''.join([str(val) for val in ctx.accum])
+                conn.write({'cmd':'event', 'text':'Eval printed: %s' % (printed,)})
             if newval is None:
                 conn.write({'cmd':'event', 'text':'Eval done.'})
             else:
