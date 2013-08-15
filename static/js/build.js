@@ -194,9 +194,9 @@ function update_prop(tableref, prop, nocopy) {
     else if (valtype == 'portlist') {
         editls = [ 
             { key:'plistkey', val:prop.val.plistkey, label:'Portlist key' },
-            { key:'focus', val:prop.val.focus, label:'false' },
-            { key:'readaccess', val:prop.val.readaccess, label:'visitor' },
-            { key:'editaccess', val:prop.val.editaccess, label:'member' },
+            { key:'focus', val:prop.val.focus, label:'(Focus) false' },
+            { key:'readaccess', val:prop.val.readaccess, label:'(Read) visitor' },
+            { key:'editaccess', val:prop.val.editaccess, label:'(Edit) member' },
             { key:'text', val:prop.val.text, label:'(Label)' } ];
     }
     else if (valtype == 'delete') {
