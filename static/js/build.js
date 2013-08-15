@@ -186,7 +186,7 @@ function update_prop(tableref, prop, nocopy) {
     else if (valtype == 'editstr') {
         editls = [ 
             { key:'key', val:prop.val.key, label:'String property' },
-            { key:'editaccess', val:prop.val.editaccess, label:'member' },
+            { key:'editaccess', val:prop.val.editaccess, label:'(Edit) member' },
             { key:'label', val:prop.val.label, label:'(Label)' },
             { key:'text', val:prop.val.text, label:'(Message)' },
             { key:'otext', val:prop.val.otext, label:'(Message to other players)' } ];
