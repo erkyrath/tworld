@@ -326,6 +326,8 @@ def define_globals():
         player instead -- but they must be in-world.
         """
         ctx = EvalPropContext.get_current_context()
+        if ctx.level != LEVEL_EXECUTE:
+            raise Exception('Events may only occur in action code')
         
         youeval = False
         otherseval = False
@@ -364,7 +366,9 @@ def define_globals():
         """
         ctx = EvalPropContext.get_current_context()
         iid = ctx.loctx.iid
-        
+        if ctx.level != LEVEL_EXECUTE:
+            raise Exception('Events may only occur in action code')
+       
         if isinstance(loc, two.execute.RealmProxy):
             locid = None
         elif isinstance(loc, two.execute.LocationProxy):
@@ -487,6 +491,8 @@ def define_globals():
         unsched() function.
         """
         ctx = EvalPropContext.get_current_context()
+        if ctx.level != LEVEL_EXECUTE:
+            raise Exception('Timer are only available in action code')
         if not ctx.loctx.iid:
             raise Exception('No current instance')
         app = ctx.app
@@ -504,6 +510,8 @@ def define_globals():
         were set up with the matching cancel argument.
         """
         ctx = EvalPropContext.get_current_context()
+        if ctx.level != LEVEL_EXECUTE:
+            raise Exception('Timer are only available in action code')
         if not ctx.loctx.iid:
             raise Exception('No current instance')
         app = ctx.app
