@@ -17,6 +17,7 @@ DBVERSION = 5
 
 import sys
 import os
+import unicodedata
 import binascii
 import types
 import logging
@@ -54,6 +55,10 @@ tornado.options.define(
 tornado.options.define(
     'localize', type=str,
     help='pathname of localization data file')
+
+tornado.options.define(
+    'resetpw', type=str,
+    help='reset the password for the given user (name or email address)')
 
 # Parse 'em up.
 tornado.options.parse_command_line()
@@ -406,4 +411,31 @@ for (key, lang, client, val) in locls:
     db.localize.update({ 'key':key, 'lang':lang },
                        obj, upsert=True)
     
+if opts.resetpw:
+    if '@' in opts.resetpw:
+        player = db.players.find_one({ 'email':opts.resetpw })
+    else:
+        player = db.players.find_one({ 'name':opts.resetpw })
+        if not player:
+            player = db.players.find_one({ 'namekey':opts.resetpw })
+    if not player:
+        raise Exception('No such player: ' + opts.resetpw)
+    print('Enter password for %s (%s)' % (player['name'], player['email']))
+    import getpass
+    import hashlib
+    
+    newpw = getpass.getpass()
+    newpw2 = getpass.getpass()
+    if newpw != newpw2:
+        raise Exception('Passwords do not match')
 
+    password = unicodedata.normalize('NFKC', newpw)
+    password = password.encode()  # to UTF8 bytes
+    pwsalt = binascii.hexlify(os.urandom(8))
+    saltedpw = pwsalt + b':' + password
+    cryptpw = hashlib.sha1(saltedpw).hexdigest().encode()
+    
+    db.players.update({'_id':player['_id']},
+                      {'$set':{'pwsalt': pwsalt, 'password': cryptpw}})
+    print('Password set.')
+    
