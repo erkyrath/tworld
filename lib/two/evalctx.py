@@ -244,6 +244,15 @@ class EvalPropContext(object):
                 return res
             if res is Accumulated:
                 return self.accum
+            if not res and self.accum:
+                # I am deeply suspicious of this case. It leaves {code}
+                # properties as second-class citizens, because they don't
+                # return Accumulated. (Therefore, for example, a print()
+                # followed by a return value doesn't concatenate them.
+                # Also, a 0 return value is wrongly ignored.)
+                # I guess we should rely on the presence of self.accum
+                # and drop Accumulated entirely?
+                return self.accum
             return str_or_null(res)
         if (self.level == LEVEL_EXECUTE):
             if res is Accumulated:
