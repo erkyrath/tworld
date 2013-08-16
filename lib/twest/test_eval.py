@@ -134,6 +134,9 @@ class TestEval(unittest.TestCase):
         self.assertSpecResolves('*ls, **map')
         self.assertSpecResolves('*ls, **map', 8, 9, x=1, y=2)
         self.assertSpecResolves('x, *ls, **map', 8, 9, w=1, q=2)
+        ###self.assertSpecResolves('*ls, x=0')
+        ###self.assertSpecResolves('*ls, x=0', x=4)
+        ###self.assertSpecResolvesRaise('*ls, x', 3)
         
 class TestEvalAsync(tornado.testing.AsyncTestCase):
     @tornado.testing.gen_test
