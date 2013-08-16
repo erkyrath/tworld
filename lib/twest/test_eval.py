@@ -94,7 +94,6 @@ class TestEval(unittest.TestCase):
         res = two.evalctx.resolve_argument_spec(spec, args, kwargs)
         want = 'lambda %s : locals()' % (specstr,)
         want = eval(want)(*args, **kwargs)
-        print('### want: %s' % (want,))
         self.assertEqual(res, want)
         
     def assertSpecResolvesRaise(self, specstr, *args, **kwargs):
@@ -122,7 +121,19 @@ class TestEval(unittest.TestCase):
         self.assertSpecResolves('x=6, *ls')
         self.assertSpecResolves('x=6, *ls', 7)
         self.assertSpecResolves('x=6, *ls', 7, 8)
-        ###self.assertSpecResolves('x', x=3)
+        self.assertSpecResolves('x', x=3)
+        self.assertSpecResolves('x, y', x=5, y=6)
+        self.assertSpecResolves('x, y=6', x=5)
+        self.assertSpecResolvesRaise('x', 4, x=3)
+        self.assertSpecResolvesRaise('x=0', 4, x=3)
+        self.assertSpecResolvesRaise('', x=3)
+        self.assertSpecResolvesRaise('x=0', x=3, y=4)
+        self.assertSpecResolves('**map')
+        self.assertSpecResolves('**map', x=1, y=2)
+        self.assertSpecResolvesRaise('**map', 1, x=1, y=2)
+        self.assertSpecResolves('*ls, **map')
+        self.assertSpecResolves('*ls, **map', 8, 9, x=1, y=2)
+        self.assertSpecResolves('x, *ls, **map', 8, 9, w=1, q=2)
         
 class TestEvalAsync(tornado.testing.AsyncTestCase):
     @tornado.testing.gen_test

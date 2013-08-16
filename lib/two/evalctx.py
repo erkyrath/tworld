@@ -1249,14 +1249,18 @@ def resolve_argument_spec(spec, args, kwargs):
     spec.
     Raises TypeError if the arguments don't match.
     """
-    # Copy this so we can destroy it.
-    if kwargs:
-        kwargs = dict(kwargs)
+    # Copy this so we can destroy it (and also return it)
+    kwargs = dict(kwargs)
         
     res = {}
     for (ix, arg) in enumerate(spec.args):
         if ix < len(args):
+            if arg.arg in kwargs:
+                raise TypeError('got multiple values for argument "%s"' % (arg.arg,))  
             res[arg.arg] = args[ix]
+            continue
+        if arg.arg in kwargs:
+            res[arg.arg] = kwargs.pop(arg.arg)
             continue
         diff = len(spec.args) - len(spec.defaults)
         if ix >= diff:
@@ -1269,6 +1273,12 @@ def resolve_argument_spec(spec, args, kwargs):
     else:
         if len(args) > len(spec.args):
             raise TypeError('%d extra positional arguments' % (len(args) - len(spec.args),))
+
+    if spec.kwarg:
+        res[spec.kwarg] = kwargs
+    else:
+        if kwargs:
+            raise TypeError('%d extra keyword arguments' % (len(kwargs)),)
     
     return res
 
