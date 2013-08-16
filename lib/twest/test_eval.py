@@ -77,8 +77,10 @@ class TestEval(unittest.TestCase):
 
         self.assertRaises(SyntaxError, parse_argument_spec, '-')
         self.assertRaises(SyntaxError, parse_argument_spec, '1')
-        ###self.assertRaises(SyntaxError, parse_argument_spec, 'x, x')
-        ###self.assertRaises(SyntaxError, parse_argument_spec, 'x, *x')
+        self.assertRaises(SyntaxError, parse_argument_spec, 'x, x')
+        self.assertRaises(SyntaxError, parse_argument_spec, 'x, *x')
+        self.assertRaises(SyntaxError, parse_argument_spec, 'x, **x')
+        self.assertRaises(SyntaxError, parse_argument_spec, '*x, **x')
         self.assertRaises(SyntaxError, parse_argument_spec, '*ls1, *ls2')
         self.assertRaises(SyntaxError, parse_argument_spec, '**map, x=1')
         self.assertRaises(SyntaxError, parse_argument_spec, ':None;lambda')

@@ -1218,7 +1218,29 @@ def parse_argument_spec(spec):
     assert type(nod) is ast.Expr
     nod = nod.value
     assert type(nod) is ast.Lambda
-    return nod.args
+    res = nod.args
+
+    # Check for duplicate arguments.
+    argset = set()
+    for arg in res.args:
+        if arg.arg in argset:
+            raise SyntaxError('duplicate argument %s in function definition' % (arg.arg,))
+        argset.add(arg.arg)
+    for arg in res.kwonlyargs:
+        if arg.arg in argset:
+            raise SyntaxError('duplicate argument %s in function definition' % (arg.arg,))
+        argset.add(arg.arg)
+    if res.vararg is not None:
+        if res.vararg in argset:
+            raise SyntaxError('duplicate argument %s in function definition' % (res.vararg,))
+        argset.add(res.vararg)
+    if res.kwarg is not None:
+        if res.kwarg in argset:
+            raise SyntaxError('duplicate argument %s in function definition' % (res.kwarg,))
+        argset.add(res.kwarg)
+
+    
+    return res
 
 def resolve_argument_spec(spec, args, kwargs):
     """Given an argument structure (as built by parse_argument_spec),
