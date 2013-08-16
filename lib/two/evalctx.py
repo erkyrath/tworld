@@ -1242,8 +1242,11 @@ def resolve_argument_spec(spec, args, kwargs):
             continue
         raise TypeError('missing %d required positional arguments' % (len(spec.args) - (len(args) + len(spec.defaults)),))
 
-    if len(args) > len(spec.args):
-        raise TypeError('%d extra positional arguments' % (len(args) - len(spec.args),))
+    if spec.vararg:
+        res[spec.vararg] = tuple(args[ len(spec.args) : ])
+    else:
+        if len(args) > len(spec.args):
+            raise TypeError('%d extra positional arguments' % (len(args) - len(spec.args),))
     
     return res
 

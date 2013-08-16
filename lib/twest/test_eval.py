@@ -78,6 +78,7 @@ class TestEval(unittest.TestCase):
         self.assertRaises(SyntaxError, parse_argument_spec, '-')
         self.assertRaises(SyntaxError, parse_argument_spec, '1')
         ###self.assertRaises(SyntaxError, parse_argument_spec, 'x, x')
+        ###self.assertRaises(SyntaxError, parse_argument_spec, 'x, *x')
         self.assertRaises(SyntaxError, parse_argument_spec, '*ls1, *ls2')
         self.assertRaises(SyntaxError, parse_argument_spec, '**map, x=1')
         self.assertRaises(SyntaxError, parse_argument_spec, ':None;lambda')
@@ -112,7 +113,14 @@ class TestEval(unittest.TestCase):
         self.assertSpecResolves('x=3, y=7', 4)
         self.assertSpecResolves('x=3, y=7', 4, 5)
         self.assertSpecResolvesRaise('x=3', 9, 9)
-        #self.assertSpecResolves('x', x=3)
+        self.assertSpecResolves('*ls')
+        self.assertSpecResolves('*ls', 1, 2, 3)
+        self.assertSpecResolves('x, *ls', 4)
+        self.assertSpecResolves('x, *ls', 4, 5)
+        self.assertSpecResolves('x=6, *ls')
+        self.assertSpecResolves('x=6, *ls', 7)
+        self.assertSpecResolves('x=6, *ls', 7, 8)
+        ###self.assertSpecResolves('x', x=3)
         
 class TestEvalAsync(tornado.testing.AsyncTestCase):
     @tornado.testing.gen_test
