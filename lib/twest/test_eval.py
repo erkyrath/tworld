@@ -9,9 +9,10 @@ for the world, instance, player, etc.
 
 import logging
 import unittest
-import tornado.testing
+import ast
 
 from bson.objectid import ObjectId
+import tornado.testing
 
 import twcommon.misc
 import two.execute
@@ -22,8 +23,56 @@ class MockApplication:
     def __init__(self):
         self.log = logging.getLogger('tworld')
 
+class TestEval(unittest.TestCase):
+    def assertSpecIs(self, spec, args=[], kwonlyargs=[], vararg=None, kwarg=None, defaults=[], kw_defaults=[]):
+        specargs = [ arg.arg for arg in spec.args ]
+        self.assertEqual(specargs, args)
+        self.assertEqual(spec.vararg, vararg)
+        speckwonlyargs = [ arg.arg for arg in spec.kwonlyargs ]
+        self.assertEqual(speckwonlyargs, kwonlyargs)
+        self.assertEqual(spec.kwarg, kwarg)
+        for (specdef, defv) in zip(spec.defaults, defaults):
+            if type(specdef) is ast.Num:
+                self.assertEqual(specdef.n, defv)
+            elif type(specdef) is ast.Str:
+                self.assertEqual(specdef.s, defv)
+            else:
+                raise Exception('Unknown default arg type')
+        for (specdef, defv) in zip(spec.kw_defaults, kw_defaults):
+            if type(specdef) is ast.Num:
+                self.assertEqual(specdef.n, defv)
+            elif type(specdef) is ast.Str:
+                self.assertEqual(specdef.s, defv)
+            else:
+                raise Exception('Unknown default arg type')
+        
+    def test_argument_spec(self):
+        parse_argument_spec = two.evalctx.parse_argument_spec
+        
+        spec = parse_argument_spec('')
+        self.assertSpecIs(spec, [])
+        spec = parse_argument_spec('x')
+        self.assertSpecIs(spec, ['x'])
+        spec = parse_argument_spec('x=1')
+        self.assertSpecIs(spec, ['x'], defaults=[1])
+        spec = parse_argument_spec('x, y=1, z="foo"')
+        self.assertSpecIs(spec, ['x', 'y', 'z'], defaults=[1, 'foo'])
+        spec = parse_argument_spec('*ls')
+        self.assertSpecIs(spec, [], vararg='ls')
+        spec = parse_argument_spec('**map')
+        self.assertSpecIs(spec, [], kwarg='map')
+        spec = parse_argument_spec('xyz, *ls, **map')
+        self.assertSpecIs(spec, ['xyz'], vararg='ls', kwarg='map')
+        spec = parse_argument_spec('xyz=0.5, *ls, **map')
+        self.assertSpecIs(spec, ['xyz'], defaults=[0.5], vararg='ls', kwarg='map')
+        spec = parse_argument_spec('*ls, x=5')
+        self.assertSpecIs(spec, kwonlyargs=['x'], vararg='ls', kw_defaults=[5])
+        spec = parse_argument_spec('x, y=1, *ls, zz=55')
+        self.assertSpecIs(spec, ['x', 'y'], kwonlyargs=['zz'], vararg='ls', defaults=[1], kw_defaults=[55])
+        spec = parse_argument_spec('*ls, x="bar", **map')
+        self.assertSpecIs(spec, kwonlyargs=['x'], vararg='ls', kwarg='map', kw_defaults=['bar'])
 
-class TestEval(tornado.testing.AsyncTestCase):
+class TestEvalAsync(tornado.testing.AsyncTestCase):
     @tornado.testing.gen_test
     def test_simple_literals(self):
         app = MockApplication()

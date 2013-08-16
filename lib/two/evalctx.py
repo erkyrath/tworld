@@ -1196,6 +1196,25 @@ def str_or_null(res):
         return ''
     return str(res)
 
+def parse_argument_spec(spec):
+    """Take a function argument spec (e.g. "x, y=3") and parse it into a
+    structure. Raises SyntaxError if the spec is invalid.
+    Do not include the parentheses in the spec.
+    This relies on the Python mechanism in ast.parse.
+    """
+    if not spec:
+        spec = ''
+    val = 'lambda %s : None' % (spec,)
+    tree = ast.parse(val)
+    assert type(tree) is ast.Module
+    if len(tree.body) != 1:
+        raise SyntaxError('apparent Bobby Tables in argument spec')
+    nod = tree.body[0]
+    assert type(nod) is ast.Expr
+    nod = nod.value
+    assert type(nod) is ast.Lambda
+    return nod.args
+
 # Late imports, to avoid circularity
 from twcommon.access import ACC_VISITOR, ACC_MEMBER
 import twcommon.interp
