@@ -31,18 +31,24 @@ class TestEval(unittest.TestCase):
         speckwonlyargs = [ arg.arg for arg in spec.kwonlyargs ]
         self.assertEqual(speckwonlyargs, kwonlyargs)
         self.assertEqual(spec.kwarg, kwarg)
+        self.assertEqual(len(spec.defaults), len(defaults))
         for (specdef, defv) in zip(spec.defaults, defaults):
             if type(specdef) is ast.Num:
                 self.assertEqual(specdef.n, defv)
             elif type(specdef) is ast.Str:
                 self.assertEqual(specdef.s, defv)
+            elif specdef is None:
+                self.assertTrue(defv is None)
             else:
                 raise Exception('Unknown default arg type')
+        self.assertEqual(len(spec.kw_defaults), len(kw_defaults))
         for (specdef, defv) in zip(spec.kw_defaults, kw_defaults):
             if type(specdef) is ast.Num:
                 self.assertEqual(specdef.n, defv)
             elif type(specdef) is ast.Str:
                 self.assertEqual(specdef.s, defv)
+            elif specdef is None:
+                self.assertTrue(defv is None)
             else:
                 raise Exception('Unknown default arg type')
         
@@ -65,12 +71,20 @@ class TestEval(unittest.TestCase):
         self.assertSpecIs(spec, ['xyz'], vararg='ls', kwarg='map')
         spec = parse_argument_spec('xyz=0.5, *ls, **map')
         self.assertSpecIs(spec, ['xyz'], defaults=[0.5], vararg='ls', kwarg='map')
+        spec = parse_argument_spec('*ls, x')
+        self.assertSpecIs(spec, kwonlyargs=['x'], vararg='ls', kw_defaults=[None])
         spec = parse_argument_spec('*ls, x=5')
         self.assertSpecIs(spec, kwonlyargs=['x'], vararg='ls', kw_defaults=[5])
         spec = parse_argument_spec('x, y=1, *ls, zz=55')
         self.assertSpecIs(spec, ['x', 'y'], kwonlyargs=['zz'], vararg='ls', defaults=[1], kw_defaults=[55])
         spec = parse_argument_spec('*ls, x="bar", **map')
         self.assertSpecIs(spec, kwonlyargs=['x'], vararg='ls', kwarg='map', kw_defaults=['bar'])
+
+        self.assertRaises(SyntaxError, parse_argument_spec, '-')
+        self.assertRaises(SyntaxError, parse_argument_spec, '1')
+        self.assertRaises(SyntaxError, parse_argument_spec, '*ls1, *ls2')
+        self.assertRaises(SyntaxError, parse_argument_spec, '**map, x=1')
+        self.assertRaises(SyntaxError, parse_argument_spec, ':None;lambda')
 
 class TestEvalAsync(tornado.testing.AsyncTestCase):
     @tornado.testing.gen_test
