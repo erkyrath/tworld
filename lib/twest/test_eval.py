@@ -24,6 +24,19 @@ class MockApplication:
         self.log = logging.getLogger('tworld')
 
 class TestEval(unittest.TestCase):
+    def mockResolveDefaults(self, ls):
+        res = []
+        for val in ls:
+            if type(val) is ast.Num:
+                res.append(val.n)
+            elif type(val) is ast.Str:
+                res.append(val.s)
+            elif val is None:
+                res.append(None)
+            else:
+                raise Exception('Unknown default arg type')
+        return res
+            
     def assertSpecIs(self, spec, args=[], kwonlyargs=[], vararg=None, kwarg=None, defaults=[], kw_defaults=[]):
         specargs = [ arg.arg for arg in spec.args ]
         self.assertEqual(specargs, args)
@@ -31,26 +44,8 @@ class TestEval(unittest.TestCase):
         speckwonlyargs = [ arg.arg for arg in spec.kwonlyargs ]
         self.assertEqual(speckwonlyargs, kwonlyargs)
         self.assertEqual(spec.kwarg, kwarg)
-        self.assertEqual(len(spec.defaults), len(defaults))
-        for (specdef, defv) in zip(spec.defaults, defaults):
-            if type(specdef) is ast.Num:
-                self.assertEqual(specdef.n, defv)
-            elif type(specdef) is ast.Str:
-                self.assertEqual(specdef.s, defv)
-            elif specdef is None:
-                self.assertTrue(defv is None)
-            else:
-                raise Exception('Unknown default arg type')
-        self.assertEqual(len(spec.kw_defaults), len(kw_defaults))
-        for (specdef, defv) in zip(spec.kw_defaults, kw_defaults):
-            if type(specdef) is ast.Num:
-                self.assertEqual(specdef.n, defv)
-            elif type(specdef) is ast.Str:
-                self.assertEqual(specdef.s, defv)
-            elif specdef is None:
-                self.assertTrue(defv is None)
-            else:
-                raise Exception('Unknown default arg type')
+        self.assertEqual(self.mockResolveDefaults(spec.defaults), defaults)
+        self.assertEqual(self.mockResolveDefaults(spec.kw_defaults), kw_defaults)
         
     def test_argument_spec(self):
         parse_argument_spec = two.evalctx.parse_argument_spec
@@ -82,10 +77,43 @@ class TestEval(unittest.TestCase):
 
         self.assertRaises(SyntaxError, parse_argument_spec, '-')
         self.assertRaises(SyntaxError, parse_argument_spec, '1')
+        ###self.assertRaises(SyntaxError, parse_argument_spec, 'x, x')
         self.assertRaises(SyntaxError, parse_argument_spec, '*ls1, *ls2')
         self.assertRaises(SyntaxError, parse_argument_spec, '**map, x=1')
         self.assertRaises(SyntaxError, parse_argument_spec, ':None;lambda')
 
+    def assertSpecResolves(self, specstr, *args, **kwargs):
+        spec = two.evalctx.parse_argument_spec(specstr)
+        if spec.defaults:
+            spec.defaults = self.mockResolveDefaults(spec.defaults)
+        if spec.kw_defaults:
+            spec.kw_defaults = self.mockResolveDefaults(spec.kw_defaults)
+        res = two.evalctx.resolve_argument_spec(spec, args, kwargs)
+        want = 'lambda %s : locals()' % (specstr,)
+        want = eval(want)(*args, **kwargs)
+        print('### want: %s' % (want,))
+        self.assertEqual(res, want)
+        
+    def assertSpecResolvesRaise(self, specstr, *args, **kwargs):
+        spec = two.evalctx.parse_argument_spec(specstr)
+        self.assertRaises(TypeError, two.evalctx.resolve_argument_spec, spec, args, kwargs)
+        
+    def test_argument_resolve_spec(self):
+        self.assertSpecResolves('')
+        self.assertSpecResolves('x', 3)
+        self.assertSpecResolves('x, y', 3, 5)
+        self.assertSpecResolvesRaise('x')
+        self.assertSpecResolvesRaise('', 3)
+        self.assertSpecResolvesRaise('x', 3, 4)
+        self.assertSpecResolvesRaise('x, y', 3, 4, 5)
+        self.assertSpecResolves('x=5')
+        self.assertSpecResolves('x=3', 4)
+        self.assertSpecResolves('x=3, y=7')
+        self.assertSpecResolves('x=3, y=7', 4)
+        self.assertSpecResolves('x=3, y=7', 4, 5)
+        self.assertSpecResolvesRaise('x=3', 9, 9)
+        #self.assertSpecResolves('x', x=3)
+        
 class TestEvalAsync(tornado.testing.AsyncTestCase):
     @tornado.testing.gen_test
     def test_simple_literals(self):

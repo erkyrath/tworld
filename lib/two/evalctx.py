@@ -1201,6 +1201,11 @@ def parse_argument_spec(spec):
     structure. Raises SyntaxError if the spec is invalid.
     Do not include the parentheses in the spec.
     This relies on the Python mechanism in ast.parse.
+    
+    The defaults and kw_defaults arrays in the result contain ast nodes.
+    The caller should immediately evaluate these (self.execcode_expr).
+    (The tests and code both assume that spec.defaults and spec.kw_defaults
+    are reassignable.)
     """
     if not spec:
         spec = ''
@@ -1214,6 +1219,33 @@ def parse_argument_spec(spec):
     nod = nod.value
     assert type(nod) is ast.Lambda
     return nod.args
+
+def resolve_argument_spec(spec, args, kwargs):
+    """Given an argument structure (as built by parse_argument_spec),
+    and some positional and keyword arguments, return a map of
+    parameter bindings. This should follow the Python function-call
+    spec.
+    Raises TypeError if the arguments don't match.
+    """
+    # Copy this so we can destroy it.
+    if kwargs:
+        kwargs = dict(kwargs)
+        
+    res = {}
+    for (ix, arg) in enumerate(spec.args):
+        if ix < len(args):
+            res[arg.arg] = args[ix]
+            continue
+        diff = len(spec.args) - len(spec.defaults)
+        if ix >= diff:
+            res[arg.arg] = spec.defaults[ix-diff]
+            continue
+        raise TypeError('missing %d required positional arguments' % (len(spec.args) - (len(args) + len(spec.defaults)),))
+
+    if len(args) > len(spec.args):
+        raise TypeError('%d extra positional arguments' % (len(args) - len(spec.args),))
+    
+    return res
 
 # Late imports, to avoid circularity
 from twcommon.access import ACC_VISITOR, ACC_MEMBER
