@@ -1274,6 +1274,15 @@ def resolve_argument_spec(spec, args, kwargs):
         if len(args) > len(spec.args):
             raise TypeError('%d extra positional arguments' % (len(args) - len(spec.args),))
 
+    for (arg, defv) in zip(spec.kwonlyargs, spec.kw_defaults):
+        if arg.arg in kwargs:
+            res[arg.arg] = kwargs.pop(arg.arg)
+            continue
+        if defv is not None:
+            res[arg.arg] = defv
+            continue
+        raise TypeError('missing required keyword-only argument "%s"' % (arg.arg,))
+
     if spec.kwarg:
         res[spec.kwarg] = kwargs
     else:
