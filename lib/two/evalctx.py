@@ -305,6 +305,11 @@ class EvalPropContext(object):
         if self.depth == 0 and self.level == LEVEL_DISPSPECIAL and objtype == 'selfdesc':
             assert self.accum is not None, 'EvalPropContext.accum should not be None here'
             try:
+                world = yield motor.Op(self.app.mongodb.worlds.find_one,
+                                       {'_id':self.loctx.wid},
+                                       {'instancing':1})
+                if not (world and world.get('instancing', None) == 'solo'):
+                    return 'You may only edit your appearance in a solo world.'
                 extratext = None
                 val = res.get('text', None)
                 if val:
