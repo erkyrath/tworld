@@ -165,6 +165,11 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
                             val['readaccess'] = twcommon.access.name_for_level(val['readaccess']).lower()
                         except:
                             del val['readaccess']
+                elif valtype == 'code':
+                    if 'args' in val:
+                        # We'll translate this back to 'code' on import
+                        val['type'] = 'codearg'
+                    pass
                 else:
                     pass
             elif isinstance(val, datetime.datetime):
@@ -204,11 +209,15 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
                 res['text'] = prop['text']
                 twcommon.interp.parse(res['text'])
             return res
-        if valtype == 'code':
-            res = { 'type':valtype }
+        if valtype == 'code' or valtype == 'codearg':
+            res = { 'type':'code' }
             if 'text' in prop:
                 res['text'] = prop['text']
                 ast.parse(res['text'], filename='property')
+            if 'args' in prop:
+                res['args'] = prop['args']
+                ### Should call the real parse_argument_spec here
+                ast.parse('lambda %s : None' % (res['args'],), filename='arguments')
             return res
         if valtype == 'event':
             res = { 'type':valtype }

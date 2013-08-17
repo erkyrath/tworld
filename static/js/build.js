@@ -30,6 +30,7 @@ var NBSP = '\u00A0';
 var property_type_selectors = [
     { value:'text', text:'Text' },
     { value:'code', text:'Code' },
+    { value:'codearg', text:'Code (args)' },
     { value:'move', text:'Move' },
     { value:'event', text:'Event' },
     { value:'panic', text:'Panic' },
@@ -165,6 +166,11 @@ function update_prop(tableref, prop, nocopy) {
     }
     else if (valtype == 'code') {
         editls = [ { key:'text', val:prop.val.text, label:'Code' } ];
+    }
+    else if (valtype == 'codearg') {
+        editls = [ 
+            { key:'args', val:prop.val.args, label:'Arguments' },
+            { key:'text', val:prop.val.text, label:'Code' } ];
     }
     else if (valtype == 'move') {
         editls = [
