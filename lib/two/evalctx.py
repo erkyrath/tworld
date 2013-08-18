@@ -735,13 +735,25 @@ class EvalPropContext(object):
                 return res
         if funcval and twcommon.misc.is_typed_dict(funcval, 'code'):
             # {code} dicts are considered callable by courtesy.
-            ### how do arguments work?
-            if args or kwargs:
-                raise TypeError('code property does not take arguments, but was given %d' % (len(args)+len(kwargs),))
+            argspec = funcval.get('args', None)
+            if not argspec:
+                locals = None
+                if args or kwargs:
+                    raise TypeError('code property does not take arguments, but was given %d' % (len(args)+len(kwargs),))
+            else:
+                argspec = parse_argument_spec(argspec)
+                # evaluate any defaults
+                if argspec.defaults:
+                    ls = []
+                    for val in argspec.defaults:
+                        val = yield self.execcode_expr(val)
+                        ls.append(val)
+                    argspec.defaults = ls
+                locals = resolve_argument_spec(argspec, args, kwargs)
             val = funcval.get('text', None)
             if not val:
                 return None
-            newval = yield self.evalobj(val, evaltype=EVALTYPE_CODE)
+            newval = yield self.evalobj(val, evaltype=EVALTYPE_CODE, locals=locals)
             return newval
         # This will raise TypeError if funcval is not callable.
         return funcval(*args, **kwargs)
@@ -1250,7 +1262,7 @@ def parse_argument_spec(spec):
 def resolve_argument_spec(spec, args, kwargs):
     """Given an argument structure (as built by parse_argument_spec),
     and some positional and keyword arguments, return a map of
-    parameter bindings. This should follow the Python function-call
+    parameter bindings. This should replicate the Python function-call
     spec.
     Raises TypeError if the arguments don't match.
     """
