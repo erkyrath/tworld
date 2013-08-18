@@ -185,7 +185,7 @@ def define_globals():
     @scriptfunc('isinstance', group='_')
     def global_isinstance(object, typ):
         """The isinstance function.
-        ### Special-case to handle text, ObjectId "types"?
+        ### Special-case to handle text, ObjectId, datetime "types"?
         """
         return isinstance(object, typ)
 
@@ -564,6 +564,14 @@ def define_globals():
             return None
         return two.execute.LocationProxy(locid)
 
+    @scriptfunc('datetime', group='datetime')
+    def global_datetime_datetime(year, month, day, **kwargs):
+        """The native datetime constructor, except that tzinfo is always
+        UTC.
+        """
+        kwargs['tzinfo'] = datetime.timezone.utc
+        return datetime.datetime(year, month, day, **kwargs)
+        
     @scriptfunc('now', group='datetime_propmap')
     def global_datetime_now():
         """Return the current task's start time.
@@ -890,9 +898,7 @@ def define_globals():
     map.update(twcommon.access.map)
     globmap['access'] = ScriptNamespace(map)
 
-    #map = dict(ScriptFunc.funcgroups['datetime'])
-    ### Need an approximate-delta-in-English function
-    map = {}
+    map = dict(ScriptFunc.funcgroups['datetime'])
     # Expose some type constructors directly
     map['timedelta'] = datetime.timedelta
     propmap = dict(ScriptFunc.funcgroups['datetime_propmap'])
