@@ -742,13 +742,7 @@ class EvalPropContext(object):
                     raise TypeError('code property does not take arguments, but was given %d' % (len(args)+len(kwargs),))
             else:
                 argspec = parse_argument_spec(argspec)
-                # evaluate any defaults
-                if argspec.defaults:
-                    ls = []
-                    for val in argspec.defaults:
-                        val = yield self.execcode_expr(val)
-                        ls.append(val)
-                    argspec.defaults = ls
+                yield self.replace_argspec_defaults(argspec)
                 locals = resolve_argument_spec(argspec, args, kwargs)
             val = funcval.get('text', None)
             if not val:
@@ -815,6 +809,22 @@ class EvalPropContext(object):
         return None
 
     @tornado.gen.coroutine
+    def replace_argspec_defaults(self, argspec):
+        if argspec.defaults:
+            ls = []
+            for val in argspec.defaults:
+                newval = yield self.execcode_expr(val)
+                ls.append(newval)
+            argspec.defaults = ls
+        if argspec.kw_defaults:
+            ls = []
+            for val in argspec.kw_defaults:
+                newval = yield self.execcode_expr(val)
+                ls.append(newval)
+            argspec.kw_defaults = ls
+        return
+        
+    @tornado.gen.coroutine
     def invoke_typed_dict(self, res, symbol=None):
         restype = res.get('type', None)
         uid = self.uid
@@ -828,10 +838,17 @@ class EvalPropContext(object):
                 newval = yield self.evalobj(val, evaltype=EVALTYPE_TEXT)
                 return newval
             if restype == 'code':
+                argspec = res.get('args', None)
+                if not argspec:
+                    locals = None
+                else:
+                    argspec = parse_argument_spec(argspec)
+                    yield self.replace_argspec_defaults(argspec)
+                    locals = resolve_argument_spec(argspec, [], {})
                 val = res.get('text', None)
                 if not val:
                     return None
-                newval = yield self.evalobj(val, evaltype=EVALTYPE_CODE)
+                newval = yield self.evalobj(val, evaltype=EVALTYPE_CODE, locals=locals)
                 return newval
             # All other special objects are returned as-is.
             return res
@@ -881,10 +898,17 @@ class EvalPropContext(object):
             return None
 
         if restype == 'code':
+            argspec = res.get('args', None)
+            if not argspec:
+                locals = None
+            else:
+                argspec = parse_argument_spec(argspec)
+                yield self.replace_argspec_defaults(argspec)
+                locals = resolve_argument_spec(argspec, [], {})
             val = res.get('text', None)
             if not val:
                 return None
-            newval = yield self.evalobj(val, evaltype=EVALTYPE_CODE)
+            newval = yield self.evalobj(val, evaltype=EVALTYPE_CODE, locals=locals)
             return newval
 
         if restype == 'event':

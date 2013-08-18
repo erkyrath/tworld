@@ -1377,7 +1377,8 @@ def perform_action(task, cmd, conn, target):
         raise ErrorMessageException('Action not understood: "%s"' % (target,))
 
     # The target is a string. This may be a simple symbol, or a chunk of
-    # code.
+    # code. (But a simple symbol *is* valid code, so we'll just treat it
+    # as the latter.)
 
     ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
     try:
