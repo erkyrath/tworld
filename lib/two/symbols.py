@@ -180,12 +180,27 @@ def define_globals():
         """
         if twcommon.misc.is_typed_dict(object, 'text'):
             return object
+        if twcommon.misc.is_typed_dict(object, 'code'):
+            return { 'type':'text', 'text':object.get('text', '') }
         return { 'type':'text', 'text':str(object) }
+
+    @scriptfunc('code', group='_')
+    def global_code(object='', args=None):
+        """Wrap a string as a {code} object.
+        """
+        if twcommon.misc.is_typed_dict(object, 'code'):
+            return object
+        if twcommon.misc.is_typed_dict(object, 'text'):
+            object = object.get('text', '')
+        res = { 'type':'code', 'text':str(object) }
+        if args:
+            res['args'] = args
+        return res
 
     @scriptfunc('isinstance', group='_')
     def global_isinstance(object, typ):
         """The isinstance function.
-        ### Special-case to handle text, ObjectId, datetime "types"?
+        ### Special-case to handle text, code, ObjectId, datetime "types"?
         """
         return isinstance(object, typ)
 
