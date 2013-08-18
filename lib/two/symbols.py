@@ -916,6 +916,7 @@ def define_globals():
 # type_getattr_allowed().
 type_getattr_table = {
     datetime.timedelta: set(['days', 'max', 'microseconds', 'min', 'resolution', 'seconds', 'total_seconds']),
+    datetime.datetime: set(['min', 'max', 'resolution', 'year', 'month', 'day', 'hour', 'minute', 'second', 'microsecond']),
     }
 
 def type_getattr_allowed(typ, key):
