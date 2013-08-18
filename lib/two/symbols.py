@@ -189,8 +189,15 @@ def define_globals():
         """Wrap a string as a {code} object.
         """
         if twcommon.misc.is_typed_dict(object, 'code'):
+            # Replace the args if args are given. If args are not given,
+            # return the object unchanged.
+            if args:
+                res = dict(object)
+                res['args'] = args
+                return res
             return object
         if twcommon.misc.is_typed_dict(object, 'text'):
+            # Convert the {text} into {code}
             object = object.get('text', '')
         res = { 'type':'code', 'text':str(object) }
         if args:
