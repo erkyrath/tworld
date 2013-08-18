@@ -335,10 +335,8 @@ class BoundNameProxy(object):
         if key == '_' or two.symbols.is_immutable_symbol(key):
             raise Exception('Cannot delete keyword "%s"' % (key,))
         
-        if key.startswith('_'):
-            locals = ctx.frame.locals
-            if locals is None:
-                raise NameError('Temporary variables not available ("%s")' % (key,))
+        locals = ctx.frame.locals
+        if key in locals or key.startswith('_'):
             if key in locals:
                 del locals[key]
                 return
@@ -362,10 +360,8 @@ class BoundNameProxy(object):
         if two.symbols.is_immutable_symbol(key):
             raise Exception('Cannot delete keyword "%s"' % (key,))
 
-        if key.startswith('_'):
-            locals = ctx.frame.locals
-            if locals is None:
-                raise NameError('Temporary variables not available ("%s")' % (key,))
+        locals = ctx.frame.locals
+        if key in locals or key.startswith('_'):
             locals[key] = val
             return
             

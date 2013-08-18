@@ -967,7 +967,7 @@ def find_symbol(app, loctx, key, locals=None, dependencies=None):
     """Look up a symbol, using the universal laws of symbol-looking-up.
     To wit:
     - "_" and other immutables
-    - locals (which start with "_")
+    - locals (which may be predefined or start with "_")
     - instance properties
     - world properties
     - realm-level instance properties
@@ -981,6 +981,8 @@ def find_symbol(app, loctx, key, locals=None, dependencies=None):
         return app.global_symbol_table
     if key in immutable_symbol_table:
         return immutable_symbol_table[key]
+    if (locals is not None) and (key in locals):
+        return locals[key]
     if key.startswith('_'):
         if locals is None:
             raise NameError('Temporary variables not available ("%s")' % (key,))
