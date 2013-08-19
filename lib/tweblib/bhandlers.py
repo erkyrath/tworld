@@ -1118,6 +1118,7 @@ class BuildSetDataHandler(BuildBaseHandler):
                 yield motor.Op(self.application.mongodb.worlds.update,
                                { '_id':wid },
                                { '$set':{'name':value} })
+                ### dependency change for world name?
                 self.write( { 'val':value } )
                 return
             
