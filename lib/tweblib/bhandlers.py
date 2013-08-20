@@ -33,7 +33,57 @@ class JSONEncoderExtra(json.JSONEncoder):
 # Regexp to match valid Python (2) identifiers. See also sluggify() in
 # lib/twcommon/misc.py.
 re_valididentifier = re.compile('^[a-zA-Z_][a-zA-Z0-9_]*$')
+
+
+class NoBuildHandler(tweblib.handlers.MyRequestHandler):
+    """Handler for the you-don't-have-build-permission page.
+    This covers several cases: having permission, not having it, and a
+    web form to request permission.
+    """
     
+    @tornado.gen.coroutine
+    def prepare(self):
+        """
+        Called before every get/post invocation for this handler. We use
+        the opportunity to store the various build permission flags.
+        """
+        yield self.find_current_session()
+        if self.twsessionstatus != 'auth':
+            raise tornado.web.HTTPError(403, 'You are not signed in.')
+        res = yield motor.Op(self.application.mongodb.players.find_one,
+                             { '_id':self.twsession['uid'] })
+        if not res:
+            raise tornado.web.HTTPError(403, 'You do not exist.')
+        self.twisadmin = res.get('admin', False)
+        self.twisbuild = (self.twisadmin or res.get('build', False))
+        self.twisaskbuild = res.get('askbuild', False)
+        
+    @tornado.gen.coroutine
+    def get(self):
+        formerror = None
+        self.render('nobuild.html',
+                    formerror=formerror,
+                    isbuild=self.twisbuild,
+                    askbuild=self.twisaskbuild)
+        
+    @tornado.gen.coroutine
+    def post(self):
+        formerror = None
+        
+        if not self.twisaskbuild:
+            formerror = 'You do not have permission to ask for permission.'
+        elif (not self.get_argument('agree', False)):
+            formerror = 'You must agree to the terms.'
+        else:
+            yield motor.Op(self.application.mongodb.players.update,
+                           { '_id':self.twsession['uid'] },
+                           { '$set':{'build':True} })
+            self.twisbuild = True
+            
+        self.render('nobuild.html',
+                    formerror=formerror,
+                    isbuild=self.twisbuild,
+                    askbuild=self.twisaskbuild)
 
 class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
     """Base class for the handlers for build pages. This has some common

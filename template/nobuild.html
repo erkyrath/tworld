@@ -1,16 +1,67 @@
 {% extends "base.html" %}
 
 {% block page_title %}
-Permission Denied
+{% if isbuild %}
+  Permission Granted
+{% elif askbuild %}
+  Build Permission
+{% else %}
+  Permission Denied
+{% end %}
+{% end %}
+
+{% block head_ext %}
+<link rel="stylesheet" href="{{ static_url('css/form.css') }}" type="text/css">
 {% end %}
 
 {% block body %}
 
-<h2>Permission Denied</h2>
+{% if isbuild %}
 
-<p>
-Your account does not have build permission.
-Please contact the server administrator.
-</p>
+  <h2>Permission Granted</h2>
+
+  <p>
+  Your account has build permission!
+  <a href="/build">Go ahead and start building.</a>
+  </p>
+
+{% elif askbuild %}
+
+  <h2>Build Permission</h2>
+
+  <p>
+  If you would like build permission, please fill out the complicated
+  form below.
+  </p>
+
+<div class="AuthForm">
+<form method="post" action="/nobuild">
+ {% module xsrf_form_html() %}
+ <input type="hidden" name="register" value="true">
+ <div class="FormSection">
+  <input name="agree" type="checkbox">I solemnly swear that I will not break the server.</input>
+ </div>
+ <div class="FormSection">
+  <input class="FormButton FloatRight" name="request" type="submit" value="Agreed">
+  &nbsp;
+ </div>
+{% if formerror %}
+ <div class="FormSection FormError">
+  {{ formerror }}
+ </div>
+{% end %}
+</form>
+</div>
+
+{% else %}
+
+  <h2>Permission Denied</h2>
+
+  <p>
+  Your account does not have build permission.
+  Please contact the server administrator.
+  </p>
+
+{% end %}
 
 {% end %}

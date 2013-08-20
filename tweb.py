@@ -131,6 +131,7 @@ handlers = [
     (r'/recover', tweblib.handlers.RecoverHandler),
     (r'/logout', tweblib.handlers.LogOutHandler),
     (r'/play', tweblib.handlers.PlayHandler),
+    (r'/nobuild', tweblib.bhandlers.NoBuildHandler),
     (r'/build', tweblib.bhandlers.BuildMainHandler),
     (r'/build/world/([0-9a-f]+)', tweblib.bhandlers.BuildWorldHandler),
     (r'/build/portlist/([0-9a-f]+)', tweblib.bhandlers.BuildPortListHandler),
