@@ -79,6 +79,7 @@ class NoBuildHandler(tweblib.handlers.MyRequestHandler):
                            { '_id':self.twsession['uid'] },
                            { '$set':{'build':True} })
             self.twisbuild = True
+            self.application.twlog.info('Player requested build permission: %s', self.twsession['email'])
             
         self.render('nobuild.html',
                     formerror=formerror,
