@@ -1,6 +1,6 @@
 Tworld -- a choice-based shared online text environment sandbox
 
-Tworld pre-release version 0.01.
+Tworld pre-release version 0.10.
 Designed by Andrew Plotkin <erkyrath@eblong.com>.
 Site: <https://github.com/erkyrath/tworld>
 
@@ -14,10 +14,13 @@ collaborative sandbox of a wiki.
 
 * Caveats
 
-Tworld is still in development. It is not finished yet! The wiki-style
-building interface is still vapor. The scripting system is a rudimentary
-placeholder. The database schema is likely to change in non-compatible
-ways before Tworld hits beta, never mind 1.0.
+Tworld is still in development. It is not finished yet! I'd be willing
+to call it "beta", but with a lot of lip-pursing and squinting.
+
+The scripting language is mostly defined, but is missing large chunks
+of functionality.
+
+The database schema is not yet finalized.
 
 
 * Requirements
