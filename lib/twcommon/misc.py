@@ -69,6 +69,41 @@ def gen_datetime_parse(val):
         pass
     raise Exception('Date-time format not recognized: %s' % (val,))
 
+def timedelta_two_units(delta):
+    """Render a timedelta in English, to two units (seconds, minutes, hours,
+    days).
+    """
+    if delta <= datetime.timedelta(seconds=0):
+        return 'just now'
+
+    total_seconds = int(delta.total_seconds())
+    
+    if delta.days:
+        days = delta.days
+        hours = delta.seconds // 3600
+        time = '%d day%s' % (days, ('' if days==1 else 's'))
+        if hours:
+            time += ', %s hour%s' % (hours, ('' if hours==1 else 's'))
+        return time
+    
+    hours = total_seconds // 3600
+    minutes = (total_seconds - (hours*3600)) // 60
+    if hours:
+        time = '%s hour%s' % (hours, ('' if hours==1 else 's'))
+        if minutes:
+            time += ', %s minute%s' % (minutes, ('' if minutes==1 else 's'))
+        return time
+
+    seconds = total_seconds - (minutes*60)
+    if minutes:
+        time = '%s minute%s' % (minutes, ('' if minutes==1 else 's'))
+        if seconds:
+            time += ', %s second%s' % (seconds, ('' if seconds==1 else 's'))
+        return time
+
+    time = '%s second%s' % (seconds, ('' if seconds==1 else 's'))
+    return time
+
 def is_typed_dict(obj, typ):
     """Returns true if obj is a dict and has a field 'type'=typ.
     """
