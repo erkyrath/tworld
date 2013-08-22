@@ -176,7 +176,9 @@ class MainHandler(MyRequestHandler):
                 name = None
             self.render('main.html', init_name=name)
         else:
-            self.render('main_auth.html')
+            connectedlist = yield self.application.tworld_players_connected_list()
+            self.render('main_auth.html',
+                        connectedlist=connectedlist)
 
     @tornado.gen.coroutine
     def post(self):

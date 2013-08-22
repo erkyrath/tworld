@@ -262,12 +262,100 @@ class TwebApplication(tornado.web.Application):
         twcommon.autoreload.autoreload()
         sys.exit(0)   # Should not reach here
 
+    def tworld_players_connected_count(self):
+        """How many players are currently connected? This is fast.
+        """
+        return self.twconntable.count()
+
+    @tornado.gen.coroutine
+    def tworld_players_connected_list(self):
+        """Return a list of structures representing connected players
+        and where they are. This is relatively slow and you probably
+        don't want it exposed to web-crawlers.
+        (Since this is yieldy, I can't make it generally available
+        as a ui_method.)
+        """
+        try:
+            players = self.twconntable.all()
+            # Sort by idle time, most-active first.
+            players.sort(key=lambda player: player.lastmsgtime)
+            # Limit how much work we'll do
+            players = players[0:10]
+            self.twlog.debug('#### A: players %s', players)
+            # Get a (possibly shorter) list of uids for these players
+            ls = [ player.uid for player in players ]
+            ls = list(set(ls))
+            self.twlog.debug('#### B: ls %s', ls)
+            # Look up the names of these players
+            namemap = {}
+            if ls:
+                cursor = self.mongodb.players.find({'_id':{'$in':ls}},
+                                                   {'name':1})
+                while (yield cursor.fetch_next):
+                    res = cursor.next_object()
+                    if res.get('name', None):
+                        namemap[res['_id']] = res['name']
+                # cursor autoclose
+            self.twlog.debug('#### namemap: %s', namemap)
+            # Now look up their instance IDs
+            iidmap = {}
+            if ls:
+                cursor = self.mongodb.playstate.find({'_id':{'$in':ls}},
+                                                     {'iid':1})
+                while (yield cursor.fetch_next):
+                    res = cursor.next_object()
+                    if res.get('iid', None):
+                        iidmap[res['_id']] = res['iid']
+                # cursor autoclose
+            self.twlog.debug('#### iidmap: %s', iidmap)
+            # Look up the world IDs for these instances.
+            widmap = {}
+            ls = list(set(iidmap.values()))
+            if ls:
+                cursor = self.mongodb.instances.find({'_id':{'$in':ls}},
+                                                     {'wid':1})
+                while (yield cursor.fetch_next):
+                    res = cursor.next_object()
+                    if res.get('wid', None):
+                        widmap[res['_id']] = res['wid']
+                # cursor autoclose
+            self.twlog.debug('#### widmap: %s', widmap)
+            # Finally, look up the world names for these worlds.
+            worldnamemap = {}
+            ls = list(set(widmap.values()))
+            if ls:
+                cursor = self.mongodb.worlds.find({'_id':{'$in':ls}},
+                                                  {'name':1})
+                while (yield cursor.fetch_next):
+                    res = cursor.next_object()
+                    worldnamemap[res['_id']] = res.get('name', '???')
+                # cursor autoclose
+            self.twlog.debug('#### worldnamemap: %s', worldnamemap)
+            # Now construct the result array.
+            res = []
+            for player in players:
+                iid = iidmap.get(player.uid, None)
+                wid = None
+                worldname = '(in transition)'
+                if iid:
+                    wid = widmap.get(iid, None)
+                if wid:
+                    worldname = worldnamemap.get(wid, None)
+                val = { 'name':namemap.get(player.uid, '???'),
+                        'world':worldname }
+                res.append(val)
+            self.twlog.debug('#### res: %s', res)
+            return res
+        except Exception as ex:
+            self.twlog.error('tworld_players_connected_list failed', exc_info=True)
+            return []
+
 application = TwebApplication(
     handlers,
     ui_methods={
         'tworld_app_title': lambda handler:opts.app_title,
         'tworld_app_banner': lambda handler:opts.app_banner,
-        'tworld_players_connected': lambda handler:handler.application.twconntable.count(),
+        'tworld_connected_count': lambda handler:handler.application.tworld_players_connected_count(),
         },
     **appoptions)
 
