@@ -1,0 +1,6 @@
+# Tworld library requirements (from "pip3 freeze")
+
+greenlet>=0.4.0
+motor==0.1
+pymongo==2.5.0
+tornado==3.1
