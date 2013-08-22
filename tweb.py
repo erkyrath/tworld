@@ -278,7 +278,7 @@ class TwebApplication(tornado.web.Application):
         try:
             players = self.twconntable.all()
             # Sort by idle time, most-active first.
-            players.sort(key=lambda player: player.lastmsgtime)
+            players.sort(key=lambda player:player.lastmsgtime, reverse=True)
             # Limit how much work we'll do
             players = players[0:12]
             # Get a (possibly shorter) list of uids for these players
@@ -326,6 +326,8 @@ class TwebApplication(tornado.web.Application):
                     worldnamemap[res['_id']] = res.get('name', '???')
                 # cursor autoclose
             # Now construct the result array.
+            now = twcommon.misc.now()
+            mindelta = datetime.timedelta(minutes=5)
             res = []
             for player in players:
                 iid = iidmap.get(player.uid, None)
@@ -335,7 +337,15 @@ class TwebApplication(tornado.web.Application):
                     wid = widmap.get(iid, None)
                 if wid:
                     worldname = worldnamemap.get(wid, None)
+                # Work out how long they've been idle. This should be in
+                # a utility module somewhere.
+                delta = now - player.lastmsgtime
+                if (delta < mindelta):
+                    time = 'active'
+                else:
+                    time = twcommon.misc.timedelta_two_units(delta)
                 val = { 'name':namemap.get(player.uid, '???'),
+                        'idle':time,
                         'world':worldname }
                 res.append(val)
             return res
