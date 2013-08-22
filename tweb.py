@@ -267,6 +267,7 @@ application = TwebApplication(
     ui_methods={
         'tworld_app_title': lambda handler:opts.app_title,
         'tworld_app_banner': lambda handler:opts.app_banner,
+        'tworld_players_connected': lambda handler:handler.application.twconntable.count(),
         },
     **appoptions)
 

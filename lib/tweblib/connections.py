@@ -42,6 +42,11 @@ class ConnectionTable(object):
         """
         return dict(self.table)
 
+    def count(self):
+        """The number of player connections.
+        """
+        return len(self.table)
+
     def for_uid(self, uid):
         """A list of player connections for a given player. (May be empty.)
         """
