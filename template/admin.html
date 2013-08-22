@@ -36,6 +36,11 @@ Admin View
 
 <form method="post" action="/admin"><p>
  {% module xsrf_form_html() %}
+ <input name="clearcaches" type="submit" value="Clear Web Server Caches">
+</p></form>
+
+<form method="post" action="/admin"><p>
+ {% module xsrf_form_html() %}
  <input name="playerconntable" type="submit" value="Check Player Connections">
 </p></form>
 

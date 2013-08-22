@@ -53,7 +53,21 @@ class AdminMainHandler(AdminBaseHandler):
         if (self.get_argument('playerconntable', None)):
             msg = { 'cmd':'logplayerconntable' }
             self.application.twservermgr.tworld_write(0, msg)
-        self.redirect('/admin')
+            self.redirect('/admin')
+            return
+        if (self.get_argument('clearcaches', None)):
+            def func(self):
+                # This code is snarfed from Tornado's web.py. May break
+                # in future Tornado versions.
+                with tornado.web.RequestHandler._template_loader_lock:
+                    for loader in tornado.web.RequestHandler._template_loaders.values():
+                        loader.reset()
+                    tornado.web.StaticFileHandler.reset()
+                self.application.twlog.warning('Admin command: cleared all web caches.')
+            tornado.ioloop.IOLoop.instance().add_callback(func, self)
+            self.redirect('/admin')
+            return
+        raise Exception('Unknown admin page button')
 
 class AdminSessionsHandler(AdminBaseHandler):
     """Handler for the Admin page which displays recent sessions.
