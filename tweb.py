@@ -280,12 +280,10 @@ class TwebApplication(tornado.web.Application):
             # Sort by idle time, most-active first.
             players.sort(key=lambda player: player.lastmsgtime)
             # Limit how much work we'll do
-            players = players[0:10]
-            self.twlog.debug('#### A: players %s', players)
+            players = players[0:12]
             # Get a (possibly shorter) list of uids for these players
             ls = [ player.uid for player in players ]
             ls = list(set(ls))
-            self.twlog.debug('#### B: ls %s', ls)
             # Look up the names of these players
             namemap = {}
             if ls:
@@ -296,7 +294,6 @@ class TwebApplication(tornado.web.Application):
                     if res.get('name', None):
                         namemap[res['_id']] = res['name']
                 # cursor autoclose
-            self.twlog.debug('#### namemap: %s', namemap)
             # Now look up their instance IDs
             iidmap = {}
             if ls:
@@ -307,7 +304,6 @@ class TwebApplication(tornado.web.Application):
                     if res.get('iid', None):
                         iidmap[res['_id']] = res['iid']
                 # cursor autoclose
-            self.twlog.debug('#### iidmap: %s', iidmap)
             # Look up the world IDs for these instances.
             widmap = {}
             ls = list(set(iidmap.values()))
@@ -319,7 +315,6 @@ class TwebApplication(tornado.web.Application):
                     if res.get('wid', None):
                         widmap[res['_id']] = res['wid']
                 # cursor autoclose
-            self.twlog.debug('#### widmap: %s', widmap)
             # Finally, look up the world names for these worlds.
             worldnamemap = {}
             ls = list(set(widmap.values()))
@@ -330,7 +325,6 @@ class TwebApplication(tornado.web.Application):
                     res = cursor.next_object()
                     worldnamemap[res['_id']] = res.get('name', '???')
                 # cursor autoclose
-            self.twlog.debug('#### worldnamemap: %s', worldnamemap)
             # Now construct the result array.
             res = []
             for player in players:
@@ -344,7 +338,6 @@ class TwebApplication(tornado.web.Application):
                 val = { 'name':namemap.get(player.uid, '???'),
                         'world':worldname }
                 res.append(val)
-            self.twlog.debug('#### res: %s', res)
             return res
         except Exception as ex:
             self.twlog.error('tworld_players_connected_list failed', exc_info=True)
