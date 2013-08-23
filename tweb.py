@@ -264,8 +264,11 @@ class TwebApplication(tornado.web.Application):
 
     def tworld_players_connected_count(self):
         """How many players are currently connected? This is fast.
+        Well, fairly fast -- it doesn't do any database access.
         """
-        return self.twconntable.count()
+        players = self.twconntable.all()
+        ls = [ player.uid for player in players ]
+        return len(set(ls))
 
     @tornado.gen.coroutine
     def tworld_players_connected_list(self):
@@ -279,11 +282,20 @@ class TwebApplication(tornado.web.Application):
             players = self.twconntable.all()
             # Sort by idle time, most-active first.
             players.sort(key=lambda player:player.lastmsgtime, reverse=True)
-            # Limit how much work we'll do
-            players = players[0:12]
-            # Get a (possibly shorter) list of uids for these players
-            ls = [ player.uid for player in players ]
-            ls = list(set(ls))
+            # Limit how much work we'll do; the first N (unique) players.
+            ls = []
+            tempset = set()
+            for player in players:
+                if len(ls) >= 12:
+                    break
+                if player.uid in tempset:
+                    continue
+                tempset.add(player.uid)
+                ls.append(player)
+            players = ls
+            ls = list(tempset)
+            # At this point, ls is a list of uids, and players is a list of
+            # Connection objects.
             # Look up the names of these players
             namemap = {}
             if ls:
