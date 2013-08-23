@@ -622,6 +622,7 @@ def define_commands():
         conn.write({'cmd':'message', 'text':'Quick help:'})
         conn.write({'cmd':'message', 'text':'Type to speak out loud (to nearby players). A message that begins with a colon (\u201C:dance\u201D) will appear as a pose (\u201CBelford dances\u201D).'})
         conn.write({'cmd':'message', 'text':'Other commands:'})
+        conn.write({'cmd':'message', 'text':'/shout text: Send message to all players in the same world (instance) as you.'})
         conn.write({'cmd':'message', 'text':'/refresh: Reload the current location. (Or you can use your browser\'s refresh button.)'})
         conn.write({'cmd':'message', 'text':'/panic: Jump to your selected panic location. \xA0 /panicstart: Jump back to the start world.'})
         conn.write({'cmd':'message', 'text':'/playstate: Display your identity and location, with database IDs.'})
@@ -666,6 +667,30 @@ def define_commands():
                 msg = 'Location: "%s" (%s).' % (loc['name'], loctx.locid)
                 conn.write({'cmd':'message', 'text':msg})
         
+    @command('meta_shout')
+    def cmd_say(app, task, cmd, conn):
+        res = yield motor.Op(app.mongodb.players.find_one,
+                             {'_id':conn.uid},
+                             {'name':1})
+        playername = res['name']
+        if not cmd.args:
+            raise MessageException('You\'ll have to say what you\'re shouting.')
+        text = ' '.join(cmd.args)
+        if text.endswith('?'):
+            (say, says) = ('ask', 'asks')
+        elif text.endswith('!'):
+            (say, says) = ('exclaim', 'exclaims')
+        else:
+            (say, says) = ('say', 'says')
+        oval = 'Realm message: %s %s, \u201C%s\u201D' % (playername, says, text,)
+        loctx = yield task.get_loctx(conn.uid)
+        others = yield task.find_location_players(loctx.iid, None)
+        for obj in others:
+            subls = app.playconns.get_for_uid(obj)
+            if subls:
+                for conn in subls:
+                    conn.write({'cmd':'message', 'text':oval})
+
     @command('meta_scopeaccess', restrict='debug')
     def cmd_meta_scopeaccess(app, task, cmd, conn):
         loctx = yield task.get_loctx(conn.uid)
