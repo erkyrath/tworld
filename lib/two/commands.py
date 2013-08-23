@@ -674,15 +674,9 @@ def define_commands():
                              {'name':1})
         playername = res['name']
         if not cmd.args:
-            raise MessageException('You\'ll have to say what you\'re shouting.')
+            raise MessageException('No message given.')
         text = ' '.join(cmd.args)
-        if text.endswith('?'):
-            (say, says) = ('ask', 'asks')
-        elif text.endswith('!'):
-            (say, says) = ('exclaim', 'exclaims')
-        else:
-            (say, says) = ('say', 'says')
-        oval = 'Realm message: %s %s, \u201C%s\u201D' % (playername, says, text,)
+        oval = 'Realm message from %s: %s' % (playername, text,)
         loctx = yield task.get_loctx(conn.uid)
         others = yield task.find_location_players(loctx.iid, None)
         for obj in others:
