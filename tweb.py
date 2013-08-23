@@ -343,7 +343,7 @@ class TwebApplication(tornado.web.Application):
                 if (delta < mindelta):
                     time = 'active'
                 else:
-                    time = twcommon.misc.timedelta_two_units(delta)
+                    time = 'idle ' + twcommon.misc.timedelta_two_units(delta)
                 val = { 'name':namemap.get(player.uid, '???'),
                         'idle':time,
                         'world':worldname }
