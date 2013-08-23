@@ -788,6 +788,8 @@ class EvalPropContext(object):
         while True:
             testval = yield self.execcode_expr(nod.test)
             if not testval:
+                for subnod in nod.orelse:
+                    res = yield self.execcode_statement(subnod)
                 return
             try:
                 for subnod in nod.body:
