@@ -15,7 +15,7 @@ import motor
 import twcommon.misc
 from twcommon.excepts import MessageException, ErrorMessageException
 from twcommon.excepts import SymbolError, ExecRunawayException, ExecSandboxException
-from twcommon.excepts import ReturnException
+from twcommon.excepts import ReturnException, LoopBodyException, BreakException, ContinueException
 import two.task
 
 # Options for evaluating a thingy -- what kind of thingy is it?
@@ -388,6 +388,8 @@ class EvalPropContext(object):
                     raise ExecRunawayException('Script ran too deep; aborting!')
                 yield self.interpolate_text(res.get('text', ''))
                 return Accumulated
+            except LoopBodyException as ex:
+                raise Exception('"%s" outside loop' % (ex.statement,))
             except ReturnException as ex:
                 ### use ex.returnvalue?
                 return Accumulated
@@ -410,6 +412,8 @@ class EvalPropContext(object):
                     raise ExecRunawayException('Script ran too deep; aborting!')
                 newres = yield self.execute_code(res.get('text', ''), originlabel=key)
                 return newres
+            except LoopBodyException as ex:
+                raise Exception('"%s" outside loop' % (ex.statement,))
             except ReturnException as ex:
                 return ex.returnvalue
             finally:
@@ -473,6 +477,12 @@ class EvalPropContext(object):
             return res
         if nodtyp is ast.Return:
             res = yield self.execcode_return(nod)
+            assert False, 'Should not get here'
+        if nodtyp is ast.Break:
+            res = yield self.execcode_break(nod)
+            assert False, 'Should not get here'
+        if nodtyp is ast.Continue:
+            res = yield self.execcode_continue(nod)
             assert False, 'Should not get here'
         if nodtyp is ast.Pass:
             return None
@@ -777,6 +787,14 @@ class EvalPropContext(object):
         else:
             val = yield self.execcode_expr(nod.value)
         raise ReturnException(returnvalue=val)
+        
+    @tornado.gen.coroutine
+    def execcode_break(self, nod):
+        raise BreakException
+        
+    @tornado.gen.coroutine
+    def execcode_continue(self, nod):
+        raise ContinueException
         
     @tornado.gen.coroutine
     def execcode_assign(self, nod):

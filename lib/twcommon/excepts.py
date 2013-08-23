@@ -40,10 +40,12 @@ class ReturnException(ExecutionException):
         self.returnvalue = returnvalue
 
 class LoopBodyException(ExecutionException):
-    pass
+    """Base class for Break and Continue.
+    """
+    statement = '???'
 
 class BreakException(LoopBodyException):
-    pass
+    statement = 'break'
 
 class ContinueException(LoopBodyException):
-    pass
+    statement = 'continue'
