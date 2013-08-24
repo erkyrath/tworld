@@ -478,6 +478,9 @@ class EvalPropContext(object):
         if nodtyp is ast.While:
             res = yield self.execcode_while(nod)
             return res
+        if nodtyp is ast.For:
+            res = yield self.execcode_for(nod)
+            return res
         if nodtyp is ast.Return:
             res = yield self.execcode_return(nod)
             assert False, 'Should not get here'
@@ -788,9 +791,7 @@ class EvalPropContext(object):
         while True:
             testval = yield self.execcode_expr(nod.test)
             if not testval:
-                for subnod in nod.orelse:
-                    res = yield self.execcode_statement(subnod)
-                return
+                break
             try:
                 for subnod in nod.body:
                     res = yield self.execcode_statement(subnod)
@@ -798,6 +799,24 @@ class EvalPropContext(object):
                 pass
             except BreakException:
                 return
+        for subnod in nod.orelse:
+            res = yield self.execcode_statement(subnod)
+        
+    @tornado.gen.coroutine
+    def execcode_for(self, nod):
+        target = yield self.execcode_expr_store(nod.target)
+        iter = yield self.execcode_expr(nod.iter)
+        for val in iter:
+            yield target.store(self, self.loctx, val)
+            try:
+                for subnod in nod.body:
+                    res = yield self.execcode_statement(subnod)
+            except ContinueException:
+                pass
+            except BreakException:
+                return
+        for subnod in nod.orelse:
+            res = yield self.execcode_statement(subnod)
         
     @tornado.gen.coroutine
     def execcode_return(self, nod):
