@@ -440,8 +440,6 @@ class EvalPropContext(object):
         tree = ast.parse(text, filename=originlabel)
         assert type(tree) is ast.Module
 
-        ### probably catch some run-exceptions here
-
         res = None
         for nod in tree.body:
             res = yield self.execcode_statement(nod)
@@ -451,7 +449,6 @@ class EvalPropContext(object):
     def execcode_statement(self, nod):
         self.task.tick()
         nodtyp = type(nod)
-        ### This should be a faster lookup table
         if nodtyp is ast.Expr:
             res = yield self.execcode_expr(nod.value)
             if res is not None and type(res) is dict and 'type' in res:
@@ -463,33 +460,12 @@ class EvalPropContext(object):
                 res = yield self.invoke_typed_dict(res, symbol)
                 return res
             return res
-        if nodtyp is ast.Assign:
-            res = yield self.execcode_assign(nod)
+        # Use lookup table for most cases. The lookup table winds up containing
+        # unbound method handlers, so we need to pass self.
+        han = self.execcode_statement_handlers.get(nodtyp, None)
+        if han:
+            res = yield han(self, nod)
             return res
-        if nodtyp is ast.AugAssign:
-            res = yield self.execcode_augassign(nod)
-            return res
-        if nodtyp is ast.Delete:
-            res = yield self.execcode_delete(nod)
-            return res
-        if nodtyp is ast.If:
-            res = yield self.execcode_if(nod)
-            return res
-        if nodtyp is ast.While:
-            res = yield self.execcode_while(nod)
-            return res
-        if nodtyp is ast.For:
-            res = yield self.execcode_for(nod)
-            return res
-        if nodtyp is ast.Return:
-            res = yield self.execcode_return(nod)
-            assert False, 'Should not get here'
-        if nodtyp is ast.Break:
-            res = yield self.execcode_break(nod)
-            assert False, 'Should not get here'
-        if nodtyp is ast.Continue:
-            res = yield self.execcode_continue(nod)
-            assert False, 'Should not get here'
         if nodtyp is ast.Pass:
             return None
         raise NotImplementedError('Script statement type not implemented: %s' % (nodtyp.__name__,))
@@ -525,46 +501,15 @@ class EvalPropContext(object):
     def execcode_expr(self, nod):
         self.task.tick()
         nodtyp = type(nod)
-        ### This should be a faster lookup table
-        if nodtyp is ast.Name:
-            res = yield self.execcode_name(nod)
-            return res
         if nodtyp is ast.Str:
             return nod.s
         if nodtyp is ast.Num:
             return nod.n  # covers floats and ints
-        if nodtyp is ast.List:
-            res = yield self.execcode_list(nod)
-            return res
-        if nodtyp is ast.Tuple:
-            res = yield self.execcode_tuple(nod)
-            return res
-        if nodtyp is ast.Set:
-            res = yield self.execcode_set(nod)
-            return res
-        if nodtyp is ast.Dict:
-            res = yield self.execcode_dict(nod)
-            return res
-        if nodtyp is ast.UnaryOp:
-            res = yield self.execcode_unaryop(nod)
-            return res
-        if nodtyp is ast.BinOp:
-            res = yield self.execcode_binop(nod)
-            return res
-        if nodtyp is ast.BoolOp:
-            res = yield self.execcode_boolop(nod)
-            return res
-        if nodtyp is ast.Compare:
-            res = yield self.execcode_compare(nod)
-            return res
-        if nodtyp is ast.Attribute:
-            res = yield self.execcode_attribute(nod)
-            return res
-        if nodtyp is ast.Subscript:
-            res = yield self.execcode_subscript(nod)
-            return res
-        if nodtyp is ast.Call:
-            res = yield self.execcode_call(nod)
+        # Use lookup table for most cases. The lookup table winds up containing
+        # unbound method handlers, so we need to pass self.
+        han = self.execcode_expr_handlers.get(nodtyp, None)
+        if han:
+            res = yield han(self, nod)
             return res
         raise NotImplementedError('Script expression type not implemented: %s' % (nodtyp.__name__,))
 
@@ -863,6 +808,34 @@ class EvalPropContext(object):
             target = yield self.execcode_expr_store(subnod)
             yield target.delete(self, self.loctx)
         return None
+
+    # Some lookup tables of node handlers
+    execcode_expr_handlers = {
+        ast.Name: execcode_name,
+        ast.List: execcode_list,
+        ast.Tuple: execcode_tuple,
+        ast.Set: execcode_set,
+        ast.Dict: execcode_dict,
+        ast.UnaryOp: execcode_unaryop,
+        ast.BinOp: execcode_binop,
+        ast.BoolOp: execcode_boolop,
+        ast.Compare: execcode_compare,
+        ast.Attribute: execcode_attribute,
+        ast.Subscript: execcode_subscript,
+        ast.Call: execcode_call,
+        }
+
+    execcode_statement_handlers = {
+        ast.Assign: execcode_assign,
+        ast.AugAssign: execcode_augassign,
+        ast.Delete: execcode_delete,
+        ast.If: execcode_if,
+        ast.While: execcode_while,
+        ast.For: execcode_for,
+        ast.Return: execcode_return,
+        ast.Break: execcode_break,
+        ast.Continue: execcode_continue,
+        }
 
     @tornado.gen.coroutine
     def replace_argspec_defaults(self, argspec):
