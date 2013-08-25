@@ -915,7 +915,7 @@ def define_commands():
         loctx = yield task.get_loctx(conn.uid)
         ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
         try:
-            newval = yield ctx.eval(code, evaltype=EVALTYPE_CODE)
+            newval = yield ctx.eval(code, evaltype=EVALTYPE_CODE, locals=conn.debuglocals)
             if ctx.accum:
                 printed = ''.join([str(val) for val in ctx.accum])
                 conn.write({'cmd':'event', 'text':'Eval printed: %s' % (printed,)})

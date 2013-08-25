@@ -131,6 +131,9 @@ class PlayerConnection(object):
         self.focusdependencies = set()
         self.populacedependencies = set()
 
+        # Only used by the /eval command.
+        self.debuglocals = {}
+
     def __repr__(self):
         return '<PlayerConnection (%d): %s>' % (self.connid, self.email,)
 
