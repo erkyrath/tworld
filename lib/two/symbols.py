@@ -899,6 +899,8 @@ def define_globals():
     globmap['int'] = int
     globmap['str'] = str
     globmap['bool'] = bool
+    globmap['list'] = list
+    globmap['dict'] = dict
     globmap['len'] = len
     globmap['max'] = max
     globmap['min'] = min
