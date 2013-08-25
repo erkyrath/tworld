@@ -941,8 +941,8 @@ def define_globals():
 type_getattr_table = {
     datetime.timedelta: set(['days', 'max', 'microseconds', 'min', 'resolution', 'seconds', 'total_seconds']),
     datetime.datetime: set(['min', 'max', 'resolution', 'year', 'month', 'day', 'hour', 'minute', 'second', 'microsecond']),
-    str: set(['capitalize', 'casefold', 'center', 'count', 'endswith', 'find', 'index', 'isalnum', 'isalpha', 'isdecimal', 'isdigit', 'isidentifier', 'islower', 'isnumeric', 'isprintable', 'isspace', 'istitle', 'isupper', 'join', 'ljust', 'lower', 'lstrip', 'partition', 'replace', 'rfind', 'rindex', 'rjust', 'rpartition', 'rsplit', 'rstrip', 'split', 'splitlines', 'startswith', 'strip', 'swapcase', 'title', 'upper', 'zfill']),
-    list: set(['append', 'clear', 'copy', 'count', 'extend', 'index', 'insert', 'pop', 'remove', 'reverse', 'sort']),
+    str: set(['capitalize', 'casefold', 'center', 'count', 'endswith', 'find', 'index', 'isalnum', 'isalpha', 'isdecimal', 'isdigit', 'isidentifier', 'islower', 'isnumeric', 'isprintable', 'isspace', 'istitle', 'isupper', 'join', 'ljust', 'lower', 'lstrip', 'partition', 'replace', 'rfind', 'rindex', 'rjust', 'rpartition', 'rsplit', 'rstrip', 'split', 'splitlines', 'startswith', 'strip', 'swapcase', 'title', 'upper', 'zfill']),  # omitted for callness: 'format', 'format_map'
+    list: set(['append', 'clear', 'copy', 'count', 'extend', 'index', 'insert', 'pop', 'remove', 'reverse']),  # omitted for callness: 'sort'
     dict: set(['clear', 'copy', 'fromkeys', 'get', 'items', 'keys', 'pop', 'popitem', 'setdefault', 'update', 'values']),
     }
 
