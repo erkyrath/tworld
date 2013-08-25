@@ -688,6 +688,7 @@ class EvalPropContext(object):
             starargs = yield self.execcode_expr(nod.kwargs)
             # Python semantics say we should reject duplicate kwargs here
             kwargs.update(starargs)
+            
         if isinstance(funcval, two.symbols.ScriptFunc):
             if not funcval.yieldy:
                 return funcval.func(*args, **kwargs)
@@ -710,6 +711,7 @@ class EvalPropContext(object):
                 return None
             newval = yield self.evalobj(val, evaltype=EVALTYPE_CODE, locals=locals)
             return newval
+        ### Validate that funcval is a safe thing to call!
         # This will raise TypeError if funcval is not callable.
         return funcval(*args, **kwargs)
         
