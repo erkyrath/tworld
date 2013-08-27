@@ -488,6 +488,16 @@ class EvalPropContext(object):
             if isinstance(argument, two.execute.PropertyProxyMixin):
                 return two.execute.BoundPropertyProxy(argument, key)
             raise ExecSandboxException('%s.%s: setattr not allowed' % (type(argument).__name__, key))
+        if nodtyp is ast.Subscript:
+            argument = yield self.execcode_expr(nod.value)
+            slice = nod.slice
+            if type(slice) is not ast.Index:
+                raise NotImplementedError('Subscript slices are not supported')
+            subscript = yield self.execcode_expr(slice.value)
+            if isinstance(argument, two.execute.PropertyProxyMixin):
+                # Special case: property proxies can be accessed by subscript.
+                return two.execute.BoundPropertyProxy(argument, subscript)
+            return two.execute.BoundSubscriptProxy(argument, subscript)
         if nodtyp in (ast.Tuple, ast.List):
             ls = []
             for subnod in nod.elts:

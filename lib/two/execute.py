@@ -375,6 +375,28 @@ class BoundNameProxy(object):
                        upsert=True)
         ctx.task.changeset.add( ('instanceprop', iid, locid, key) )
 
+class BoundSubscriptProxy(object):
+    """A load/store/delete object for a subscript expression. This
+    represents the left-hand side of an "x[y] = ..." expression.
+    (But not "x[y:z]" -- that's not yet implemented.)
+    """
+    
+    def __init__(self, arg, subscript):
+        self.arg = arg
+        self.subscript = subscript
+
+    @tornado.gen.coroutine
+    def load(self, ctx, loctx):
+        return self.arg[self.subscript]
+    
+    @tornado.gen.coroutine
+    def delete(self, ctx, loctx):
+        del self.arg[self.subscript]
+    
+    @tornado.gen.coroutine
+    def store(self, ctx, loctx, val):
+        self.arg[self.subscript] = val
+
 class MultiBoundProxy(object):
     """A load/delete/store object for a tuple of l/d/s objects. This
     represents the left-hand side of an "(x, y, z) = (1, 2, 3)" statement.
