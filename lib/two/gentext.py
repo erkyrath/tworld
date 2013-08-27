@@ -79,16 +79,19 @@ bare_node_class_map = {
     'Comma': CommaNode, 'COMMA': CommaNode,
     }
 
+call_node_class_map = {
+    'Seq': SeqNode,
+    'Alt': AltNode,
+    }
+
 def evalnode(nod, prefix=b''):
     nodtyp = type(nod)
     
     if nodtyp is ast.Str:
-        if not nod.s:
-            return None
         return nod.s
         
     if nodtyp is ast.Num:
-        return str(nod.n)
+        return nod.n
         
     if nodtyp is ast.List:
         ls = []
@@ -112,13 +115,47 @@ def evalnode(nod, prefix=b''):
         symbol = nod.id
         if symbol == 'None':
             return None
+        if symbol == 'True':
+            return True
+        if symbol == 'False':
+            return False
         if symbol in bare_node_class_map:
             cla = bare_node_class_map[symbol]
             # Prefixes not needed for these
             return cla()
+        if symbol in call_node_class_map:
+            raise GenTextSyntaxError('special node requires arguments: %s' % (symbol,))
         if symbol == twcommon.misc.sluggify(symbol):
             return SymbolNode(symbol)
         raise GenTextSyntaxError('not a special node or database key: %s' % (symbol,))
+
+    if nodtyp is ast.Call:
+        if type(nod.func) is not ast.Name:
+            raise GenTextSyntaxError('only literals may be called')
+        symbol = nod.func.id
+        if symbol in bare_node_class_map:
+            cla = bare_node_class_map[symbol]
+            # Prefixes not needed for these
+            return cla()
+        if symbol in call_node_class_map:
+            cla = call_node_class_map[symbol]
+            ### arguments
+            args = []
+            for (ix, subnod) in enumerate(nod.args):
+                pre = ':arg_'+str(ix)
+                args.append(evalnode(subnod, prefix=prefix+pre.encode()))
+            if nod.starargs:
+                raise GenTextSyntaxError('*args not supported')
+            kwargs = {}
+            for subnod in nod.keywords:
+                pre = ':kwarg_'+subnod.arg
+                kwargs[subnod.arg] = evalnode(subnod.value, prefix=prefix+pre.encode())
+            if nod.kwargs:
+                raise GenTextSyntaxError('**kwargs not supported')
+            res = cla(*args, **kwargs)
+            res.prefix = prefix
+            return res
+        raise GenTextSyntaxError('not a special node: %s()' % (symbol,))
 
     raise GenTextSyntaxError('Expression type not implemented: %s' % (nodtyp.__name__,))
         
