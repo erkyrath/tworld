@@ -86,6 +86,13 @@ call_node_class_map = {
 
 def evalnode(nod, prefix=b''):
     nodtyp = type(nod)
+
+    # We handle simple types (int, float, str, bool, None) as themselves.
+    # This is because we use the same evaluator for node arguments, some
+    # of which are flags or strings or numbers.
+    #
+    # On the other hand, we turn lists and tuples into SeqNode and AltNode
+    # objects. Hope I don't need those as arguments anywhere.
     
     if nodtyp is ast.Str:
         return nod.s
