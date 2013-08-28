@@ -35,6 +35,7 @@ var property_type_selectors = [
     { value:'event', text:'Event' },
     { value:'panic', text:'Panic' },
     { value:'editstr', text:'EditStr' },
+    { value:'gentext', text:'GenText' },
     { value:'portlist', text:'PortList' },
     { value:'datetime', text:'DateTime' },
     { value:'value', text:'Value' },
@@ -165,6 +166,9 @@ function update_prop(tableref, prop, nocopy) {
         editls = [ { key:'text', val:prop.val.text, label:'Text' } ];
     }
     else if (valtype == 'code') {
+        editls = [ { key:'text', val:prop.val.text, label:'Code' } ];
+    }
+    else if (valtype == 'gentext') {
         editls = [ { key:'text', val:prop.val.text, label:'Code' } ];
     }
     else if (valtype == 'codearg') {

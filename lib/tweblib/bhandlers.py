@@ -260,6 +260,12 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
                 res['text'] = prop['text']
                 twcommon.interp.parse(res['text'])
             return res
+        if valtype == 'gentext':
+            res = { 'type':valtype }
+            if 'text' in prop:
+                res['text'] = prop['text']
+                ### Ideally, do a test parse here
+            return res
         if valtype == 'code' or valtype == 'codearg':
             res = { 'type':'code' }
             if 'text' in prop:
