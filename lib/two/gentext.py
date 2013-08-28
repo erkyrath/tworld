@@ -105,6 +105,8 @@ class SeqNode(NodeClass):
         sys.stdout.write('\n')
         for nod in self.nodes:
             gentext.dump(depth+1, nod)
+            
+    @tornado.gen.coroutine
     def perform(self, ctx, propname, gentext):
         for nod in self.nodes:
             yield gentext.perform(ctx, propname, nod)
@@ -116,7 +118,20 @@ class AltNode(NodeClass):
         sys.stdout.write('\n')
         for nod in self.nodes:
             gentext.dump(depth+1, nod)
+            
+    @tornado.gen.coroutine
+    def perform(self, ctx, propname, gentext):
+        count = len(self.nodes)
+        if not count:
+            return
+        if count == 1:
+            nod = self.nodes[0]
+        else:
+            seed = self.computeseed(ctx.genseed, propname)
+            nod = self.nodes[seed % len(self.nodes)]
+        gentext.dump(depth+1, nod)
 
+        
 class ANode(NodeClass):
     pass
 
