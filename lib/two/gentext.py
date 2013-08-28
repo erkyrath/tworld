@@ -3,18 +3,32 @@ The code structures for procedural text generation.
 """
 
 import sys
+import hashlib
+import struct
 import ast
 
 import twcommon.misc
+
+RootPlaceholder = twcommon.misc.SuiGeneris('RootPlaceholder')
 
 class GenTextSyntaxError(SyntaxError):
     pass
 
 class GenText(object):
+    """Represents a complete parsed {gentext} object. This is just a thin
+    wrapper around a node, or tree of nodes.
+
+    (A node may be a NodeClass object or a native type, so it's handy
+    to have this wrapper.)
+    """
+    
     def __init__(self, nod):
         self.nod = nod
-    def dump(self, depth=0, nod=None):
-        if depth == 0:
+        
+    def dump(self, depth=0, nod=RootPlaceholder):
+        """Print out the contents of the node tree. For debugging only.
+        """
+        if nod is RootPlaceholder:
             nod = self.nod
         sys.stdout.write('  '*depth + repr(nod))
         if isinstance(nod, NodeClass):
@@ -22,16 +36,60 @@ class GenText(object):
         else:
             sys.stdout.write('\n')
 
+    @tornado.gen.coroutine
+    def perform(self, ctx, propname, nod=RootPlaceholder):
+        """Generate text (to ctx.accum). This is yieldy, since it may have
+        to check properties.
+
+        The propname should be a bytes; it will be prepended to node
+        prefixes.
+        """
+        if nod is RootPlaceholder:
+            nod = self.nod
+
+        if nod is None:
+            return
+        if not isinstance(nod, NodeClass):
+            ctx.accum.append(str(nod))
+            return
+        yield nod.perform(ctx, propname, self)
+
 class NodeClass(object):
+    """Virtual base class for gentext nodes -- the ones that aren't
+    native types, that is.
+    """
     prefix = b''
+    
     def __repr__(self):
         if not self.prefix:
             return "<%s>" % (self.__class__.__name__,)
         else:
             return "<%s '%s'>" % (self.__class__.__name__, self.prefix.decode(),)
     def dump(self, depth, gentext):
+        """For debugging only. Overridden by subclasses to display themselves
+        to stdout. The output must include a newline.
+        """
         sys.stdout.write('\n')
 
+    def computeseed(self, seed, propname):
+        """Generate a pseudo-random number based on the seed, propname,
+        and prefix. The arguments must be byteses. The result is (should
+        be) an unsigned 32-bit integer with uniform distribution.
+
+        I'm not sure this is speedy. But I don't know a good alternative
+        either.
+        """
+        hash = hashlib.md5()
+        hash.update(seed)
+        hash.update(propname)
+        hash.update(self.prefix)
+        res = struct.unpack('!I', hash.digest()[-4:])
+        return res
+
+    @tornado.gen.coroutine
+    def perform(self, ctx, propname, gentext):
+        ctx.append('[Unimplemented NodeClass: %s]' % (repr(self),))
+        
 class SymbolNode(NodeClass):
     def __init__(self, symbol):
         self.symbol = symbol
@@ -47,6 +105,9 @@ class SeqNode(NodeClass):
         sys.stdout.write('\n')
         for nod in self.nodes:
             gentext.dump(depth+1, nod)
+    def perform(self, ctx, propname, gentext):
+        for nod in self.nodes:
+            yield gentext.perform(ctx, propname, nod)
 
 class AltNode(NodeClass):
     def __init__(self, *nodes):
