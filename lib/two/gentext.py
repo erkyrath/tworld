@@ -9,6 +9,8 @@ import ast
 
 import twcommon.misc
 
+import tornado.gen
+
 RootPlaceholder = twcommon.misc.SuiGeneris('RootPlaceholder')
 
 class GenTextSyntaxError(SyntaxError):
@@ -128,7 +130,7 @@ class AltNode(NodeClass):
             nod = self.nodes[0]
         else:
             seed = self.computeseed(ctx.genseed, propname)
-            nod = self.nodes[seed % len(self.nodes)]
+            nod = self.nodes[seed % count]
         gentext.dump(depth+1, nod)
 
         

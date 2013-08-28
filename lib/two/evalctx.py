@@ -23,6 +23,7 @@ EVALTYPE_SYMBOL = 0 # name of a symbol to look up
 EVALTYPE_RAW = 1    # raw value
 EVALTYPE_CODE = 2   # string containing code
 EVALTYPE_TEXT = 3   # string containing marked-up text
+EVALTYPE_GENTEXT = 4 # string containing gentext code
 
 # Bitmask capability flags
 EVALCAP_RUN     = 0x01  # do anything at all
@@ -261,9 +262,13 @@ class EvalPropContext(object):
         raise Exception('unrecognized eval level: %d' % (self.level,))
         
     @tornado.gen.coroutine
-    def evalobj(self, key, evaltype=EVALTYPE_SYMBOL, locals=None):
+    def evalobj(self, key, evaltype=EVALTYPE_SYMBOL, symbol=None, locals=None):
         """Look up a symbol, adding it to the accumulated content. If the
         result contains interpolated strings, this calls itself recursively.
+
+        For EVALTYPE_SYMBOL, the key is the symbol (and the symbol argument
+        is ignored). For other types, the symbol may be provided as handy
+        context.
 
         Returns an object, or the special ref Accumulated to indicate a
         description array. (The latter only at MESSAGE/DISPLAY/DISPSPECIAL/
@@ -279,16 +284,15 @@ class EvalPropContext(object):
         self.task.tick()
         
         if evaltype == EVALTYPE_SYMBOL:
-            origkey = key
+            symbol = key
             res = yield two.symbols.find_symbol(self.app, self.loctx, key, dependencies=self.dependencies)
         elif evaltype == EVALTYPE_TEXT:
-            origkey = None
             res = { 'type':'text', 'text':key }
+        elif evaltype == EVALTYPE_GENTEXT:
+            res = { 'type':'gentext', 'text':key }
         elif evaltype == EVALTYPE_CODE:
-            origkey = None
             res = { 'type':'code', 'text':key }
         elif evaltype == EVALTYPE_RAW:
-            origkey = None
             res = key
         else:
             raise Exception('evalobj: unknown evaltype %s' % (evaltype,))
@@ -363,7 +367,7 @@ class EvalPropContext(object):
                 self.task.log.warning('Caught exception (editstr): %s', ex, exc_info=self.app.debugstacktraces)
                 return '[Exception: %s]' % (ex,)
 
-        if not(objtype in ('text', 'code')
+        if not(objtype in ('text', 'gentext', 'code')
                and self.level in (LEVEL_MESSAGE, LEVEL_DISPLAY, LEVEL_DISPSPECIAL, LEVEL_EXECUTE)):
             # For most cases, the type returned by the database is the
             # type we want.
@@ -397,6 +401,34 @@ class EvalPropContext(object):
                 raise  # Let this through
             except Exception as ex:
                 self.task.log.warning('Caught exception (interpolating): %s', ex, exc_info=self.app.debugstacktraces)
+                return '[Exception: %s]' % (ex,)
+            finally:
+                self.frames.pop()
+                self.frame = origframe
+        elif objtype == 'gentext':
+            # We prefer to catch interpolation errors as low as possible,
+            # so that they will appear inline in a logical spot.
+            try:
+                origframe = self.frame  # may be None
+                self.frame = EvalPropFrame(self.depth+1, locals=locals)
+                self.frames.append(self.frame)
+                if self.parentdepth+self.depth > self.task.STACK_DEPTH_LIMIT:
+                    self.task.log.error('ExecRunawayException: User script exceeded depth limit!')
+                    raise ExecRunawayException('Script ran too deep; aborting!')
+                if symbol is None:
+                    raise Exception('Temporary variable cannot generate text')
+                tree = two.gentext.parse(res.get('text', ''))
+                yield tree.perform(self, symbol.encode())
+                return Accumulated
+            except LoopBodyException as ex:
+                raise Exception('"%s" outside loop' % (ex.statement,))
+            except ReturnException as ex:
+                ### use ex.returnvalue?
+                return Accumulated
+            except ExecRunawayException:
+                raise  # Let this through
+            except Exception as ex:
+                self.task.log.warning('Caught exception (text-generating): %s', ex, exc_info=self.app.debugstacktraces)
                 return '[Exception: %s]' % (ex,)
             finally:
                 self.frames.pop()
@@ -876,7 +908,13 @@ class EvalPropContext(object):
                 val = res.get('text', None)
                 if not val:
                     return ''
-                newval = yield self.evalobj(val, evaltype=EVALTYPE_TEXT)
+                newval = yield self.evalobj(val, evaltype=EVALTYPE_TEXT, symbol=symbol)
+                return newval
+            if restype == 'gentext':
+                val = res.get('text', None)
+                if not val:
+                    return ''
+                newval = yield self.evalobj(val, evaltype=EVALTYPE_GENTEXT, symbol=symbol)
                 return newval
             if restype == 'code':
                 argspec = res.get('args', None)
@@ -889,7 +927,7 @@ class EvalPropContext(object):
                 val = res.get('text', None)
                 if not val:
                     return None
-                newval = yield self.evalobj(val, evaltype=EVALTYPE_CODE, locals=locals)
+                newval = yield self.evalobj(val, evaltype=EVALTYPE_CODE, locals=locals, symbol=symbol)
                 return newval
             # All other special objects are returned as-is.
             return res
@@ -1379,5 +1417,6 @@ import twcommon.interp
 from twcommon.interp import InterpNode
 import two.execute
 import two.symbols
+import two.gentext
 import two.grammar
 from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_POPULACE, DIRTY_FOCUS
