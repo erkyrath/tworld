@@ -133,9 +133,17 @@ class EvalPropContext(object):
         if level < LEVEL_EXECUTE:
             self.caps &= (~(EVALCAP_DATAMOD|EVALCAP_MOVE))
 
+        # Execution context state.
         self.frame = None
         self.frames = None
         self.accum = None
+
+        # Text generation state.
+        self.genseed = None
+        self.genparams = None
+
+        # Accumulating the state dependencies and action keys for the
+        # client.
         self.linktargets = None
         self.dependencies = None
 
@@ -207,6 +215,10 @@ class EvalPropContext(object):
         self.linktargets = None
         self.dependencies = set()
         self.wasspecial = False
+
+        # These will be filled in if and when a gentext starts.
+        self.genseed = None
+        self.genparams = None
 
         # We start with no frames and a depth of zero. (When we add frames,
         # the self.frame will always be the current stack frame, which is
@@ -417,6 +429,13 @@ class EvalPropContext(object):
                     raise ExecRunawayException('Script ran too deep; aborting!')
                 if symbol is None:
                     raise Exception('Temporary variable cannot generate text')
+                if self.genseed is None:
+                    try:
+                        self.genseed = str(self.loctx.iid).encode()
+                    except:
+                        self.genseed = b'???'
+                if self.genparams is None:
+                    self.genparams = {}
                 tree = two.gentext.parse(res.get('text', ''))
                 yield tree.perform(self, symbol.encode())
                 return Accumulated

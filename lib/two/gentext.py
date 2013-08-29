@@ -86,7 +86,7 @@ class NodeClass(object):
         hash.update(propname)
         hash.update(self.prefix)
         res = struct.unpack('!I', hash.digest()[-4:])
-        return res
+        return res[0]
 
     @tornado.gen.coroutine
     def perform(self, ctx, propname, gentext):
@@ -131,7 +131,7 @@ class AltNode(NodeClass):
         else:
             seed = self.computeseed(ctx.genseed, propname)
             nod = self.nodes[seed % count]
-        gentext.dump(depth+1, nod)
+        yield gentext.perform(ctx, propname, nod)
 
         
 class ANode(NodeClass):
