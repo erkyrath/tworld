@@ -49,10 +49,15 @@ class GenText(object):
         if nod is RootPlaceholder:
             nod = self.nod
 
+        # Put a blank before every single node.
+        ctx.accum.append(' ') ### or blank text node
+
         if nod is None:
             return
         if not isinstance(nod, NodeClass):
-            ctx.accum.append(str(nod))
+            val = str(nod)
+            if val:
+                ctx.accum.append(val)
             return
         yield nod.perform(ctx, propname, self)
 
@@ -137,6 +142,9 @@ class AltNode(NodeClass):
 class ANode(NodeClass):
     pass
 
+class SpaceNode(NodeClass):
+    pass
+
 class ParaNode(NodeClass):
     pass
 
@@ -151,6 +159,7 @@ class CommaNode(NodeClass):
 
 bare_node_class_map = {
     'A': ANode,
+    'Space': SpaceNode, 'SPACE': SpaceNode,
     'Para': ParaNode, 'PARA': ParaNode,
     'Stop': StopNode, 'STOP': StopNode,
     'Semi': SemiNode, 'SEMI': SemiNode,
