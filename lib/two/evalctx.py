@@ -436,7 +436,7 @@ class EvalPropContext(object):
                         self.genseed = b'???'
                 if self.genparams is None:
                     self.genparams = {}
-                tree = two.gentext.parse(res.get('text', ''))
+                tree = twcommon.gentext.parse(res.get('text', ''))
                 yield tree.perform(self, symbol.encode())
                 return Accumulated
             except LoopBodyException as ex:
@@ -1436,6 +1436,6 @@ import twcommon.interp
 from twcommon.interp import InterpNode
 import two.execute
 import two.symbols
-import two.gentext
+import twcommon.gentext
 import two.grammar
 from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_POPULACE, DIRTY_FOCUS

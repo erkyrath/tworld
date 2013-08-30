@@ -19,6 +19,7 @@ import motor
 import tweblib.handlers
 import twcommon.misc
 import twcommon.interp
+import twcommon.gentext
 from twcommon.misc import sluggify
 
 # Utility class for JSON-encoding objects that contain ObjectIds.
@@ -264,7 +265,7 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
             res = { 'type':valtype }
             if 'text' in prop:
                 res['text'] = prop['text']
-                ### Ideally, do a test parse here
+                twcommon.gentext.parse(res['text'])
             return res
         if valtype == 'code' or valtype == 'codearg':
             res = { 'type':'code' }
