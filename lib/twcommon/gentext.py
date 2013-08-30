@@ -50,7 +50,7 @@ class GenText(object):
             nod = self.nod
 
         # Put a blank before every single node.
-        ctx.accum.append(' ') ### or blank text node
+        ctx.accum.append(' ') ### or blank... whatever
 
         if nod is None:
             return
@@ -95,7 +95,7 @@ class NodeClass(object):
 
     @tornado.gen.coroutine
     def perform(self, ctx, propname, gentext):
-        ctx.append('[Unimplemented NodeClass: %s]' % (repr(self),))
+        ctx.accum.append('[Unimplemented NodeClass: %s]' % (repr(self),))
         
 class SymbolNode(NodeClass):
     def __init__(self, symbol):
@@ -142,7 +142,10 @@ class AltNode(NodeClass):
 class ANode(NodeClass):
     pass
 
-class SpaceNode(NodeClass):
+class RunOnNode(NodeClass):
+    pass
+    
+class BlankNode(NodeClass):
     pass
 
 class ParaNode(NodeClass):
@@ -158,8 +161,9 @@ class CommaNode(NodeClass):
     pass
 
 bare_node_class_map = {
+    '_': RunOnNode,
     'A': ANode,
-    'Space': SpaceNode, 'SPACE': SpaceNode,
+    'Blank': BlankNode, 'BLANK': BlankNode,
     'Para': ParaNode, 'PARA': ParaNode,
     'Stop': StopNode, 'STOP': StopNode,
     'Semi': SemiNode, 'SEMI': SemiNode,
