@@ -140,6 +140,7 @@ class EvalPropContext(object):
 
         # Text generation state.
         self.genseed = None
+        self.gentexting = False
         self.genparams = None
 
         # Accumulating the state dependencies and action keys for the
@@ -218,6 +219,7 @@ class EvalPropContext(object):
 
         # These will be filled in if and when a gentext starts.
         self.genseed = None
+        self.gentexting = False
         self.genparams = None
 
         # We start with no frames and a depth of zero. (When we add frames,
@@ -434,10 +436,15 @@ class EvalPropContext(object):
                         self.genseed = str(self.loctx.iid).encode()
                     except:
                         self.genseed = b'???'
-                if self.genparams is None:
-                    self.genparams = {}
                 tree = twcommon.gentext.parse(res.get('text', ''))
-                yield tree.perform(self, symbol.encode())
+                toplevel = (not self.gentexting)
+                if toplevel:
+                    tree.setup_context(self)
+                try:
+                    yield tree.perform(self, symbol.encode())
+                finally:
+                    if toplevel:
+                        tree.final_context(self)
                 return Accumulated
             except LoopBodyException as ex:
                 raise Exception('"%s" outside loop' % (ex.statement,))

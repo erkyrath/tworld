@@ -3,6 +3,7 @@ The code structures for procedural text generation.
 """
 
 import sys
+import re
 import hashlib
 import struct
 import ast
@@ -10,6 +11,8 @@ import ast
 import twcommon.misc
 
 import tornado.gen
+
+re_vowelstart = re.compile('^[aeiou]', re.IGNORECASE)
 
 RootPlaceholder = twcommon.misc.SuiGeneris('RootPlaceholder')
 
@@ -38,6 +41,90 @@ class GenText(object):
         else:
             sys.stdout.write('\n')
 
+    @staticmethod
+    def setup_context(ctx, capstart=True):
+        assert (not ctx.gentexting)
+        # The seed should already be set
+        assert (ctx.genseed is not None)
+        ctx.gentexting = True
+        ctx.genparams = {}
+        ctx.gendocap = False
+        if (capstart):
+            ctx.gentextstate = BeginNode
+        else:
+            ctx.gentextstate = RunOnNode
+
+    @staticmethod
+    def final_context(ctx, stopend=True):
+        assert (ctx.gentexting)
+        if stopend and ctx.gentextstate is not 'BEGIN':
+            ctx.accum.append('.')
+        ctx.genparams = None
+        ctx.gentexting = False
+
+    @staticmethod
+    def append_context(ctx, val):
+        if isinstance(val, NodeClass):
+            nodtyp = type(val)
+            if nodtyp in (RunOnNode, CommaNode, SemiNode, StopNode, ParaNode):
+                ### should be max of gentextstate, nodtyp (BEGIN is highest)
+                if ctx.gentextstate is not BeginNode:
+                    ctx.gentextstate = nodtyp
+                return
+        else:
+            assert (type(val) is str and len(val) > 0)
+            nodtyp = WordNode
+            
+        ctx.gendocap = False
+        
+        if ctx.gentextstate in (BeginNode, StopNode, ParaNode):
+            if ctx.gentextstate is StopNode:
+                ctx.accum.append('. ')
+            elif ctx.gentextstate is ParaNode:
+                ctx.accum.append(['para']) # see interp.ParaBreak
+            ctx.gendocap = True
+        elif ctx.gentextstate is SemiNode:
+            ctx.accum.append('; ')
+        elif ctx.gentextstate is CommaNode:
+            ctx.accum.append(', ')
+        elif ctx.gentextstate is RunOnNode:
+            pass
+        elif ctx.gentextstate is RunOnCapNode:
+            ctx.gendocap = True
+        elif ctx.gentextstate is ANode:
+            if nodtyp is AFormNode:
+                ctx.accum.append(' ')
+            elif nodtyp is AnFormNode:
+                ctx.accum.append('n ')
+            elif nodtyp is WordNode and re_vowelstart.match(val):
+                ctx.accum.append('n ')
+            else:
+                ctx.accum.append(' ')
+        else:
+            ctx.accum.append(' ')
+            
+        if nodtyp is ANode:
+            if ctx.gendocap:
+                ctx.accum.append('A')
+            else:
+                ctx.accum.append('a')
+            ctx.gentextstate = ANode
+        elif nodtyp in (AFormNode, AnFormNode):
+            if ctx.gendocap:
+                ctx.gentextstate = RunOnCapNode
+            else:
+                ctx.gentextstate = RunOnNode
+        elif nodtyp is WordNode:
+            if ctx.gendocap:
+                ctx.accum.append(val[0].upper())
+                ctx.accum.append(val[1:])
+            else:                   
+                ctx.accum.append(val)
+            ctx.gentextstate = WordNode
+        else:
+            ctx.accum.append('[Unsupported NodeClass: %s]' % (nodtyp.__name__,))
+            
+
     @tornado.gen.coroutine
     def perform(self, ctx, propname, nod=RootPlaceholder):
         """Generate text (to ctx.accum). This is yieldy, since it may have
@@ -49,15 +136,12 @@ class GenText(object):
         if nod is RootPlaceholder:
             nod = self.nod
 
-        # Put a blank before every single node.
-        ctx.accum.append(' ') ### or blank... whatever
-
         if nod is None:
             return
         if not isinstance(nod, NodeClass):
             val = str(nod)
             if val:
-                ctx.accum.append(val)
+                self.append_context(ctx, val)
             return
         yield nod.perform(ctx, propname, self)
 
@@ -95,7 +179,7 @@ class NodeClass(object):
 
     @tornado.gen.coroutine
     def perform(self, ctx, propname, gentext):
-        ctx.accum.append('[Unimplemented NodeClass: %s]' % (repr(self),))
+        gentext.append_context(ctx, '[Unimplemented NodeClass: %s]' % (repr(self),))
         
 class SymbolNode(NodeClass):
     def __init__(self, symbol):
@@ -139,31 +223,52 @@ class AltNode(NodeClass):
         yield gentext.perform(ctx, propname, nod)
 
         
-class ANode(NodeClass):
+class StaticNodeClass(NodeClass):
+    @tornado.gen.coroutine
+    def perform(self, ctx, propname, gentext):
+        gentext.append_context(ctx, self)
+        
+class BeginNode(StaticNodeClass):
+    # Not generateable
     pass
 
-class RunOnNode(NodeClass):
+class WordNode(StaticNodeClass):
+    # Not generateable
+    pass
+
+class ANode(StaticNodeClass):
+    pass
+
+class AFormNode(StaticNodeClass):
+    pass
+
+class AnFormNode(StaticNodeClass):
+    pass
+
+class RunOnNode(StaticNodeClass):
     pass
     
-class BlankNode(NodeClass):
+class RunOnCapNode(StaticNodeClass):
+    # Not generateable
+    pass
+    
+class ParaNode(StaticNodeClass):
     pass
 
-class ParaNode(NodeClass):
+class StopNode(StaticNodeClass):
     pass
 
-class StopNode(NodeClass):
+class SemiNode(StaticNodeClass):
     pass
 
-class SemiNode(NodeClass):
-    pass
-
-class CommaNode(NodeClass):
+class CommaNode(StaticNodeClass):
     pass
 
 bare_node_class_map = {
     '_': RunOnNode,
-    'A': ANode,
-    'Blank': BlankNode, 'BLANK': BlankNode,
+    'A': ANode, 'An': ANode, 'AN': ANode,
+    'AForm': AFormNode, 'AFORM': AFormNode, 
+    'AnForm': AnFormNode, 'ANFORM': AnFormNode, 
     'Para': ParaNode, 'PARA': ParaNode,
     'Stop': StopNode, 'STOP': StopNode,
     'Semi': SemiNode, 'SEMI': SemiNode,
