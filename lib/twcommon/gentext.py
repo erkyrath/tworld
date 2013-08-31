@@ -67,8 +67,8 @@ class GenText(object):
         if isinstance(val, NodeClass):
             nodtyp = type(val)
             if nodtyp in (RunOnNode, CommaNode, SemiNode, StopNode, ParaNode):
-                ### should be max of gentextstate, nodtyp (BEGIN is highest)
-                if ctx.gentextstate is not BeginNode:
+                # Retain the more severe break form.
+                if ctx.gentextstate.precedence < nodtyp.precedence:
                     ctx.gentextstate = nodtyp
                 return
         else:
@@ -81,6 +81,7 @@ class GenText(object):
             if ctx.gentextstate is StopNode:
                 ctx.accum.append('. ')
             elif ctx.gentextstate is ParaNode:
+                ctx.accum.append('.')
                 ctx.accum.append(['para']) # see interp.ParaBreak
             ctx.gendocap = True
         elif ctx.gentextstate is SemiNode:
@@ -224,12 +225,21 @@ class AltNode(NodeClass):
 
         
 class StaticNodeClass(NodeClass):
+    """Subclass for nodes that just represent themselves, literally,
+    in the output stream.
+
+    The precedence field lets us string several together (a STOP
+    next to a COMMA, for example) and keep the most severe break.
+    """
+    precedence = 0
+    
     @tornado.gen.coroutine
     def perform(self, ctx, propname, gentext):
         gentext.append_context(ctx, self)
         
 class BeginNode(StaticNodeClass):
     # Not generateable
+    precedence = 10
     pass
 
 class WordNode(StaticNodeClass):
@@ -253,15 +263,19 @@ class RunOnCapNode(StaticNodeClass):
     pass
     
 class ParaNode(StaticNodeClass):
+    precedence = 4
     pass
 
 class StopNode(StaticNodeClass):
+    precedence = 3
     pass
 
 class SemiNode(StaticNodeClass):
+    precedence = 2
     pass
 
 class CommaNode(StaticNodeClass):
+    precedence = 1
     pass
 
 bare_node_class_map = {
