@@ -12,8 +12,10 @@ import twcommon.misc
 
 import tornado.gen
 
+# Check whether a string starts with a vowel.
 re_vowelstart = re.compile('^[aeiou]', re.IGNORECASE)
 
+# Used as a placeholder for the root argument of recursive functions.
 RootPlaceholder = twcommon.misc.SuiGeneris('RootPlaceholder')
 
 class GenTextSyntaxError(SyntaxError):
@@ -43,6 +45,13 @@ class GenText(object):
 
     @staticmethod
     def setup_context(ctx, capstart=True):
+        """Prepare an EvalPropContext for text generation.
+
+        (This, and the following, are static methods because they don't
+        depend on any of the GenText's state. They operate solely on the
+        evalctx. Logically they're evalctx methods, but I put them here
+        to keep the generation code together.)
+        """
         assert (not ctx.gentexting)
         # The seed should already be set
         assert (ctx.genseed is not None)
@@ -56,14 +65,28 @@ class GenText(object):
 
     @staticmethod
     def final_context(ctx, stopend=True):
+        """End text generation in an EvalPropContext, applying the final
+        stop (if required). Clear out all the state variables.
+        """
         assert (ctx.gentexting)
         if stopend and ctx.gentextstate is not 'BEGIN':
             ctx.accum.append('.')
         ctx.genparams = None
+        ctx.gentextstate = None
+        ctx.gendocap = False
         ctx.gentexting = False
 
     @staticmethod
     def append_context(ctx, val):
+        """Add one element to an EvalPropContext. The value must be a
+        (nonempty) string or a static NodeClass. This relies on, and
+        modifies, the ctx state variables (gentextstate and gendocap).
+        The upshot is to (probably) add a new string to ctx.accum, or
+        perhaps a paragraph break marker.
+
+        This algorithm is occult, and I'm sorry for that. It's not logically
+        *that* complicated; but it has a lot of interacting cases.
+        """
         if isinstance(val, NodeClass):
             nodtyp = type(val)
             if nodtyp in (RunOnNode, CommaNode, SemiNode, StopNode, ParaNode):
@@ -133,6 +156,9 @@ class GenText(object):
 
         The propname should be a bytes; it will be prepended to node
         prefixes.
+
+        This calls append_context(), or else it calls NodeClass implementations
+        that call append_context().
         """
         if nod is RootPlaceholder:
             nod = self.nod
@@ -180,17 +206,25 @@ class NodeClass(object):
 
     @tornado.gen.coroutine
     def perform(self, ctx, propname, gentext):
+        """Do the work of the node, which boils down to calling
+        append_context(), or maybe perform() recursively on subnodes.
+        """
         gentext.append_context(ctx, '[Unimplemented NodeClass: %s]' % (repr(self),))
         
 class SymbolNode(NodeClass):
+    """A bare (lowercase) symbol, which will be looked up as a property.
+    """
     def __init__(self, symbol):
         self.symbol = symbol
     def dump(self, depth, gentext):
         sys.stdout.write(' ')
         sys.stdout.write(self.symbol)
         sys.stdout.write('\n')
+    ### perform!
     
 class SeqNode(NodeClass):
+    """A sequence of subnodes; they are all rendered in sequence.
+    """
     def __init__(self, *nodes):
         self.nodes = nodes
     def dump(self, depth, gentext):
@@ -204,6 +238,8 @@ class SeqNode(NodeClass):
             yield gentext.perform(ctx, propname, nod)
 
 class AltNode(NodeClass):
+    """A set of subnodes; one is selected at random.
+    """
     def __init__(self, *nodes):
         self.nodes = nodes
     def dump(self, depth, gentext):
@@ -295,6 +331,11 @@ call_node_class_map = {
     }
 
 def evalnode(nod, prefix=b''):
+    """Convert an ast (syntax tree) node into a GenText node. The result
+    may be a native type (int, str, bool, None) or a NodeClass object.
+
+    Raises GenTextSyntaxError on failure.
+    """
     nodtyp = type(nod)
 
     # We handle simple types (int, float, str, bool, None) as themselves.
@@ -377,6 +418,12 @@ def evalnode(nod, prefix=b''):
     raise GenTextSyntaxError('Expression type not implemented: %s' % (nodtyp.__name__,))
         
 def parse(text, originlabel='<gentext>'):
+    """Given a block of text, break it down into a GenText() node. Raises
+    SyntaxError (or subclass GenTextSyntaxError) on failure.
+
+    This starts by calling ast.parse; the GenText syntax is Python syntax.
+    (The semantics are totally not Python.)
+    """
     tree = ast.parse(text, filename=originlabel)
     assert type(tree) is ast.Module
 
