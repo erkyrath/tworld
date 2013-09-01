@@ -980,9 +980,9 @@ function focuspane_set_special(ls) {
                     spel.append('(' + portal.scope + ')');
                     lel.append(spel);
 
-                    lel.append(' ' + NBSP + ' ');
+                    lel.append(' ' + NBSP + '\u2013 ');
                     var spel = $('<span>', {'class':'StyleEmph'});
-                    spel.text(localize('client.label.created_by_paren').replace('%s', portal.creator));
+                    spel.text(localize('client.label.created_by').replace('%s', portal.creator));
                     lel.append(spel);
 
                     el.append(lel);
@@ -1085,7 +1085,7 @@ function plistedit_update_portal_selection() {
         $('.FocusPlistAddButton').prop('disabled', true);
     }
     else {
-        el.text(portal.world + ' \u2013 ' + portal.location + ' (' + portal.scope + ')');
+        el.text(portal.world + ' \u2013 ' + portal.location + ' (' + portal.scope + ')' + ' \u2013 ' + portal.creator);
         $('.FocusPlistAddButton').prop('disabled', false);
     }
 
