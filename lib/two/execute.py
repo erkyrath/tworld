@@ -936,7 +936,7 @@ def render_focus(task, loctx, conn, focusobj):
             
             subls = []
             for portal in ls:
-                desc = yield two.execute.portal_description(task.app, portal, conn.uid, uidiid=loctx.iid)
+                desc = yield two.execute.portal_description(task.app, portal, conn.uid, uidiid=loctx.iid, short=True)
                 if not desc:
                     continue
                 ackey = 'plist' + EvalPropContext.build_action_key()

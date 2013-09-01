@@ -974,10 +974,17 @@ function focuspane_set_special(ls) {
                     ael.text(portal.world);
                     ael.on('click', {target:portal.target}, evhan_click_action);
                     lel.append(ael);
+
+                    lel.append(' ' + NBSP + ' ');
+                    var spel = $('<span>', {'class':'FocusPlistGloss'});
+                    spel.append('(' + portal.scope + ')');
+                    lel.append(spel);
+
                     lel.append(' ' + NBSP + ' ');
                     var spel = $('<span>', {'class':'StyleEmph'});
                     spel.text(localize('client.label.created_by_paren').replace('%s', portal.creator));
                     lel.append(spel);
+
                     el.append(lel);
                 }
             }
