@@ -549,6 +549,11 @@ ul.ToolList + ul.ToolList {
   font-style: italic;
 }
 
+.FocusPlistGloss {
+  font-style: italic;
+  font-size: 0.8em;
+}
+
 .FocusListDelButton {
   display: inline-block;
   color: #F00;

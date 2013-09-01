@@ -471,11 +471,11 @@ def scope_access_level(app, uid, wid, scid):
         world = yield motor.Op(app.mongodb.worlds.find_one,
                                {'_id':wid})
         if world and world['creator'] == uid:
-            return ACC_CREATOR
+            return ACC_FOUNDER
         return ACC_VISITOR
 
     if scope['type'] == 'pers' and scope.get('uid', None) == uid:
-        return ACC_CREATOR
+        return ACC_FOUNDER
     
     res = yield motor.Op(app.mongodb.scopeaccess.find_one,
                          {'uid':uid, 'scid':scid},
@@ -936,7 +936,7 @@ def render_focus(task, loctx, conn, focusobj):
             
             subls = []
             for portal in ls:
-                desc = yield two.execute.portal_description(task.app, portal, conn.uid, uidiid=loctx.iid)
+                desc = yield two.execute.portal_description(task.app, portal, conn.uid, uidiid=loctx.iid, short=True)
                 if not desc:
                     continue
                 ackey = 'plist' + EvalPropContext.build_action_key()
@@ -1415,5 +1415,5 @@ from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_POPULACE, DIRTY
 from two.evalctx import EvalPropContext
 from two.evalctx import EVALTYPE_SYMBOL, EVALTYPE_RAW, EVALTYPE_CODE, EVALTYPE_TEXT
 from two.evalctx import LEVEL_EXECUTE, LEVEL_DISPSPECIAL, LEVEL_DISPLAY, LEVEL_MESSAGE, LEVEL_FLAT, LEVEL_RAW
-from twcommon.access import ACC_VISITOR, ACC_CREATOR
+from twcommon.access import ACC_VISITOR, ACC_FOUNDER
 import two.symbols

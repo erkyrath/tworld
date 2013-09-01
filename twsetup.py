@@ -335,6 +335,7 @@ default_localize_entries = """
 +client.label.back_to_plist: (Back to the collection)
 +client.label.enter_portal: Enter the portal.
 +client.label.plist_is_empty: The collection is empty.
++client.label.created_by: created by %s
 +client.label.created_by_paren: (created by %s)
 +client.label.select_portal_to_add: Select a portal from your list to add to this collection.
 

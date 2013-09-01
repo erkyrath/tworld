@@ -158,7 +158,7 @@ class SessionMgr(object):
 
         # And give the player full access to it
         yield motor.Op(self.app.mongodb.scopeaccess.insert,
-                       {'uid':uid, 'scid':scid, 'level':twcommon.access.ACC_CREATOR})
+                       {'uid':uid, 'scid':scid, 'level':twcommon.access.ACC_FOUNDER})
 
         # Create a personal portlist (booklet) for the player.
         portlist = {

@@ -481,6 +481,7 @@ def define_globals():
     def global_location(obj=None):
         """Create a LocationProxy.
         - No argument: the current player's location
+        - ObjectId argument: the location with the given identifier
         - String argument: the location with the given key
         - Player argument: the location of the given player (if in the current world!)
         """
@@ -491,6 +492,17 @@ def define_globals():
             if not ctx.loctx.locid:
                 return None
             return two.execute.LocationProxy(ctx.loctx.locid)
+        
+        if isinstance(obj, ObjectId):
+            ctx = EvalPropContext.get_current_context()
+            res = yield motor.Op(ctx.app.mongodb.locations.find_one,
+                                 {'_id':obj},
+                                 {'wid':1})
+            if not res:
+                raise Exception('No such location')
+            if res['wid'] != ctx.loctx.wid:
+                raise Exception('Location not in this world')
+            return two.execute.LocationProxy(obj)
         
         if isinstance(obj, two.execute.PlayerProxy):
             ctx = EvalPropContext.get_current_context()
