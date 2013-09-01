@@ -78,6 +78,11 @@ class EvalPropContext(object):
     # necessary to find the "current" context without a handy reference.)
     context_stack = []
 
+    # This is provided so that the gentext module can check it without
+    # importing this module. This is a terrible solution and should go
+    # away someday.
+    _Accumulated = Accumulated
+
     @staticmethod
     def get_current_context():
         if not EvalPropContext.context_stack:

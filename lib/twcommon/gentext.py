@@ -220,7 +220,14 @@ class SymbolNode(NodeClass):
         sys.stdout.write(' ')
         sys.stdout.write(self.symbol)
         sys.stdout.write('\n')
-    ### perform!
+    @tornado.gen.coroutine
+    def perform(self, ctx, propname, gentext):
+        res = yield ctx.evalobj(self.symbol)
+        if res is not ctx._Accumulated: ### terrible
+            if res is not None:
+                val = str(res)
+                if val:
+                    gentext.append_context(ctx, val)
     
 class SeqNode(NodeClass):
     """A sequence of subnodes; they are all rendered in sequence.
@@ -443,3 +450,4 @@ def parse(text, originlabel='<gentext>'):
         res = SeqNode(*ls)
 
     return GenText(res)
+
