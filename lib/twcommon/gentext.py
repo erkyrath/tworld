@@ -160,6 +160,8 @@ class GenText(object):
         This calls append_context(), or else it calls NodeClass implementations
         that call append_context().
         """
+        ctx.task.tick()
+        
         if nod is RootPlaceholder:
             nod = self.nod
 
