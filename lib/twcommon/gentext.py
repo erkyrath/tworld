@@ -56,6 +56,7 @@ class GenText(object):
         # The seed should already be set
         assert (ctx.genseed is not None)
         ctx.gentexting = True
+        ctx.gencount = 0
         ctx.genparams = {}
         ctx.gendocap = False
         if (capstart):
@@ -71,6 +72,7 @@ class GenText(object):
         assert (ctx.gentexting)
         if stopend and ctx.gentextstate is not 'BEGIN':
             ctx.accum.append('.')
+        ctx.gencount = None
         ctx.genparams = None
         ctx.gentextstate = None
         ctx.gendocap = False
@@ -191,16 +193,21 @@ class NodeClass(object):
         """
         sys.stdout.write('\n')
 
-    def computeseed(self, seed, propname):
-        """Generate a pseudo-random number based on the seed, propname,
-        and prefix. The arguments must be byteses. The result is (should
-        be) an unsigned 32-bit integer with uniform distribution.
+    def computeseed(self, ctx, propname):
+        """Generate a pseudo-random number based on the context, propname,
+        and prefix. The ctx.seed, propname, and prefix must be byteses.
+        The result is (should be) an unsigned 32-bit integer with uniform
+        distribution.
 
         I'm not sure this is speedy. But I don't know a good alternative
         either.
         """
+        count = str(ctx.gencount).encode()
+        ctx.gencount += 1
+        
         hash = hashlib.md5()
-        hash.update(seed)
+        hash.update(ctx.genseed)
+        hash.update(count)
         hash.update(propname)
         hash.update(self.prefix)
         res = struct.unpack('!I', hash.digest()[-4:])
@@ -264,8 +271,44 @@ class AltNode(NodeClass):
         if count == 1:
             nod = self.nodes[0]
         else:
-            seed = self.computeseed(ctx.genseed, propname)
+            seed = self.computeseed(ctx, propname)
             nod = self.nodes[seed % count]
+        yield gentext.perform(ctx, propname, nod)
+
+        
+class ShuffleNode(NodeClass):
+    """A set of subnodes; one is selected at random, but avoiding repeats
+    where possible.
+    """
+    def __init__(self, *nodes):
+        self.nodes = nodes
+    def dump(self, depth, gentext):
+        sys.stdout.write('\n')
+        for nod in self.nodes:
+            gentext.dump(depth+1, nod)
+            
+    @tornado.gen.coroutine
+    def perform(self, ctx, propname, gentext):
+        count = len(self.nodes)
+        if not count:
+            return
+        if count == 1:
+            nod = self.nodes[0]
+            yield gentext.perform(ctx, propname, nod)
+            return
+
+        ls = ctx.genparams.get(self.prefix, None)
+        if ls is None:
+            ls = list(range(count))
+        if len(ls) == 1:
+            index = ls[0]
+            ls = list(range(count))
+            ls.remove(index)
+        else:
+            seed = self.computeseed(ctx, propname)
+            index = ls.pop(seed % len(ls))
+        ctx.genparams[self.prefix] = ls
+        nod = self.nodes[index]
         yield gentext.perform(ctx, propname, nod)
 
         
@@ -337,6 +380,7 @@ bare_node_class_map = {
 call_node_class_map = {
     'Seq': SeqNode,
     'Alt': AltNode,
+    'Shuffle': ShuffleNode,
     }
 
 def evalnode(nod, prefix=b''):

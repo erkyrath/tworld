@@ -144,8 +144,9 @@ class EvalPropContext(object):
         self.accum = None
 
         # Text generation state.
-        self.genseed = None
         self.gentexting = False
+        self.genseed = None
+        self.gencount = None
         self.genparams = None
 
         # Accumulating the state dependencies and action keys for the
@@ -223,8 +224,9 @@ class EvalPropContext(object):
         self.wasspecial = False
 
         # These will be filled in if and when a gentext starts.
-        self.genseed = None
         self.gentexting = False
+        self.genseed = None
+        self.gencount = None
         self.genparams = None
 
         # We start with no frames and a depth of zero. (When we add frames,
