@@ -207,8 +207,25 @@ def define_globals():
     @scriptfunc('isinstance', group='_')
     def global_isinstance(object, typ):
         """The isinstance function.
-        ### Special-case to handle text, code, ObjectId, datetime "types"?
+        This is special-cased to handle a few "type constructors" which are
+        not true Python types: text, code, ObjectId, datetime.
+        (Note that timedelta *is* a Python type, however.)
         """
+        if isinstance(typ, tuple):
+            # isinstance(foo, (x,y,z)) checks whether foo is any of the
+            # types (x,y,z). Betcha didn't know that.
+            for subtyp in typ:
+                if global_isinstance.func(object, subtyp):
+                    return True
+            return False
+        if typ is global_objectid:
+            return isinstance(object, ObjectId)
+        if typ is global_code:
+            return isinstance(object, dict) and object.get('type', None) == 'code'
+        if typ is global_text:
+            return isinstance(object, dict) and object.get('type', None) == 'text'
+        if typ is global_datetime_datetime:
+            return isinstance(object, datetime.datetime)
         return isinstance(object, typ)
 
     @scriptfunc('ObjectId', group='_')
