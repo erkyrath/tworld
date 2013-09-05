@@ -6,6 +6,8 @@ Register
 
 {% block head_ext %}
 <link rel="stylesheet" href="{{ static_url('css/form.css') }}" type="text/css">
+<script src="{{ static_url('js/jquery-1.9.1.js') }}" type="text/javascript"></script>
+<script src="{{ static_url('js/register.js') }}" type="text/javascript"></script>
 {% end %}
 
 {% block body %}
@@ -24,10 +26,13 @@ Javascript, but you will not be able to play.)
  {% module xsrf_form_html() %}
  <div class="FormSection">
   <input class="FormInput" autocapitalize="off"
-   id="login_field" name="name" type="text" placeholder="Avatar Name"
+   id="login_field" name="name" type="text" placeholder="Player Name"
    {% if formfocus == 'name' %} autofocus="autofocus" {% end %}
    {% if init_name %} value="{{init_name}}" {% end %}
    >
+ </div>
+ <div class="FormSection FormLabel">
+  <span id="name_display_label"><em>Player Name</em></span> waves to the camera.
  </div>
  <div class="FormSection">
   <input class="FormInput" autocapitalize="off"
