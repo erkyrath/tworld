@@ -27,6 +27,7 @@ var EVENT_TRIM_LIMIT = 80;
 var EVENT_TRIM_KEEP = 60;
 
 var KEY_RETURN = 13;
+var KEY_ESC = 27;
 var KEY_UP = 38;
 var KEY_DOWN = 40;
 
@@ -146,6 +147,7 @@ function build_focuspane(contentls)
 
 function setup_event_handlers() {
     $(document).on('keypress', evhan_doc_keypress);
+    $(document).on('keydown', evhan_doc_keydown);
 
     var inputel = $('#eventinput');
     inputel.on('keypress', evhan_input_keypress);
@@ -1677,7 +1679,25 @@ function send_uipref_changed()
     changed_uiprefs = {};
 }
 
-/* Event handler: keypress events on input fields.
+/* Event handler: keydown events on the top-level document.
+
+   On Escape, close the focus window (if open).
+*/
+function evhan_doc_keydown(ev) {
+    var keycode = 0;
+    if (ev) keycode = ev.which;
+
+    if (keycode == KEY_ESC) {
+        ev.preventDefault();
+        var el = $('.FocusPane');
+        if (el.length) {
+            websocket_send_json({ cmd:'dropfocus' });
+        }
+        return;
+    }
+}
+
+/* Event handler: keypress events on the top-level document.
 
    Move the input focus to the event pane's input line.
 */
