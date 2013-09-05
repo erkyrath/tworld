@@ -207,8 +207,25 @@ def define_globals():
     @scriptfunc('isinstance', group='_')
     def global_isinstance(object, typ):
         """The isinstance function.
-        ### Special-case to handle text, code, ObjectId, datetime "types"?
+        This is special-cased to handle a few "type constructors" which are
+        not true Python types: text, code, ObjectId, datetime.
+        (Note that timedelta *is* a Python type, however.)
         """
+        if isinstance(typ, tuple):
+            # isinstance(foo, (x,y,z)) checks whether foo is any of the
+            # types (x,y,z). Betcha didn't know that.
+            for subtyp in typ:
+                if global_isinstance.func(object, subtyp):
+                    return True
+            return False
+        if typ is global_objectid:
+            return isinstance(object, ObjectId)
+        if typ is global_code:
+            return isinstance(object, dict) and object.get('type', None) == 'code'
+        if typ is global_text:
+            return isinstance(object, dict) and object.get('type', None) == 'text'
+        if typ is global_datetime_datetime:
+            return isinstance(object, datetime.datetime)
         return isinstance(object, typ)
 
     @scriptfunc('ObjectId', group='_')
@@ -482,6 +499,7 @@ def define_globals():
         """Create a LocationProxy.
         - No argument: the current player's location
         - ObjectId argument: the location with the given identifier
+        - LocationProxy argument: returns it unchanged
         - String argument: the location with the given key
         - Player argument: the location of the given player (if in the current world!)
         """
@@ -503,6 +521,9 @@ def define_globals():
             if res['wid'] != ctx.loctx.wid:
                 raise Exception('Location not in this world')
             return two.execute.LocationProxy(obj)
+        
+        if isinstance(obj, two.execute.LocationProxy):
+            return obj
         
         if isinstance(obj, two.execute.PlayerProxy):
             ctx = EvalPropContext.get_current_context()
@@ -617,6 +638,11 @@ def define_globals():
 
     @scriptfunc('player', group='players', yieldy=True)
     def global_players_player(player=None):
+        """Create or find a PlayerProxy.
+        - No argument: the current player
+        - ObjectId argument: the player with the given identifier
+        - PlayerProxy argument: returns it unchanged
+        """
         ctx = EvalPropContext.get_current_context()
         if player is None:
             if not ctx.uid:

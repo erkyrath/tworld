@@ -22,6 +22,11 @@
   color: #470;
 }
 
+.FormLabel {
+  color: #886;
+  text-align: right;
+}
+
 .FormDivider {
   clear: both;
   margin-top: 20px;
