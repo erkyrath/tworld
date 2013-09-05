@@ -482,6 +482,7 @@ def define_globals():
         """Create a LocationProxy.
         - No argument: the current player's location
         - ObjectId argument: the location with the given identifier
+        - LocationProxy argument: returns it unchanged
         - String argument: the location with the given key
         - Player argument: the location of the given player (if in the current world!)
         """
@@ -503,6 +504,9 @@ def define_globals():
             if res['wid'] != ctx.loctx.wid:
                 raise Exception('Location not in this world')
             return two.execute.LocationProxy(obj)
+        
+        if isinstance(obj, two.execute.LocationProxy):
+            return obj
         
         if isinstance(obj, two.execute.PlayerProxy):
             ctx = EvalPropContext.get_current_context()
@@ -617,6 +621,11 @@ def define_globals():
 
     @scriptfunc('player', group='players', yieldy=True)
     def global_players_player(player=None):
+        """Create or find a PlayerProxy.
+        - No argument: the current player
+        - ObjectId argument: the player with the given identifier
+        - PlayerProxy argument: returns it unchanged
+        """
         ctx = EvalPropContext.get_current_context()
         if player is None:
             if not ctx.uid:
