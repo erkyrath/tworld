@@ -670,10 +670,24 @@ class EvalPropContext(object):
     @tornado.gen.coroutine
     def execcode_subscript(self, nod):
         argument = yield self.execcode_expr(nod.value)
-        slice = nod.slice
-        if type(slice) is not ast.Index:
-            raise NotImplementedError('Subscript slices are not supported')
-        subscript = yield self.execcode_expr(slice.value)
+        subnod = nod.slice
+        subtyp = type(subnod)
+        if subtyp is ast.Index:
+            subscript = yield self.execcode_expr(subnod.value)
+        elif subtyp is ast.Slice:
+            lower = None
+            if subnod.lower is not None:
+                lower = yield self.execcode_expr(subnod.lower)
+            upper = None
+            if subnod.upper is not None:
+                upper = yield self.execcode_expr(subnod.upper)
+            if subnod.step is None:
+                subscript = slice(lower, upper)
+            else:
+                step = yield self.execcode_expr(subnod.step)
+                subscript = slice(lower, upper, step)
+        else:
+            raise NotImplementedError('Unsupported subscript type: %s' % (subtyp.__name__,))
         if isinstance(argument, two.execute.PropertyProxyMixin):
             # Special case: property proxies can be accessed by subscript.
             res = yield argument.getprop(self, self.loctx, subscript)
