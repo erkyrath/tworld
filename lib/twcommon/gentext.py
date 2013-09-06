@@ -58,7 +58,6 @@ class GenText(object):
         ctx.gentexting = True
         ctx.gencount = 0
         ctx.genparams = {}
-        ctx.gendocap = False
         if (capstart):
             ctx.gentextstate = BeginNode
         else:
@@ -75,14 +74,13 @@ class GenText(object):
         ctx.gencount = None
         ctx.genparams = None
         ctx.gentextstate = None
-        ctx.gendocap = False
         ctx.gentexting = False
 
     @staticmethod
     def append_context(ctx, val):
         """Add one element to an EvalPropContext. The value must be a
         (nonempty) string or a static NodeClass. This relies on, and
-        modifies, the ctx state variables (gentextstate and gendocap).
+        modifies, the ctx state variables (gentextstate).
         The upshot is to (probably) add a new string to ctx.accum, or
         perhaps a paragraph break marker.
 
@@ -100,7 +98,7 @@ class GenText(object):
             assert (type(val) is str and len(val) > 0)
             nodtyp = WordNode
             
-        ctx.gendocap = False
+        docap = False
         
         if ctx.gentextstate in (BeginNode, StopNode, ParaNode):
             if ctx.gentextstate is StopNode:
@@ -108,7 +106,7 @@ class GenText(object):
             elif ctx.gentextstate is ParaNode:
                 ctx.accum.append('.')
                 ctx.accum.append(['para']) # see interp.ParaBreak
-            ctx.gendocap = True
+            docap = True
         elif ctx.gentextstate is SemiNode:
             ctx.accum.append('; ')
         elif ctx.gentextstate is CommaNode:
@@ -116,7 +114,7 @@ class GenText(object):
         elif ctx.gentextstate is RunOnNode:
             pass
         elif ctx.gentextstate is RunOnCapNode:
-            ctx.gendocap = True
+            docap = True
         elif ctx.gentextstate is ANode:
             if nodtyp is AFormNode:
                 ctx.accum.append(' ')
@@ -130,18 +128,18 @@ class GenText(object):
             ctx.accum.append(' ')
             
         if nodtyp is ANode:
-            if ctx.gendocap:
+            if docap:
                 ctx.accum.append('A')
             else:
                 ctx.accum.append('a')
             ctx.gentextstate = ANode
         elif nodtyp in (AFormNode, AnFormNode):
-            if ctx.gendocap:
+            if docap:
                 ctx.gentextstate = RunOnCapNode
             else:
                 ctx.gentextstate = RunOnNode
         elif nodtyp is WordNode:
-            if ctx.gendocap:
+            if docap:
                 ctx.accum.append(val[0].upper())
                 ctx.accum.append(val[1:])
             else:                   
