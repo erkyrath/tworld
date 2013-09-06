@@ -245,6 +245,8 @@ class EvalPropContext(object):
 
         # At this point, if the value was a {text}, the accum will contain
         # the desired description.
+        if self.accum: ####
+            self.task.log.debug('#### accum: %s' % (repr(self.accum)))
         
         if (self.level == LEVEL_RAW):
             return res
@@ -259,12 +261,14 @@ class EvalPropContext(object):
             return str(res)
         if (self.level == LEVEL_DISPLAY):
             if res is Accumulated:
+                optimize_accum(self.accum)
                 return self.accum
             return str_or_null(res)
         if (self.level == LEVEL_DISPSPECIAL):
             if self.wasspecial:
                 return res
             if res is Accumulated:
+                optimize_accum(self.accum)
                 return self.accum
             if not res and self.accum:
                 # I am deeply suspicious of this case. It leaves {code}
@@ -274,10 +278,12 @@ class EvalPropContext(object):
                 # Also, a 0 return value is wrongly ignored.)
                 # I guess we should rely on the presence of self.accum
                 # and drop Accumulated entirely?
+                optimize_accum(self.accum)
                 return self.accum
             return str_or_null(res)
         if (self.level == LEVEL_EXECUTE):
             if res is Accumulated:
+                optimize_accum(self.accum)
                 return self.accum
             return res
         raise Exception('unrecognized eval level: %d' % (self.level,))
@@ -1373,9 +1379,27 @@ class EvalPropContext(object):
 
                 
 def str_or_null(res):
+    """Return res as a string, unless res is None, in which case it returns
+    the empty string.
+    """
     if res is None:
         return ''
     return str(res)
+
+def optimize_accum(ls):
+    """Given a list of strings and other objects, concatenate all the strings.
+    That is, smush together all the sublists that are all-string.
+    This operates in place (and returns nothing).
+    """
+    end = len(ls)
+    while end > 0:
+        beg = end - 1
+        while beg >= 0 and isinstance(ls[beg], str):
+            beg = beg - 1
+        if end >= beg + 3:
+            ls[beg+1:end] = (''.join(ls[beg+1:end]),)
+        end = beg
+    return
 
 def parse_argument_spec(spec):
     """Take a function argument spec (e.g. "x, y=3") and parse it into a

@@ -24,6 +24,43 @@ class MockApplication:
         self.log = logging.getLogger('tworld')
 
 class TestEval(unittest.TestCase):
+    def test_optimize_accum(self):
+        optimize_accum = two.evalctx.optimize_accum
+        
+        ls = []
+        optimize_accum(ls)
+        self.assertEqual(ls, [])
+        ls = ['foo']
+        optimize_accum(ls)
+        self.assertEqual(ls, ['foo'])
+        ls = ['foo', 'bar']
+        optimize_accum(ls)
+        self.assertEqual(ls, ['foobar'])
+        ls = ['foo', ' ', 'baz']
+        optimize_accum(ls)
+        self.assertEqual(ls, ['foo baz'])
+        ls = [()]
+        optimize_accum(ls)
+        self.assertEqual(ls, [()])
+        ls = [(), ()]
+        optimize_accum(ls)
+        self.assertEqual(ls, [(), ()])
+        ls = ['x', (), 'y', (), 'z']
+        optimize_accum(ls)
+        self.assertEqual(ls, ['x', (), 'y', (), 'z'])
+        ls = ['x', 'X', (), 'y', 'Y', (), 'z', 'Z']
+        optimize_accum(ls)
+        self.assertEqual(ls, ['xX', (), 'yY', (), 'zZ'])
+        ls = [(), 'foo', '-', 'bar', ()]
+        optimize_accum(ls)
+        self.assertEqual(ls, [(), 'foo-bar', ()])
+        ls = ['x', 'X', (1,), (2,), 'z', 'Z']
+        optimize_accum(ls)
+        self.assertEqual(ls, ['xX', (1,), (2,), 'zZ'])
+        ls = ['x', 'X', 'x', (), 'z', 'Z', 'z']
+        optimize_accum(ls)
+        self.assertEqual(ls, ['xXx', (), 'zZz'])
+        
     def mockResolveDefaults(self, ls):
         res = []
         for val in ls:
