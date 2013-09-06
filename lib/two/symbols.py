@@ -123,16 +123,19 @@ def scriptfunc(name, group=None, **kwargs):
 def define_globals():
     
     @scriptfunc('print', group='_', yieldy=True)
-    def global_print(*ls):
+    def global_print(*ls, sep=' '):
         ctx = EvalPropContext.get_current_context()
         if ctx.accum is None:
             raise Exception('print() in non-printing context')
+        if sep is not None:
+            sep = str(sep)
         first = True
         for obj in ls:
             if first:
                 first = False
             else:
-                ctx.accum.append(' ')
+                if sep:
+                    ctx.accum.append(sep)
             res = yield ctx.evalobj(obj, evaltype=EVALTYPE_RAW)
             if res is not two.evalctx.Accumulated:
                 ctx.accum.append(str(res))
