@@ -245,8 +245,6 @@ class EvalPropContext(object):
 
         # At this point, if the value was a {text}, the accum will contain
         # the desired description.
-        if self.accum: ####
-            self.task.log.debug('#### accum: %s' % (repr(self.accum)))
         
         if (self.level == LEVEL_RAW):
             return res
