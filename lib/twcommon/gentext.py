@@ -87,6 +87,8 @@ class GenText(object):
         This algorithm is occult, and I'm sorry for that. It's not logically
         *that* complicated; but it has a lot of interacting cases.
         """
+        # Check the node type. Break types output nothing; they just change
+        # the current state.
         if isinstance(val, NodeClass):
             nodtyp = type(val)
             if nodtyp in (RunOnNode, CommaNode, SemiNode, StopNode, ParaNode):
@@ -99,7 +101,9 @@ class GenText(object):
             nodtyp = WordNode
             
         docap = False
-        
+
+        # Based on the current state, add a space or punctuation or
+        # whatever before the new text.
         if ctx.gentextstate in (BeginNode, StopNode, ParaNode):
             if ctx.gentextstate is StopNode:
                 ctx.accum.append('. ')
@@ -126,7 +130,10 @@ class GenText(object):
                 ctx.accum.append(' ')
         else:
             ctx.accum.append(' ')
-            
+
+        # Add the new text. We may have to capitalize it, depending on
+        # what the last state was. This sets the next state, most commonly
+        # to WordNode.
         if nodtyp is ANode:
             if docap:
                 ctx.accum.append('A')
