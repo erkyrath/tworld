@@ -1001,7 +1001,7 @@ class EvalPropContext(object):
             # All other special objects are returned as-is.
             return res
         
-        if restype in ('text', 'selfdesc', 'editstr'):
+        if restype in ('text', 'gentext', 'selfdesc', 'editstr'):
             # Set focus to this symbol-name
             if not symbol:
                 raise ErrorMessageException('typed dict (%s) cannot be focussed; not a bare symbol' % (restype,))
