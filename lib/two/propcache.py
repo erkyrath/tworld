@@ -21,8 +21,8 @@ class PropCache:
         self.app = app
         self.log = self.app.log
 
-        self.objmap = {}
-        self.propmap = {}
+        self.objmap = {}  # maps id(val) to PropEntry
+        self.propmap = {}  # maps tuple to PropEntry
 
     def final(self):
         """Shut down and clean up.
@@ -30,11 +30,12 @@ class PropCache:
         This does not write back dirty data. Be sure to call write_all_dirty()
         before this.
         """
-        if self.dirty_entries():
-            self.log.error('propcache: finalizing while dirty!')
+        ls = self.dirty_entries()
+        if ls:
+            self.log.error('propcache: finalizing while %d dirty entries!', len(ls))
             
-        # Empty the maps, because maybe I'll add a backlink to the PropEntry
-        # object and that would be a ref cycle.
+        # Empty the maps, because PropEntry might have a backlink to this
+        # PropCache someday and that would be a ref cycle.
         self.objmap.clear()
         self.propmap.clear()
 
@@ -43,23 +44,121 @@ class PropCache:
         self.objmap = None
         self.propmap = None
 
+    @staticmethod
+    def query_for_tuple(tup):
+        (db, id1, id2, key) = tup
+        if db == 'worldprop':
+            return {'wid':id1, 'locid':id2, 'key':key}
+        if db == 'instanceprop':
+            return {'iid':id1, 'locid':id2, 'key':key}
+        if db == 'wplayerprop':
+            return {'wid':id1, 'uid':id2, 'key':key}
+        if db == 'iplayerprop':
+            return {'iid':id1, 'uid':id2, 'key':key}
+        raise Exception('Unknown collection: %s' % (db,))
+
+    @tornado.gen.coroutine
+    def get(self, tup, dependencies=None):
+        """Fetch a value from the database, or the cache if it's cached.
+
+        The tup argument has four entries: ('worldprop', wid, locid, key).
+        The meaning of the second and third depend on the database collection
+        (the first entry). This is the same format as dependency keys.
+        Currently this class understands 'instanceprop', 'worldprop',
+        'iplayerprop', 'wplayerprop'.
+        
+        Returns a PropEntry (if found) or None (if not). The value you
+        want is res.val if res is not None.
+
+        (Note that this may return None to indicate that we checked the
+        database earlier, found nothing, and cached that fact.)
+        """
+        if dependencies is not None:
+            dependencies.add(tup)
+            
+        res = self.propmap.get(tup, None)
+        if res is not None:
+            if not res.found:
+                # Cached "not found" value
+                return None
+            return res
+
+        dbname = tup[0]
+        query = PropCache.query_for_tuple(tup)
+        res = yield motor.Op(self.app.mongodb[dbname].find_one,
+                             query,
+                             {'val':1})
+        if not res:
+            ent = PropEntry(None, tup, query, found=False)
+        else:
+            val = res['val']
+            ent = PropEntry(val, tup, query, found=True)
+            self.objmap[id(val)] = ent
+        self.propmap[tup] = ent
+
+        return ent
+
+    @tornado.gen.coroutine
+    def set(self, tup, val):
+        """Set a new object in the database (and the cache). If we had
+        an object cached at this tuple, it's discarded.
+        """
+        pass ###
+        
+    @tornado.gen.coroutine
+    def del(self, del, val):
+        """Delete an object from the database (and the cache).
+        """
+        pass ###
+        
+    def get_by_object(self, val):
+        """Check whether a value is in the cache. This is keyed by the
+        *identity* of the value!
+        Returns a PropEntry (if found) or None (if not).
+        """
+        res = self.objmap.get(id(val), None)
+        return res
+
     def dirty_entries(self):
         return [ ent for ent in self.objmap.values() if ent.dirty() ]
 
     @tornado.gen.coroutine
     def write_all_dirty(self):
         ls = self.dirty_entries()
-        ###
+        for ent in ls:
+            yield self.write_dirty(ent)
+
+    @tornado.gen.coroutine
+    def write_dirty(self, ent):
+        pass ###
 
 class PropEntry:
-    def __init__(self, val):
+    """Represents a database entry, or perhaps the lack of a database entry.
+    """
+    
+    def __init__(self, val, tup, query, found=True):
         self.val = val
-        self.found = True  # Was a database entry found at all?
-        self.mutable = isinstance(val, (list, dict))
+        self.tup = tup  # Dependency key
+        self.dbname = tup[0]  # Collection name
+        self.query = query  # Query in the collection
+        self.found = found  # Was a database entry found at all?
+        
+        if not found:
+            self.mutable = False
+        else:
+            self.mutable = isinstance(val, (list, dict))
+            if self.mutable:
+                # Keep a copy, to check for possible changes
+                self.origval = deepcopy(val)
 
-        if self.mutable:
-            # Keep a copy, to check for possible changes
-            self.origval = deepcopy(val)
+    def __repr__(self):
+        if not.found:
+            val = '(not found)'
+        else:
+            val = repr(self.val)
+            if len(val) > 32:
+                val = val[:32] + '...'
+        return '<PropEntry %s: %s>' % (self.tup, val)
 
     def dirty(self):
         """Has this value changed since we cached it?
