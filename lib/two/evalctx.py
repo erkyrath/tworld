@@ -142,6 +142,8 @@ class EvalPropContext(object):
         self.frame = None
         self.frames = None
         self.accum = None
+        self.cooked = False
+        self.textstate = RunOnNode
 
         # Text generation state.
         self.gentexting = False
@@ -219,6 +221,8 @@ class EvalPropContext(object):
         
         # Initialize per-invocation fields.
         self.accum = None
+        self.cooked = False
+        self.textstate = RunOnNode
         self.linktargets = None
         self.dependencies = set()
         self.wasspecial = False
@@ -1114,7 +1118,7 @@ class EvalPropContext(object):
             if not (isinstance(nod, InterpNode)):
                 # String.
                 if nod and not suppressed:
-                    self.accum.append(nod)
+                    self.accum_append(nod, raw=True)
                 continue
             
             nodkey = nod.classname
@@ -1141,7 +1145,7 @@ class EvalPropContext(object):
                     
             if nodkey == 'ElIf':
                 if len(suppstack) == 0:
-                    self.accum.append('[$elif without matching $if]')
+                    self.accum_append('[$elif without matching $if]')
                     continue
                 if not suppressed:
                     # We follow a successful "if". Suppress now.
@@ -1167,7 +1171,7 @@ class EvalPropContext(object):
                     
             if nodkey == 'End':
                 if len(suppstack) == 0:
-                    self.accum.append('[$end without matching $if]')
+                    self.accum_append('[$end without matching $if]')
                     continue
                 suppstack.pop()
                 suppressed = sum(suppstack)
@@ -1175,7 +1179,7 @@ class EvalPropContext(object):
 
             if nodkey == 'Else':
                 if len(suppstack) == 0:
-                    self.accum.append('[$else without matching $if]')
+                    self.accum_append('[$else without matching $if]')
                     continue
                 val = suppstack[-1]
                 if val == 1:
@@ -1192,6 +1196,7 @@ class EvalPropContext(object):
                 continue
             
             if nodkey == 'Link':
+                # Non-printing element, append directly
                 if not nod.external:
                     ackey = EvalPropContext.build_action_key()
                     self.linktargets[ackey] = nod.target
@@ -1212,7 +1217,7 @@ class EvalPropContext(object):
                 if subres is not Accumulated:
                     # Anything not a {text} object gets interpolated as
                     # a string.
-                    self.accum.append(str(subres))
+                    self.accum_append(str(subres), raw=True)
                 continue
             
             if nodkey == 'PlayerRef':
@@ -1232,12 +1237,21 @@ class EvalPropContext(object):
                     self.accum.append('[No such player]')
                     continue
                 if nod.key == 'name':
-                    self.accum.append(player['name'])
+                    self.accum_append(player['name'], raw=True)
                 else:
-                    self.accum.append(two.grammar.resolve_pronoun(player, nod.key))
+                    self.accum_append(two.grammar.resolve_pronoun(player, nod.key), raw=True)
+                continue
+
+            if nodkey == 'OpenBracket':
+                self.accum_append('[', raw=True)
+                continue
+
+            if nodkey == 'CloseBracket':
+                self.accum_append(']', raw=True)
                 continue
 
             # Otherwise...
+            # Non-printing element, append directly
             self.accum.append(nod.describe())
 
         # End of nodls interaction.
@@ -1375,6 +1389,92 @@ class EvalPropContext(object):
             except Exception as ex:
                 self.task.log.warning('Caught exception (entering loc, move): %s', ex, exc_info=self.app.debugstacktraces)
 
+    def accum_append(self, val, raw=False):
+        """Add one element to an EvalPropContext. The value must be a
+        string or a static GenNodeClass. This relies on, and modifies,
+        the ctx state (textstate).
+        The upshot is to (probably) add a new string to self.accum, or
+        perhaps a paragraph break marker.
+
+        This algorithm is occult, and I'm sorry for that. It's not logically
+        *that* complicated; but it has a lot of interacting cases.
+        """
+        raw = raw or (not self.cooked)
+        
+        # Check the node type. Break types output nothing; they just change
+        # the current state.
+        if isinstance(val, GenNodeClass):
+            nodtyp = type(val)
+            if nodtyp in (RunOnNode, CommaNode, SemiNode, StopNode, ParaNode):
+                # Retain the more severe break form.
+                if self.textstate.precedence < nodtyp.precedence:
+                    self.textstate = nodtyp
+                return
+        else:
+            assert (type(val) is str)
+            if not val:
+                return
+            nodtyp = WordNode
+            
+        docap = False
+
+        # Based on the current state, add a space or punctuation or
+        # whatever before the new text.
+        if self.textstate is RunOnNode:
+            pass
+        elif self.textstate in (BeginNode, StopNode, ParaNode):
+            if self.textstate is StopNode:
+                self.accum.append('. ')
+            elif self.textstate is ParaNode:
+                self.accum.append('.')
+                self.accum.append(['para']) # see interp.ParaBreak
+            docap = True
+        elif self.textstate is SemiNode:
+            self.accum.append('; ')
+        elif self.textstate is CommaNode:
+            self.accum.append(', ')
+        elif self.textstate is RunOnCapNode:
+            docap = True
+        elif self.textstate is ANode:
+            if nodtyp is AFormNode:
+                self.accum.append(' ')
+            elif nodtyp is AnFormNode:
+                self.accum.append('n ')
+            elif nodtyp is WordNode and re_vowelstart.match(val):
+                self.accum.append('n ')
+            else:
+                self.accum.append(' ')
+        else:
+            self.accum.append(' ')
+
+        # Add the new text. We may have to capitalize it, depending on
+        # what the last state was. This sets the next state, most commonly
+        # to WordNode.
+        if nodtyp is WordNode:
+            if docap:
+                self.accum.append(val[0].upper())
+                self.accum.append(val[1:])
+            else:                   
+                self.accum.append(val)
+            if raw:
+                self.textstate = RunOnNode
+            else:
+                self.textstate = WordNode
+        elif nodtyp is ANode:
+            if docap:
+                self.accum.append('A')
+            else:
+                self.accum.append('a')
+            self.textstate = ANode
+        elif nodtyp in (AFormNode, AnFormNode):
+            if docap:
+                self.textstate = RunOnCapNode
+            else:
+                self.textstate = RunOnNode
+        else:
+            self.accum.append('[Unsupported GenNodeClass: %s]' % (nodtyp.__name__,))
+            
+
                 
 def str_or_null(res):
     """Return res as a string, unless res is None, in which case it returns
@@ -1498,6 +1598,7 @@ def resolve_argument_spec(spec, args, kwargs):
 from twcommon.access import ACC_VISITOR, ACC_MEMBER
 import twcommon.interp
 from twcommon.interp import InterpNode
+from twcommon.gentext import GenNodeClass, SymbolNode, SeqNode, AltNode, ShuffleNode, BeginNode, WordNode, ANode, AFormNode, AnFormNode, RunOnNode, RunOnCapNode, ParaNode, StopNode, SemiNode, CommaNode
 import two.execute
 import two.symbols
 import twcommon.gentext

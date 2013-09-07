@@ -25,7 +25,7 @@ class GenText(object):
     """Represents a complete parsed {gentext} object. This is just a thin
     wrapper around a node, or tree of nodes.
 
-    (A node may be a NodeClass object or a native type, so it's handy
+    (A node may be a GenNodeClass object or a native type, so it's handy
     to have this wrapper.)
     """
     
@@ -38,13 +38,13 @@ class GenText(object):
         if nod is RootPlaceholder:
             nod = self.nod
         sys.stdout.write('  '*depth + repr(nod))
-        if isinstance(nod, NodeClass):
+        if isinstance(nod, GenNodeClass):
             nod.dump(depth, self)
         else:
             sys.stdout.write('\n')
 
     @staticmethod
-    def setup_context(ctx, capstart=True):
+    def setup_context(ctx):
         """Prepare an EvalPropContext for text generation.
 
         (This, and the following, are static methods because they don't
@@ -58,103 +58,16 @@ class GenText(object):
         ctx.gentexting = True
         ctx.gencount = 0
         ctx.genparams = {}
-        if (capstart):
-            ctx.gentextstate = BeginNode
-        else:
-            ctx.gentextstate = RunOnNode
 
     @staticmethod
-    def final_context(ctx, stopend=True):
+    def final_context(ctx):
         """End text generation in an EvalPropContext, applying the final
         stop (if required). Clear out all the state variables.
         """
         assert (ctx.gentexting)
-        if stopend and ctx.gentextstate is not 'BEGIN':
-            ctx.accum.append('.')
         ctx.gencount = None
         ctx.genparams = None
-        ctx.gentextstate = None
         ctx.gentexting = False
-
-    @staticmethod
-    def append_context(ctx, val):
-        """Add one element to an EvalPropContext. The value must be a
-        (nonempty) string or a static NodeClass. This relies on, and
-        modifies, the ctx state variables (gentextstate).
-        The upshot is to (probably) add a new string to ctx.accum, or
-        perhaps a paragraph break marker.
-
-        This algorithm is occult, and I'm sorry for that. It's not logically
-        *that* complicated; but it has a lot of interacting cases.
-        """
-        # Check the node type. Break types output nothing; they just change
-        # the current state.
-        if isinstance(val, NodeClass):
-            nodtyp = type(val)
-            if nodtyp in (RunOnNode, CommaNode, SemiNode, StopNode, ParaNode):
-                # Retain the more severe break form.
-                if ctx.gentextstate.precedence < nodtyp.precedence:
-                    ctx.gentextstate = nodtyp
-                return
-        else:
-            assert (type(val) is str and len(val) > 0)
-            nodtyp = WordNode
-            
-        docap = False
-
-        # Based on the current state, add a space or punctuation or
-        # whatever before the new text.
-        if ctx.gentextstate in (BeginNode, StopNode, ParaNode):
-            if ctx.gentextstate is StopNode:
-                ctx.accum.append('. ')
-            elif ctx.gentextstate is ParaNode:
-                ctx.accum.append('.')
-                ctx.accum.append(['para']) # see interp.ParaBreak
-            docap = True
-        elif ctx.gentextstate is SemiNode:
-            ctx.accum.append('; ')
-        elif ctx.gentextstate is CommaNode:
-            ctx.accum.append(', ')
-        elif ctx.gentextstate is RunOnNode:
-            pass
-        elif ctx.gentextstate is RunOnCapNode:
-            docap = True
-        elif ctx.gentextstate is ANode:
-            if nodtyp is AFormNode:
-                ctx.accum.append(' ')
-            elif nodtyp is AnFormNode:
-                ctx.accum.append('n ')
-            elif nodtyp is WordNode and re_vowelstart.match(val):
-                ctx.accum.append('n ')
-            else:
-                ctx.accum.append(' ')
-        else:
-            ctx.accum.append(' ')
-
-        # Add the new text. We may have to capitalize it, depending on
-        # what the last state was. This sets the next state, most commonly
-        # to WordNode.
-        if nodtyp is ANode:
-            if docap:
-                ctx.accum.append('A')
-            else:
-                ctx.accum.append('a')
-            ctx.gentextstate = ANode
-        elif nodtyp in (AFormNode, AnFormNode):
-            if docap:
-                ctx.gentextstate = RunOnCapNode
-            else:
-                ctx.gentextstate = RunOnNode
-        elif nodtyp is WordNode:
-            if docap:
-                ctx.accum.append(val[0].upper())
-                ctx.accum.append(val[1:])
-            else:                   
-                ctx.accum.append(val)
-            ctx.gentextstate = WordNode
-        else:
-            ctx.accum.append('[Unsupported NodeClass: %s]' % (nodtyp.__name__,))
-            
 
     @tornado.gen.coroutine
     def perform(self, ctx, propname, nod=RootPlaceholder):
@@ -164,8 +77,8 @@ class GenText(object):
         The propname should be a bytes; it will be prepended to node
         prefixes.
 
-        This calls append_context(), or else it calls NodeClass implementations
-        that call append_context().
+        This calls accum_append(), or else it calls GenNodeClass
+        implementations that call accum_append().
         """
         ctx.task.tick()
         
@@ -174,14 +87,14 @@ class GenText(object):
 
         if nod is None:
             return
-        if not isinstance(nod, NodeClass):
+        if not isinstance(nod, GenNodeClass):
             val = str(nod)
             if val:
-                self.append_context(ctx, val)
+                ctx.accum_append(val)
             return
         yield nod.perform(ctx, propname, self)
 
-class NodeClass(object):
+class GenNodeClass(object):
     """Virtual base class for gentext nodes -- the ones that aren't
     native types, that is.
     """
@@ -221,11 +134,11 @@ class NodeClass(object):
     @tornado.gen.coroutine
     def perform(self, ctx, propname, gentext):
         """Do the work of the node, which boils down to calling
-        append_context(), or maybe perform() recursively on subnodes.
+        accum_append(), or maybe perform() recursively on subnodes.
         """
-        gentext.append_context(ctx, '[Unimplemented NodeClass: %s]' % (repr(self),))
+        ctx.accum_append('[Unimplemented GenNodeClass: %s]' % (repr(self),))
         
-class SymbolNode(NodeClass):
+class SymbolNode(GenNodeClass):
     """A bare (lowercase) symbol, which will be looked up as a property.
     """
     def __init__(self, symbol):
@@ -241,9 +154,9 @@ class SymbolNode(NodeClass):
             if res is not None:
                 val = str(res)
                 if val:
-                    gentext.append_context(ctx, val)
+                    ctx.accum_append(val)
     
-class SeqNode(NodeClass):
+class SeqNode(GenNodeClass):
     """A sequence of subnodes; they are all rendered in sequence.
     """
     def __init__(self, *nodes):
@@ -258,7 +171,7 @@ class SeqNode(NodeClass):
         for nod in self.nodes:
             yield gentext.perform(ctx, propname, nod)
 
-class AltNode(NodeClass):
+class AltNode(GenNodeClass):
     """A set of subnodes; one is selected at random.
     """
     def __init__(self, *nodes):
@@ -281,7 +194,7 @@ class AltNode(NodeClass):
         yield gentext.perform(ctx, propname, nod)
 
         
-class ShuffleNode(NodeClass):
+class ShuffleNode(GenNodeClass):
     """A set of subnodes; one is selected at random, but avoiding repeats
     where possible.
     """
@@ -317,7 +230,7 @@ class ShuffleNode(NodeClass):
         yield gentext.perform(ctx, propname, nod)
 
         
-class StaticNodeClass(NodeClass):
+class StaticNodeClass(GenNodeClass):
     """Subclass for nodes that just represent themselves, literally,
     in the output stream.
 
@@ -328,7 +241,7 @@ class StaticNodeClass(NodeClass):
     
     @tornado.gen.coroutine
     def perform(self, ctx, propname, gentext):
-        gentext.append_context(ctx, self)
+        ctx.accum_append(self)
         
 class BeginNode(StaticNodeClass):
     # Not generateable
@@ -390,7 +303,7 @@ call_node_class_map = {
 
 def evalnode(nod, prefix=b''):
     """Convert an ast (syntax tree) node into a GenText node. The result
-    may be a native type (int, str, bool, None) or a NodeClass object.
+    may be a native type (int, str, bool, None) or a GenNodeClass object.
 
     Raises GenTextSyntaxError on failure.
     """

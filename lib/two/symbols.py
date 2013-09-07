@@ -127,9 +127,13 @@ def define_globals():
         ctx = EvalPropContext.get_current_context()
         if ctx.accum is None:
             raise Exception('print() in non-printing context')
+        if not ls:
+            # print() is a no-op, because we don't care about blank lines.
+            return
         if sep is not None:
             sep = str(sep)
         first = True
+        # We use raw mode, but we'll fake in WordNode state at the end.
         for obj in ls:
             if first:
                 first = False
@@ -138,7 +142,9 @@ def define_globals():
                     ctx.accum.append(sep)
             res = yield ctx.evalobj(obj, evaltype=EVALTYPE_RAW)
             if res is not two.evalctx.Accumulated:
-                ctx.accum.append(str(res))
+                ctx.accum_append(str(res), raw=True)
+        if self.textstate is RunOnNode:
+            self.textstate = WordNode
         return '' ### tacky
 
     @scriptfunc('style', group='_')
@@ -147,6 +153,7 @@ def define_globals():
         if ctx.accum is None:
             raise Exception('style() in non-printing context')
         nod = twcommon.interp.Style(style)
+        # Non-printing element, append directly
         ctx.accum.append(nod.describe())
         return '' ### tacky
         
@@ -156,6 +163,7 @@ def define_globals():
         if ctx.accum is None:
             raise Exception('endstyle() in non-printing context')
         nod = twcommon.interp.EndStyle(style)
+        # Non-printing element, append directly
         ctx.accum.append(nod.describe())
         return '' ### tacky
         
