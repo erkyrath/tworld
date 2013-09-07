@@ -133,7 +133,8 @@ def define_globals():
         if sep is not None:
             sep = str(sep)
         first = True
-        # We use raw mode, but we'll fake in WordNode state at the end.
+        # We use raw mode, but if the ctx is in cooked mode, we'll fake
+        # in WordNode state at the end.
         for obj in ls:
             if first:
                 first = False
@@ -143,8 +144,8 @@ def define_globals():
             res = yield ctx.evalobj(obj, evaltype=EVALTYPE_RAW)
             if res is not two.evalctx.Accumulated:
                 ctx.accum_append(str(res), raw=True)
-        if self.textstate is RunOnNode:
-            self.textstate = WordNode
+        if ctx.cooked and ctx.textstate is twcommon.gentext.RunOnNode:
+            ctx.textstate = twcommon.gentext.WordNode
         return '' ### tacky
 
     @scriptfunc('style', group='_')
@@ -630,6 +631,20 @@ def define_globals():
             return None
         return two.execute.LocationProxy(locid)
 
+    @scriptfunc('display', group='gentext', yieldy=True)
+    def global_gentext_display(obj, cooked=None):
+        ctx = EvalPropContext.get_current_context()
+        origcooked = ctx.cooked
+        if cooked is not None:
+            ctx.set_cooked(cooked)
+            
+        res = yield ctx.evalobj(obj, evaltype=EVALTYPE_RAW)
+        if res is not two.evalctx.Accumulated:
+            ctx.accum_append(str(res))
+            
+        if cooked is not None:
+            ctx.set_cooked(origcooked)
+    
     @scriptfunc('datetime', group='datetime')
     def global_datetime_datetime(year, month, day, **kwargs):
         """The native datetime constructor, except that tzinfo is always
@@ -970,6 +985,9 @@ def define_globals():
     # Add in all the access level names (as uppercase symbols)
     map.update(twcommon.access.map)
     globmap['access'] = ScriptNamespace(map)
+
+    map = dict(ScriptFunc.funcgroups['gentext'])
+    globmap['gentext'] = ScriptNamespace(map)
 
     map = dict(ScriptFunc.funcgroups['datetime'])
     # Expose some type constructors directly

@@ -1389,6 +1389,21 @@ class EvalPropContext(object):
             except Exception as ex:
                 self.task.log.warning('Caught exception (entering loc, move): %s', ex, exc_info=self.app.debugstacktraces)
 
+    def set_cooked(self, val):
+        """Flip the raw/cooked flag in the text generation state. When
+        we enter cooked mode, we use a state that causes a capital letter;
+        when we leave, we generate a period (if there wasn't just one).
+        """
+        if (not self.cooked) and val:
+            self.cooked = True
+            if self.textstate is RunOnNode:
+                self.textstate = BeginNode
+        elif self.cooked and (not val):
+            self.cooked = False
+            if self.textstate is not BeginNode:
+                self.accum.append('.')
+            self.textstate = RunOnNode
+
     def accum_append(self, val, raw=False):
         """Add one element to an EvalPropContext. The value must be a
         string or a static GenNodeClass. This relies on, and modifies,
