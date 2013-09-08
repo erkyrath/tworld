@@ -93,7 +93,6 @@ class PropCache:
         res = yield motor.Op(self.app.mongodb[dbname].find_one,
                              query,
                              {'val':1})
-        self.log.debug('### db get: %s %s (%s)', dbname, query, bool(res))
         if not res:
             ent = PropEntry(None, tup, query, found=False)
         else:
@@ -130,7 +129,6 @@ class PropCache:
         yield motor.Op(self.app.mongodb[dbname].update,
                        query, newval,
                        upsert=True)
-        self.log.debug('### db set: %s %s', dbname, newval)
 
         ent = PropEntry(val, tup, query, found=True)
         self.objmap[ent.id] = ent
@@ -154,7 +152,6 @@ class PropCache:
         
         yield motor.Op(self.app.mongodb[dbname].remove,
                        query)
-        self.log.debug('### db delete: %s %s', dbname, query)
 
         ent = PropEntry(None, tup, query, found=False)
         self.propmap[tup] = ent
@@ -193,7 +190,6 @@ class PropCache:
         yield motor.Op(self.app.mongodb[dbname].update,
                        query, newval,
                        upsert=True)
-        self.log.debug('### db written: %s %s', dbname, newval)
         ent.origval = deepcopy(ent.val)
 
 class PropEntry:
@@ -231,7 +227,7 @@ class PropEntry:
         (Always false for immutable and not-found values.)
         
         ### This will fail to detect changes that compare equal. That is,
-        ### if an array [True] changes to [1], this will not notice the
+        ### if an array [1] changes to [1.0], this will not notice the
         ### difference.
         """
         return self.mutable and (self.val != self.origval)
