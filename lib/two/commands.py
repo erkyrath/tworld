@@ -425,6 +425,8 @@ def define_commands():
         # right now, it's all [db, wid, locid/uid, key] where db is
         # 'worldprop' or 'wplayerprop' and the id values may be None
         # or ObjectId.
+        ### All of this prop-access stuff will need to go through the 
+        ### propcache, when the propcache has a lifespan.
         if type(ls[1]) is str:
             ls[1] = ObjectId(ls[1])
         if type(ls[2]) is str:
@@ -667,8 +669,21 @@ def define_commands():
                 msg = 'Location: "%s" (%s).' % (loc['name'], loctx.locid)
                 conn.write({'cmd':'message', 'text':msg})
         
+    @command('meta_me')
+    def cmd_me(app, task, cmd, conn):
+        res = yield motor.Op(app.mongodb.players.find_one,
+                             {'_id':conn.uid},
+                             {'name':1})
+        playername = res['name']
+        if not cmd.args:
+            raise MessageException('No pose given.')
+        text = ' '.join(cmd.args)
+        val = '%s %s' % (playername, text,)
+        everyone = yield task.find_locale_players()
+        task.write_event(everyone, val)
+
     @command('meta_shout')
-    def cmd_say(app, task, cmd, conn):
+    def cmd_shout(app, task, cmd, conn):
         res = yield motor.Op(app.mongodb.players.find_one,
                              {'_id':conn.uid},
                              {'name':1})
@@ -751,6 +766,8 @@ def define_commands():
         if not iid:
             # In the void, there should be no actions.
             raise ErrorMessageException('You are between worlds.')
+        ### All of this prop-access stuff will need to go through the 
+        ### propcache, when the propcache has a lifespan.
         instance = yield motor.Op(app.mongodb.instances.find_one,
                                   {'_id':iid})
         wid = instance['wid']

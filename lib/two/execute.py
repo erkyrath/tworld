@@ -66,42 +66,31 @@ class PlayerProxy(PropertyProxyMixin, object):
         iid = loctx.iid
         uid = self.uid
         dependencies = ctx.dependencies
+        app = ctx.app
         
         if iid is not None:
-            if dependencies is not None:
-                dependencies.add(('iplayerprop', iid, uid, key))
-            res = yield motor.Op(ctx.app.mongodb.iplayerprop.find_one,
-                                 {'iid':iid, 'uid':uid, 'key':key},
-                                 {'val':1})
+            res = yield app.propcache.get(('iplayerprop', iid, uid, key),
+                                          dependencies=dependencies)
             if res:
-                return res['val']
+                return res.val
     
         if True:
-            if dependencies is not None:
-                dependencies.add(('wplayerprop', wid, uid, key))
-            res = yield motor.Op(ctx.app.mongodb.wplayerprop.find_one,
-                                 {'wid':wid, 'uid':uid, 'key':key},
-                                 {'val':1})
+            res = yield app.propcache.get(('wplayerprop', wid, uid, key),
+                                          dependencies=dependencies)
             if res:
-                return res['val']
+                return res.val
 
         if iid is not None:
-            if dependencies is not None:
-                dependencies.add(('iplayerprop', iid, None, key))
-            res = yield motor.Op(ctx.app.mongodb.iplayerprop.find_one,
-                                 {'iid':iid, 'uid':None, 'key':key},
-                                 {'val':1})
+            res = yield app.propcache.get(('iplayerprop', iid, None, key),
+                                          dependencies=dependencies)
             if res:
-                return res['val']
+                return res.val
     
         if True:
-            if dependencies is not None:
-                dependencies.add(('wplayerprop', wid, None, key))
-            res = yield motor.Op(ctx.app.mongodb.wplayerprop.find_one,
-                                 {'wid':wid, 'uid':None, 'key':key},
-                                 {'val':1})
+            res = yield app.propcache.get(('wplayerprop', wid, None, key),
+                                          dependencies=dependencies)
             if res:
-                return res['val']
+                return res.val
 
         raise AttributeError('Player property "%s" is not found' % (key,))
         
@@ -113,9 +102,11 @@ class PlayerProxy(PropertyProxyMixin, object):
             raise Exception('Properties may only be deleted in action code (player prop "%s")' % (key,))
         iid = loctx.iid
         uid = self.uid
-        yield motor.Op(ctx.app.mongodb.iplayerprop.remove,
-                       {'iid':iid, 'uid':uid, 'key':key})
-        ctx.task.changeset.add( ('iplayerprop', iid, uid, key) )
+        app = ctx.app
+        
+        tup = ('iplayerprop', iid, uid, key)
+        yield app.propcache.delete(tup)
+        ctx.task.changeset.add(tup)
 
     @tornado.gen.coroutine
     def setprop(self, ctx, loctx, key, val):
@@ -125,11 +116,11 @@ class PlayerProxy(PropertyProxyMixin, object):
             raise Exception('Properties may only be set in action code (player prop "%s")' % (key,))
         iid = loctx.iid
         uid = self.uid
-        yield motor.Op(ctx.app.mongodb.iplayerprop.update,
-                       {'iid':iid, 'uid':uid, 'key':key},
-                       {'iid':iid, 'uid':uid, 'key':key, 'val':val},
-                       upsert=True)
-        ctx.task.changeset.add( ('iplayerprop', iid, uid, key) )
+        app = ctx.app
+
+        tup = ('iplayerprop', iid, uid, key)
+        yield app.propcache.set(tup, val)
+        ctx.task.changeset.add(tup)
 
 class LocationProxy(PropertyProxyMixin, object):
     """Represents a location, in the script environment. The locid argument
@@ -138,6 +129,7 @@ class LocationProxy(PropertyProxyMixin, object):
     requires an async operation to resolve.
     """
     def __init__(self, locid):
+        assert locid is not None
         self.locid = locid
     def __repr__(self):
         return '<LocationProxy %s>' % (self.locid,)
@@ -158,44 +150,32 @@ class LocationProxy(PropertyProxyMixin, object):
         wid = loctx.wid
         iid = loctx.iid
         locid = self.locid
+        app = ctx.app
         dependencies = ctx.dependencies
         
         if iid is not None:
-            if dependencies is not None:
-                dependencies.add(('instanceprop', iid, locid, key))
-            res = yield motor.Op(ctx.app.mongodb.instanceprop.find_one,
-                                 {'iid':iid, 'locid':locid, 'key':key},
-                                 {'val':1})
+            res = yield app.propcache.get(('instanceprop', iid, locid, key),
+                                          dependencies=dependencies)
             if res:
-                return res['val']
+                return res.val
     
         if True:
-            if dependencies is not None:
-                dependencies.add(('worldprop', wid, locid, key))
-            res = yield motor.Op(ctx.app.mongodb.worldprop.find_one,
-                                 {'wid':wid, 'locid':locid, 'key':key},
-                                 {'val':1})
+            res = yield app.propcache.get(('worldprop', wid, locid, key),
+                                          dependencies=dependencies)
             if res:
-                return res['val']
+                return res.val
 
         if iid is not None:
-            if dependencies is not None:
-                dependencies.add(('instanceprop', iid, None, key))
-            res = yield motor.Op(ctx.app.mongodb.instanceprop.find_one,
-                                 {'iid':iid, 'locid':None, 'key':key},
-                                 {'val':1})
+            res = yield app.propcache.get(('instanceprop', iid, None, key),
+                                          dependencies=dependencies)
             if res:
-                return res['val']
+                return res.val
     
         if True:
-            if dependencies is not None:
-                dependencies.add(('worldprop', wid, None, key))
-            res = yield motor.Op(ctx.app.mongodb.worldprop.find_one,
-                                 {'wid':wid, 'locid':None, 'key':key},
-                                 {'val':1})
+            res = yield app.propcache.get(('worldprop', wid, None, key),
+                                          dependencies=dependencies)
             if res:
-                return res['val']
-
+                return res.val
 
         raise AttributeError('Property "%s" is not found' % (key,))
         
@@ -207,9 +187,11 @@ class LocationProxy(PropertyProxyMixin, object):
             raise Exception('Properties may only be deleted in action code (location prop "%s")' % (key,))
         iid = loctx.iid
         locid = self.locid
-        yield motor.Op(ctx.app.mongodb.instanceprop.remove,
-                       {'iid':iid, 'locid':locid, 'key':key})
-        ctx.task.changeset.add( ('instanceprop', iid, locid, key) )
+        app = ctx.app
+        
+        tup = ('instanceprop', iid, locid, key)
+        yield app.propcache.delete(tup)
+        ctx.task.changeset.add(tup)
 
     @tornado.gen.coroutine
     def setprop(self, ctx, loctx, key, val):
@@ -219,11 +201,11 @@ class LocationProxy(PropertyProxyMixin, object):
             raise Exception('Properties may only be set in action code (location prop "%s")' % (key,))
         iid = loctx.iid
         locid = self.locid
-        yield motor.Op(ctx.app.mongodb.instanceprop.update,
-                       {'iid':iid, 'locid':locid, 'key':key},
-                       {'iid':iid, 'locid':locid, 'key':key, 'val':val},
-                       upsert=True)
-        ctx.task.changeset.add( ('instanceprop', iid, locid, key) )
+        app = ctx.app
+        
+        tup = ('instanceprop', iid, locid, key)
+        yield app.propcache.set(tup, val)
+        ctx.task.changeset.add(tup)
         
 class RealmProxy(PropertyProxyMixin, object):
     """Represents the realm-level properties, in the script environment.
@@ -239,26 +221,20 @@ class RealmProxy(PropertyProxyMixin, object):
         """
         wid = loctx.wid
         iid = loctx.iid
-        locid = None
+        app = ctx.app
         dependencies = ctx.dependencies
         
         if iid is not None:
-            if dependencies is not None:
-                dependencies.add(('instanceprop', iid, locid, key))
-            res = yield motor.Op(ctx.app.mongodb.instanceprop.find_one,
-                                 {'iid':iid, 'locid':locid, 'key':key},
-                                 {'val':1})
+            res = yield app.propcache.get(('instanceprop', iid, None, key),
+                                          dependencies=dependencies)
             if res:
-                return res['val']
+                return res.val
     
         if True:
-            if dependencies is not None:
-                dependencies.add(('worldprop', wid, locid, key))
-            res = yield motor.Op(ctx.app.mongodb.worldprop.find_one,
-                                 {'wid':wid, 'locid':locid, 'key':key},
-                                 {'val':1})
+            res = yield app.propcache.get(('worldprop', wid, None, key),
+                                          dependencies=dependencies)
             if res:
-                return res['val']
+                return res.val
 
         raise AttributeError('Realm property "%s" is not found' % (key,))
         
@@ -269,10 +245,11 @@ class RealmProxy(PropertyProxyMixin, object):
         if ctx.level != LEVEL_EXECUTE:
             raise Exception('Properties may only be deleted in action code (realm prop "%s")' % (key,))
         iid = loctx.iid
-        locid = None
-        yield motor.Op(ctx.app.mongodb.instanceprop.remove,
-                       {'iid':iid, 'locid':locid, 'key':key})
-        ctx.task.changeset.add( ('instanceprop', iid, locid, key) )
+        app = ctx.app
+        
+        tup = ('instanceprop', iid, None, key)
+        yield app.propcache.delete(tup)
+        ctx.task.changeset.add(tup)
 
     @tornado.gen.coroutine
     def setprop(self, ctx, loctx, key, val):
@@ -281,12 +258,11 @@ class RealmProxy(PropertyProxyMixin, object):
         if ctx.level != LEVEL_EXECUTE:
             raise Exception('Properties may only be set in action code (realm prop "%s")' % (key,))
         iid = loctx.iid
-        locid = None
-        yield motor.Op(ctx.app.mongodb.instanceprop.update,
-                       {'iid':iid, 'locid':locid, 'key':key},
-                       {'iid':iid, 'locid':locid, 'key':key, 'val':val},
-                       upsert=True)
-        ctx.task.changeset.add( ('instanceprop', iid, locid, key) )
+        app = ctx.app
+        
+        tup = ('instanceprop', iid, None, key)
+        yield app.propcache.set(tup, val)
+        ctx.task.changeset.add(tup)
 
 
 class BoundPropertyProxy(object):
@@ -346,9 +322,11 @@ class BoundNameProxy(object):
             raise Exception('Properties may only be deleted in action code (prop "%s")' % (key,))
         iid = loctx.iid
         locid = loctx.locid
-        yield motor.Op(ctx.app.mongodb.instanceprop.remove,
-                       {'iid':iid, 'locid':locid, 'key':key})
-        ctx.task.changeset.add( ('instanceprop', iid, locid, key) )
+        app = ctx.app
+        
+        tup = ('instanceprop', iid, locid, key)
+        yield app.propcache.delete(tup)
+        ctx.task.changeset.add(tup)
     
     @tornado.gen.coroutine
     def store(self, ctx, loctx, val):
@@ -369,11 +347,12 @@ class BoundNameProxy(object):
             raise Exception('Properties may only be set in action code (prop "%s")' % (key,))
         iid = loctx.iid
         locid = loctx.locid
-        yield motor.Op(ctx.app.mongodb.instanceprop.update,
-                       {'iid':iid, 'locid':locid, 'key':key},
-                       {'iid':iid, 'locid':locid, 'key':key, 'val':val},
-                       upsert=True)
-        ctx.task.changeset.add( ('instanceprop', iid, locid, key) )
+        app = ctx.app
+        
+        tup = ('instanceprop', iid, locid, key)
+        yield app.propcache.set(tup, val)
+        ctx.task.changeset.add(tup)
+        
 
 class BoundSubscriptProxy(object):
     """A load/store/delete object for a subscript expression. This
@@ -1181,11 +1160,9 @@ def perform_action(task, cmd, conn, target):
                 val = val[0:MAX_DESCLINE_LENGTH]
             iid = loctx.iid
             locid = loctx.locid
-            yield motor.Op(app.mongodb.instanceprop.update,
-                           {'iid':iid, 'locid':locid, 'key':key},
-                           {'iid':iid, 'locid':locid, 'key':key, 'val':val},
-                           upsert=True)
-            task.set_data_change( ('instanceprop', iid, locid, key) )
+            tup = ('instanceprop', iid, locid, key)
+            yield app.propcache.set(tup, val)
+            task.set_data_change(tup)
             if text is not None:
                 ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_MESSAGE)
                 val = yield ctx.eval(text, evaltype=EVALTYPE_TEXT)

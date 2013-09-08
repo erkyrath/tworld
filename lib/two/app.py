@@ -16,6 +16,7 @@ import two.ipool
 import two.commands
 import two.symbols
 import two.task
+import two.propcache
 from two.evalctx import EvalPropContext
 import twcommon.misc
 import twcommon.autoreload
@@ -46,6 +47,7 @@ class Tworld(object):
         self.commandbusy = False
 
         # Miscellaneous.
+        self.propcache = None
         self.caughtinterrupt = False
         self.shuttingdown = False
         self.debugstacktraces = opts.show_stack_traces
@@ -192,6 +194,9 @@ class Tworld(object):
 
         EvalPropContext.context_stack.clear()
 
+        # Set up a property cache (only for the duration of the task).
+        self.propcache = two.propcache.PropCache(self)
+
         # Handle the command.
         try:
             yield task.handle()
@@ -212,6 +217,15 @@ class Tworld(object):
             self.log.error('EvalPropContext.context_stack has %d entries remaining at end of task!', len(EvalPropContext.context_stack))
             
         task.resetticks()
+
+        # Write back any necessary property DB changes and drop the propcache.
+        try:
+            yield self.propcache.write_all_dirty()
+        except Exception as ex:
+            self.log.error('Error clearing propcache: %s', cmdobj, exc_info=True)
+        self.propcache.final()
+        self.propcache = None
+        
         starttime = task.starttime
         endtime = twcommon.misc.now()
         self.log.info('Finished command in %.3f ms (queued for %.3f ms); %d ticks max, %d ticks total',
