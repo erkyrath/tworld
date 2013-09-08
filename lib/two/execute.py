@@ -138,6 +138,7 @@ class LocationProxy(PropertyProxyMixin, object):
     requires an async operation to resolve.
     """
     def __init__(self, locid):
+        assert locid is not None
         self.locid = locid
     def __repr__(self):
         return '<LocationProxy %s>' % (self.locid,)
@@ -158,44 +159,32 @@ class LocationProxy(PropertyProxyMixin, object):
         wid = loctx.wid
         iid = loctx.iid
         locid = self.locid
+        app = ctx.app
         dependencies = ctx.dependencies
         
         if iid is not None:
-            if dependencies is not None:
-                dependencies.add(('instanceprop', iid, locid, key))
-            res = yield motor.Op(ctx.app.mongodb.instanceprop.find_one,
-                                 {'iid':iid, 'locid':locid, 'key':key},
-                                 {'val':1})
+            res = yield app.propcache.get(('instanceprop', iid, locid, key),
+                                          dependencies=dependencies)
             if res:
-                return res['val']
+                return res.val
     
         if True:
-            if dependencies is not None:
-                dependencies.add(('worldprop', wid, locid, key))
-            res = yield motor.Op(ctx.app.mongodb.worldprop.find_one,
-                                 {'wid':wid, 'locid':locid, 'key':key},
-                                 {'val':1})
+            res = yield app.propcache.get(('worldprop', wid, locid, key),
+                                          dependencies=dependencies)
             if res:
-                return res['val']
+                return res.val
 
         if iid is not None:
-            if dependencies is not None:
-                dependencies.add(('instanceprop', iid, None, key))
-            res = yield motor.Op(ctx.app.mongodb.instanceprop.find_one,
-                                 {'iid':iid, 'locid':None, 'key':key},
-                                 {'val':1})
+            res = yield app.propcache.get(('instanceprop', iid, None, key),
+                                          dependencies=dependencies)
             if res:
-                return res['val']
+                return res.val
     
         if True:
-            if dependencies is not None:
-                dependencies.add(('worldprop', wid, None, key))
-            res = yield motor.Op(ctx.app.mongodb.worldprop.find_one,
-                                 {'wid':wid, 'locid':None, 'key':key},
-                                 {'val':1})
+            res = yield app.propcache.get(('worldprop', wid, None, key),
+                                          dependencies=dependencies)
             if res:
-                return res['val']
-
+                return res.val
 
         raise AttributeError('Property "%s" is not found' % (key,))
         
@@ -239,26 +228,20 @@ class RealmProxy(PropertyProxyMixin, object):
         """
         wid = loctx.wid
         iid = loctx.iid
-        locid = None
+        app = ctx.app
         dependencies = ctx.dependencies
         
         if iid is not None:
-            if dependencies is not None:
-                dependencies.add(('instanceprop', iid, locid, key))
-            res = yield motor.Op(ctx.app.mongodb.instanceprop.find_one,
-                                 {'iid':iid, 'locid':locid, 'key':key},
-                                 {'val':1})
+            res = yield app.propcache.get(('instanceprop', iid, None, key),
+                                          dependencies=dependencies)
             if res:
-                return res['val']
+                return res.val
     
         if True:
-            if dependencies is not None:
-                dependencies.add(('worldprop', wid, locid, key))
-            res = yield motor.Op(ctx.app.mongodb.worldprop.find_one,
-                                 {'wid':wid, 'locid':locid, 'key':key},
-                                 {'val':1})
+            res = yield app.propcache.get(('worldprop', wid, None, key),
+                                          dependencies=dependencies)
             if res:
-                return res['val']
+                return res.val
 
         raise AttributeError('Realm property "%s" is not found' % (key,))
         

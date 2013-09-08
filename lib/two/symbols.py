@@ -1039,40 +1039,28 @@ def find_symbol(app, loctx, key, locals=None, dependencies=None):
     locid = loctx.locid
     
     if (locid is not None) and (iid is not None):
-        if dependencies is not None:
-            dependencies.add(('instanceprop', iid, locid, key))
-        res = yield motor.Op(app.mongodb.instanceprop.find_one,
-                             {'iid':iid, 'locid':locid, 'key':key},
-                             {'val':1})
+        res = yield app.propcache.get(('instanceprop', iid, locid, key),
+                                      dependencies=dependencies)
         if res:
-            return res['val']
+            return res.val
     
     if locid is not None:
-        if dependencies is not None:
-            dependencies.add(('worldprop', wid, locid, key))
-        res = yield motor.Op(app.mongodb.worldprop.find_one,
-                             {'wid':wid, 'locid':locid, 'key':key},
-                             {'val':1})
+        res = yield app.propcache.get(('worldprop', wid, locid, key),
+                                      dependencies=dependencies)
         if res:
-            return res['val']
+            return res.val
 
     if iid is not None:
-        if dependencies is not None:
-            dependencies.add(('instanceprop', iid, None, key))
-        res = yield motor.Op(app.mongodb.instanceprop.find_one,
-                             {'iid':iid, 'locid':None, 'key':key},
-                             {'val':1})
+        res = yield app.propcache.get(('instanceprop', iid, None, key),
+                                      dependencies=dependencies)
         if res:
-            return res['val']
+            return res.val
 
     if True:
-        if dependencies is not None:
-            dependencies.add(('worldprop', wid, None, key))
-        res = yield motor.Op(app.mongodb.worldprop.find_one,
-                             {'wid':wid, 'locid':None, 'key':key},
-                             {'val':1})
+        res = yield app.propcache.get(('worldprop', wid, None, key),
+                                      dependencies=dependencies)
         if res:
-            return res['val']
+            return res.val
 
     if app.global_symbol_table.has(key):
         (res, yieldy) = app.global_symbol_table.getyieldy(key)

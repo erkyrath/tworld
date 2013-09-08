@@ -7,7 +7,7 @@ is cached as a nothing.)
 This also tracks mutable values, and is able to write them back to the
 database if they change.
 
-Currently, this lives in a task and its lifespan is just the duration of the
+Currently, this lives in the app, but its lifespan is just the duration of one
 task. A future version may hang around longer.
 """
 
@@ -23,6 +23,7 @@ class PropCache:
 
         self.objmap = {}  # maps id(val) to PropEntry
         self.propmap = {}  # maps tuple to PropEntry
+        # propmap contains not-found entries; objmap does not.
 
     def final(self):
         """Shut down and clean up.
@@ -76,18 +77,19 @@ class PropCache:
         if dependencies is not None:
             dependencies.add(tup)
             
-        res = self.propmap.get(tup, None)
-        if res is not None:
-            if not res.found:
+        ent = self.propmap.get(tup, None)
+        if ent is not None:
+            if not ent.found:
                 # Cached "not found" value
                 return None
-            return res
+            return ent
 
         dbname = tup[0]
         query = PropCache.query_for_tuple(tup)
         res = yield motor.Op(self.app.mongodb[dbname].find_one,
                              query,
                              {'val':1})
+        self.log.debug('### db get: %s %s (%s)', dbname, query, bool(res))
         if not res:
             ent = PropEntry(None, tup, query, found=False)
         else:
@@ -96,6 +98,9 @@ class PropCache:
             self.objmap[id(val)] = ent
         self.propmap[tup] = ent
 
+        if not ent.found:
+            # Cached "not found" value
+            return None
         return ent
 
     @tornado.gen.coroutine
@@ -106,7 +111,7 @@ class PropCache:
         pass ###
         
     @tornado.gen.coroutine
-    def del(self, del, val):
+    def delete(self, tup, val):
         """Delete an object from the database (and the cache).
         """
         pass ###
@@ -116,14 +121,14 @@ class PropCache:
         *identity* of the value!
         Returns a PropEntry (if found) or None (if not).
         """
-        res = self.objmap.get(id(val), None)
-        return res
+        return self.objmap.get(id(val), None)
 
     def dirty_entries(self):
         return [ ent for ent in self.objmap.values() if ent.dirty() ]
 
     @tornado.gen.coroutine
     def write_all_dirty(self):
+        self.log.debug('### write_all time: cache is %s', self.propmap)
         ls = self.dirty_entries()
         for ent in ls:
             yield self.write_dirty(ent)
@@ -152,7 +157,7 @@ class PropEntry:
                 self.origval = deepcopy(val)
 
     def __repr__(self):
-        if not.found:
+        if not self.found:
             val = '(not found)'
         else:
             val = repr(self.val)
@@ -162,7 +167,7 @@ class PropEntry:
 
     def dirty(self):
         """Has this value changed since we cached it?
-        (Always false for immutable values.)
+        (Always false for immutable and not-found values.)
         
         ### This will fail to detect changes that compare equal. That is,
         ### if an array [True] changes to [1], this will not notice the
