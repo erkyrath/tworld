@@ -229,6 +229,42 @@ class ShuffleNode(GenNodeClass):
         nod = self.nodes[index]
         yield gentext.perform(ctx, propname, nod)
 
+class WeightNode(GenNodeClass):
+    """A set of subnodes; one is selected at random, according to
+    weights.
+    """
+    def __init__(self, *nodes):
+        self.nodes = []
+        self.total = 0.0
+        for ix in range(0, len(nodes), 2):
+            wgt = float(nodes[ix])
+            if wgt < 0:
+                raise Exception('Weight: entry is negative')
+            nod = nodes[ix+1]
+            self.nodes.append( (wgt, nod) )
+            self.total = self.total + wgt
+        if self.total < 0:
+            raise Exception('Weight: total is negative')
+    def dump(self, depth, gentext):
+        sys.stdout.write('\n')
+        for (wgt, nod) in self.nodes:
+            sys.stdout.write('%s%f' % ('  '*depth, wgt,))
+            gentext.dump(depth+1, nod)
+            
+    @tornado.gen.coroutine
+    def perform(self, ctx, propname, gentext):
+        seed = self.computeseed(ctx, propname)
+        val = ((seed % 65535) / 65535.0) * self.total
+        total = 0.0
+        selnod = self.nodes[-1][1]
+        for (wgt, nod) in self.nodes:
+            if (val < total + wgt):
+                selnod = nod
+                break
+            total = total + wgt
+        yield gentext.perform(ctx, propname, selnod)
+
+        
 class OptNode(GenNodeClass):
     """One subnode, which has a given probability of appearing.
     """
@@ -316,6 +352,7 @@ call_node_class_map = {
     'Alt': AltNode,
     'Shuffle': ShuffleNode,
     'Opt': OptNode,
+    'Weight': WeightNode,
     }
 
 def evalnode(nod, prefix=b''):
