@@ -425,6 +425,8 @@ def define_commands():
         # right now, it's all [db, wid, locid/uid, key] where db is
         # 'worldprop' or 'wplayerprop' and the id values may be None
         # or ObjectId.
+        ### All of this prop-access stuff will need to go through the 
+        ### propcache, when the propcache has a lifespan.
         if type(ls[1]) is str:
             ls[1] = ObjectId(ls[1])
         if type(ls[2]) is str:
