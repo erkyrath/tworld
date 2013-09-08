@@ -445,6 +445,12 @@ class EvalPropContext(object):
                     self.task.log.error('ExecRunawayException: User script exceeded depth limit!')
                     raise ExecRunawayException('Script ran too deep; aborting!')
                 if symbol is None:
+                    # We may be able to identify the object's property name
+                    # from the propcache.
+                    ent = self.app.propcache.get_by_object(res)
+                    if ent:
+                        symbol = ent.key
+                if symbol is None:
                     raise Exception('Temporary variable cannot generate text')
                 if self.genseed is None:
                     try:
