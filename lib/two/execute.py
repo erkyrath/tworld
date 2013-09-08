@@ -196,9 +196,11 @@ class LocationProxy(PropertyProxyMixin, object):
             raise Exception('Properties may only be deleted in action code (location prop "%s")' % (key,))
         iid = loctx.iid
         locid = self.locid
-        yield motor.Op(ctx.app.mongodb.instanceprop.remove,
-                       {'iid':iid, 'locid':locid, 'key':key})
-        ctx.task.changeset.add( ('instanceprop', iid, locid, key) )
+        app = ctx.app
+        
+        tup = ('instanceprop', iid, locid, key)
+        yield app.propcache.delete(tup)
+        ctx.task.changeset.add(tup)
 
     @tornado.gen.coroutine
     def setprop(self, ctx, loctx, key, val):
@@ -208,11 +210,11 @@ class LocationProxy(PropertyProxyMixin, object):
             raise Exception('Properties may only be set in action code (location prop "%s")' % (key,))
         iid = loctx.iid
         locid = self.locid
-        yield motor.Op(ctx.app.mongodb.instanceprop.update,
-                       {'iid':iid, 'locid':locid, 'key':key},
-                       {'iid':iid, 'locid':locid, 'key':key, 'val':val},
-                       upsert=True)
-        ctx.task.changeset.add( ('instanceprop', iid, locid, key) )
+        app = ctx.app
+        
+        tup = ('instanceprop', iid, locid, key)
+        yield app.propcache.set(tup, val)
+        ctx.task.changeset.add(tup)
         
 class RealmProxy(PropertyProxyMixin, object):
     """Represents the realm-level properties, in the script environment.
@@ -252,10 +254,11 @@ class RealmProxy(PropertyProxyMixin, object):
         if ctx.level != LEVEL_EXECUTE:
             raise Exception('Properties may only be deleted in action code (realm prop "%s")' % (key,))
         iid = loctx.iid
-        locid = None
-        yield motor.Op(ctx.app.mongodb.instanceprop.remove,
-                       {'iid':iid, 'locid':locid, 'key':key})
-        ctx.task.changeset.add( ('instanceprop', iid, locid, key) )
+        app = ctx.app
+        
+        tup = ('instanceprop', iid, None, key)
+        yield app.propcache.delete(tup)
+        ctx.task.changeset.add(tup)
 
     @tornado.gen.coroutine
     def setprop(self, ctx, loctx, key, val):
@@ -264,12 +267,11 @@ class RealmProxy(PropertyProxyMixin, object):
         if ctx.level != LEVEL_EXECUTE:
             raise Exception('Properties may only be set in action code (realm prop "%s")' % (key,))
         iid = loctx.iid
-        locid = None
-        yield motor.Op(ctx.app.mongodb.instanceprop.update,
-                       {'iid':iid, 'locid':locid, 'key':key},
-                       {'iid':iid, 'locid':locid, 'key':key, 'val':val},
-                       upsert=True)
-        ctx.task.changeset.add( ('instanceprop', iid, locid, key) )
+        app = ctx.app
+        
+        tup = ('instanceprop', iid, None, key)
+        yield app.propcache.set(tup, val)
+        ctx.task.changeset.add(tup)
 
 
 class BoundPropertyProxy(object):
@@ -329,9 +331,11 @@ class BoundNameProxy(object):
             raise Exception('Properties may only be deleted in action code (prop "%s")' % (key,))
         iid = loctx.iid
         locid = loctx.locid
-        yield motor.Op(ctx.app.mongodb.instanceprop.remove,
-                       {'iid':iid, 'locid':locid, 'key':key})
-        ctx.task.changeset.add( ('instanceprop', iid, locid, key) )
+        app = ctx.app
+        
+        tup = ('instanceprop', iid, locid, key)
+        yield app.propcache.delete(tup)
+        ctx.task.changeset.add(tup)
     
     @tornado.gen.coroutine
     def store(self, ctx, loctx, val):
@@ -352,11 +356,12 @@ class BoundNameProxy(object):
             raise Exception('Properties may only be set in action code (prop "%s")' % (key,))
         iid = loctx.iid
         locid = loctx.locid
-        yield motor.Op(ctx.app.mongodb.instanceprop.update,
-                       {'iid':iid, 'locid':locid, 'key':key},
-                       {'iid':iid, 'locid':locid, 'key':key, 'val':val},
-                       upsert=True)
-        ctx.task.changeset.add( ('instanceprop', iid, locid, key) )
+        app = ctx.app
+        
+        tup = ('instanceprop', iid, locid, key)
+        yield app.propcache.set(tup, val)
+        ctx.task.changeset.add(tup)
+        
 
 class BoundSubscriptProxy(object):
     """A load/store/delete object for a subscript expression. This
@@ -1164,11 +1169,9 @@ def perform_action(task, cmd, conn, target):
                 val = val[0:MAX_DESCLINE_LENGTH]
             iid = loctx.iid
             locid = loctx.locid
-            yield motor.Op(app.mongodb.instanceprop.update,
-                           {'iid':iid, 'locid':locid, 'key':key},
-                           {'iid':iid, 'locid':locid, 'key':key, 'val':val},
-                           upsert=True)
-            task.set_data_change( ('instanceprop', iid, locid, key) )
+            tup = ('instanceprop', iid, locid, key)
+            yield app.propcache.set(tup, val)
+            task.set_data_change(tup)
             if text is not None:
                 ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_MESSAGE)
                 val = yield ctx.eval(text, evaltype=EVALTYPE_TEXT)

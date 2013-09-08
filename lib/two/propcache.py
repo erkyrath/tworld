@@ -95,7 +95,7 @@ class PropCache:
         else:
             val = res['val']
             ent = PropEntry(val, tup, query, found=True)
-            self.objmap[id(val)] = ent
+            self.objmap[ent.id] = ent
         self.propmap[tup] = ent
 
         if not ent.found:
@@ -108,13 +108,52 @@ class PropCache:
         """Set a new object in the database (and the cache). If we had
         an object cached at this tuple, it's discarded.
         """
-        pass ###
+        ent = self.propmap.get(tup, None)
+        if ent:
+            if ent.found and ent.val is val:
+                # It's already there (exactly the same object).
+                return
+            del self.propmap[tup]
+            if ent.found:
+                del self.objmap[ent.id]
+
+        dbname = tup[0]
+        assert dbname in ('instanceprop', 'iplayerprop')
+        query = PropCache.query_for_tuple(tup)
+        newval = dict(query)
+        newval['val'] = val
+
+        yield motor.Op(self.app.mongodb[dbname].update,
+                       query, newval,
+                       upsert=True)
+        self.log.debug('### db set: %s %s', dbname, newval)
+
+        ent = PropEntry(val, tup, query, found=True)
+        self.objmap[ent.id] = ent
+        self.propmap[tup] = ent
         
     @tornado.gen.coroutine
-    def delete(self, tup, val):
+    def delete(self, tup):
         """Delete an object from the database (and the cache).
         """
-        pass ###
+        ent = self.propmap.get(tup, None)
+        if ent:
+            if not ent.found:
+                # It's already non-there.
+                return
+            del self.propmap[tup]
+            del self.objmap[ent.id]
+
+        dbname = tup[0]
+        assert dbname in ('instanceprop', 'iplayerprop')
+        query = PropCache.query_for_tuple(tup)
+        
+        yield motor.Op(self.app.mongodb[dbname].remove,
+                       query)
+        self.log.debug('### db delete: %s %s', dbname, query)
+
+        ent = PropEntry(None, tup, query, found=False)
+        self.propmap[tup] = ent
         
     def get_by_object(self, val):
         """Check whether a value is in the cache. This is keyed by the
@@ -151,6 +190,7 @@ class PropEntry:
         if not found:
             self.mutable = False
         else:
+            self.id = id(val)
             self.mutable = isinstance(val, (list, dict))
             if self.mutable:
                 # Keep a copy, to check for possible changes
