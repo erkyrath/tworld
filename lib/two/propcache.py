@@ -15,6 +15,10 @@ import tornado.gen
 from bson.objectid import ObjectId
 import motor
 
+# Collections that code may update. (As opposed to 'worldprop', etc,
+# which may only be updated by build code.)
+writable_collections = set(['instanceprop', 'iplayerprop'])
+
 class PropCache:
     def __init__(self, app):
         # Keep a link to the owning application.
@@ -32,7 +36,7 @@ class PropCache:
         before this.
         """
         ls = self.dirty_entries()
-        if ls:
+        if len(ls):
             self.log.error('propcache: finalizing while %d dirty entries!', len(ls))
             
         # Empty the maps, because PropEntry might have a backlink to this
@@ -118,7 +122,7 @@ class PropCache:
                 del self.objmap[ent.id]
 
         dbname = tup[0]
-        assert dbname in ('instanceprop', 'iplayerprop')
+        assert dbname in writable_collections
         query = PropCache.query_for_tuple(tup)
         newval = dict(query)
         newval['val'] = val
@@ -145,7 +149,7 @@ class PropCache:
             del self.objmap[ent.id]
 
         dbname = tup[0]
-        assert dbname in ('instanceprop', 'iplayerprop')
+        assert dbname in writable_collections
         query = PropCache.query_for_tuple(tup)
         
         yield motor.Op(self.app.mongodb[dbname].remove,
@@ -173,7 +177,24 @@ class PropCache:
 
     @tornado.gen.coroutine
     def write_dirty(self, ent):
-        pass ###
+        assert ent.found
+        dbname = ent.tup[0]
+        if dbname not in writable_collections:
+            # Maybe we should update the equivalent writable entry here,
+            # but we'll just skip it.
+            self.log.warning('Unable to update %s entry: %s', dbname, ent.key)
+            ent.origval = deepcopy(ent.val)
+            return
+        
+        query = PropCache.query_for_tuple(ent.tup)
+        newval = dict(ent.query)
+        newval['val'] = ent.val
+
+        yield motor.Op(self.app.mongodb[dbname].update,
+                       query, newval,
+                       upsert=True)
+        self.log.debug('### db written: %s %s', dbname, newval)
+        ent.origval = deepcopy(ent.val)
 
 class PropEntry:
     """Represents a database entry, or perhaps the lack of a database entry.
@@ -183,6 +204,7 @@ class PropEntry:
         self.val = val
         self.tup = tup  # Dependency key
         self.dbname = tup[0]  # Collection name
+        self.key = tup[-1]
         self.query = query  # Query in the collection
         self.found = found  # Was a database entry found at all?
         
