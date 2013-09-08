@@ -229,6 +229,22 @@ class ShuffleNode(GenNodeClass):
         nod = self.nodes[index]
         yield gentext.perform(ctx, propname, nod)
 
+class OptNode(GenNodeClass):
+    """One subnode, which has a given probability of appearing.
+    """
+    def __init__(self, val, nod):
+        self.chance = val
+        self.node = nod
+    def dump(self, depth, gentext):
+        sys.stdout.write('\n')
+        gentext.dump(depth+1, self.node)
+
+    @tornado.gen.coroutine
+    def perform(self, ctx, propname, gentext):
+        seed = self.computeseed(ctx, propname)
+        if ((seed % 65535) / 65535.0) < self.chance:
+            yield gentext.perform(ctx, propname, self.node)
+        
         
 class StaticNodeClass(GenNodeClass):
     """Subclass for nodes that just represent themselves, literally,
@@ -299,6 +315,7 @@ call_node_class_map = {
     'Seq': SeqNode,
     'Alt': AltNode,
     'Shuffle': ShuffleNode,
+    'Opt': OptNode,
     }
 
 def evalnode(nod, prefix=b''):
