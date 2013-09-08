@@ -167,7 +167,6 @@ class PropCache:
 
     @tornado.gen.coroutine
     def write_all_dirty(self):
-        self.log.debug('### write_all time: cache is %s', self.propmap)
         ls = self.dirty_entries()
         for ent in ls:
             yield self.write_dirty(ent)

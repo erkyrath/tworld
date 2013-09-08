@@ -751,6 +751,8 @@ def define_commands():
         if not iid:
             # In the void, there should be no actions.
             raise ErrorMessageException('You are between worlds.')
+        ### All of this prop-access stuff will need to go through the 
+        ### propcache, when the propcache has a lifespan.
         instance = yield motor.Op(app.mongodb.instances.find_one,
                                   {'_id':iid})
         wid = instance['wid']

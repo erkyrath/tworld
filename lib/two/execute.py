@@ -66,42 +66,31 @@ class PlayerProxy(PropertyProxyMixin, object):
         iid = loctx.iid
         uid = self.uid
         dependencies = ctx.dependencies
+        app = ctx.app
         
         if iid is not None:
-            if dependencies is not None:
-                dependencies.add(('iplayerprop', iid, uid, key))
-            res = yield motor.Op(ctx.app.mongodb.iplayerprop.find_one,
-                                 {'iid':iid, 'uid':uid, 'key':key},
-                                 {'val':1})
+            res = yield app.propcache.get(('iplayerprop', iid, uid, key),
+                                          dependencies=dependencies)
             if res:
-                return res['val']
+                return res.val
     
         if True:
-            if dependencies is not None:
-                dependencies.add(('wplayerprop', wid, uid, key))
-            res = yield motor.Op(ctx.app.mongodb.wplayerprop.find_one,
-                                 {'wid':wid, 'uid':uid, 'key':key},
-                                 {'val':1})
+            res = yield app.propcache.get(('wplayerprop', wid, uid, key),
+                                          dependencies=dependencies)
             if res:
-                return res['val']
+                return res.val
 
         if iid is not None:
-            if dependencies is not None:
-                dependencies.add(('iplayerprop', iid, None, key))
-            res = yield motor.Op(ctx.app.mongodb.iplayerprop.find_one,
-                                 {'iid':iid, 'uid':None, 'key':key},
-                                 {'val':1})
+            res = yield app.propcache.get(('iplayerprop', iid, None, key),
+                                          dependencies=dependencies)
             if res:
-                return res['val']
+                return res.val
     
         if True:
-            if dependencies is not None:
-                dependencies.add(('wplayerprop', wid, None, key))
-            res = yield motor.Op(ctx.app.mongodb.wplayerprop.find_one,
-                                 {'wid':wid, 'uid':None, 'key':key},
-                                 {'val':1})
+            res = yield app.propcache.get(('wplayerprop', wid, None, key),
+                                          dependencies=dependencies)
             if res:
-                return res['val']
+                return res.val
 
         raise AttributeError('Player property "%s" is not found' % (key,))
         
@@ -113,9 +102,11 @@ class PlayerProxy(PropertyProxyMixin, object):
             raise Exception('Properties may only be deleted in action code (player prop "%s")' % (key,))
         iid = loctx.iid
         uid = self.uid
-        yield motor.Op(ctx.app.mongodb.iplayerprop.remove,
-                       {'iid':iid, 'uid':uid, 'key':key})
-        ctx.task.changeset.add( ('iplayerprop', iid, uid, key) )
+        app = ctx.app
+        
+        tup = ('iplayerprop', iid, uid, key)
+        yield app.propcache.delete(tup)
+        ctx.task.changeset.add(tup)
 
     @tornado.gen.coroutine
     def setprop(self, ctx, loctx, key, val):
@@ -125,11 +116,11 @@ class PlayerProxy(PropertyProxyMixin, object):
             raise Exception('Properties may only be set in action code (player prop "%s")' % (key,))
         iid = loctx.iid
         uid = self.uid
-        yield motor.Op(ctx.app.mongodb.iplayerprop.update,
-                       {'iid':iid, 'uid':uid, 'key':key},
-                       {'iid':iid, 'uid':uid, 'key':key, 'val':val},
-                       upsert=True)
-        ctx.task.changeset.add( ('iplayerprop', iid, uid, key) )
+        app = ctx.app
+
+        tup = ('iplayerprop', iid, uid, key)
+        yield app.propcache.set(tup, val)
+        ctx.task.changeset.add(tup)
 
 class LocationProxy(PropertyProxyMixin, object):
     """Represents a location, in the script environment. The locid argument
