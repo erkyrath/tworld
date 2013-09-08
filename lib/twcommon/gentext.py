@@ -281,7 +281,47 @@ class OptNode(GenNodeClass):
         if ((seed % 65535) / 65535.0) < self.chance:
             yield gentext.perform(ctx, propname, self.node)
         
-        
+class SetKeyNode(GenNodeClass):
+    """Set a generation parameter. Also takes an optional subnode.
+    """
+    def __init__(self, key, val, nod=None):
+        self.key = key
+        self.value = val
+        self.node = nod
+    def dump(self, depth, gentext):
+        sys.stdout.write('%s = %s\n' % (self.key, repr(self.value)))
+        if self.node is not None:
+            gentext.dump(depth+1, self.node)
+
+    @tornado.gen.coroutine
+    def perform(self, ctx, propname, gentext):
+        ctx.genparams[self.key] = self.value
+        if self.node is not None:
+            yield gentext.perform(ctx, propname, self.node)
+            
+class IfKeyNode(GenNodeClass):
+    """Select one of two subnodes, based on a generation parameter.
+    """
+    def __init__(self, key, val, truenod, falsenod=None):
+        self.key = key
+        self.value = val
+        self.truenode = truenod
+        self.falsenode = falsenod
+    def dump(self, depth, gentext):
+        sys.stdout.write('%s =- %s\n' % (self.key, repr(self.value)))
+        gentext.dump(depth+1, self.truenode)
+        gentext.dump(depth+1, self.falsenode)
+
+    @tornado.gen.coroutine
+    def perform(self, ctx, propname, gentext):
+        if ctx.genparams.get(self.key, None) == self.value:
+            if self.truenode is not None:
+                yield gentext.perform(ctx, propname, self.truenode)
+        else:
+            if self.falsenode is not None:
+                yield gentext.perform(ctx, propname, self.falsenode)
+
+                
 class StaticNodeClass(GenNodeClass):
     """Subclass for nodes that just represent themselves, literally,
     in the output stream.
@@ -353,6 +393,8 @@ call_node_class_map = {
     'Shuffle': ShuffleNode,
     'Opt': OptNode,
     'Weight': WeightNode,
+    'SetKey': SetKeyNode,
+    'IfKey': IfKeyNode,
     }
 
 def evalnode(nod, prefix=b''):
