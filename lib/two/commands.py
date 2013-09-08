@@ -669,8 +669,21 @@ def define_commands():
                 msg = 'Location: "%s" (%s).' % (loc['name'], loctx.locid)
                 conn.write({'cmd':'message', 'text':msg})
         
+    @command('meta_me')
+    def cmd_me(app, task, cmd, conn):
+        res = yield motor.Op(app.mongodb.players.find_one,
+                             {'_id':conn.uid},
+                             {'name':1})
+        playername = res['name']
+        if not cmd.args:
+            raise MessageException('No pose given.')
+        text = ' '.join(cmd.args)
+        val = '%s %s' % (playername, text,)
+        everyone = yield task.find_locale_players()
+        task.write_event(everyone, val)
+
     @command('meta_shout')
-    def cmd_say(app, task, cmd, conn):
+    def cmd_shout(app, task, cmd, conn):
         res = yield motor.Op(app.mongodb.players.find_one,
                              {'_id':conn.uid},
                              {'name':1})
