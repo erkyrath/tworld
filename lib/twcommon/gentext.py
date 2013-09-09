@@ -3,7 +3,6 @@ The code structures for procedural text generation.
 """
 
 import sys
-import re
 import hashlib
 import struct
 import ast
@@ -11,9 +10,6 @@ import ast
 import twcommon.misc
 
 import tornado.gen
-
-# Check whether a string starts with a vowel.
-re_vowelstart = re.compile('^[aeiou]', re.IGNORECASE)
 
 # Used as a placeholder for the root argument of recursive functions.
 RootPlaceholder = twcommon.misc.SuiGeneris('RootPlaceholder')

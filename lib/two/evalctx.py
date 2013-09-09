@@ -3,6 +3,7 @@ The context object for evaluating script code. Most of the implementation
 of TworldPy lives in the EvalPropContext module.
 """
 
+import re
 import random
 import ast
 import operator
@@ -31,12 +32,16 @@ EVALCAP_DATAMOD = 0x02  # cause data changes
 EVALCAP_MOVE    = 0x04  # move the player
 EVALCAP_ALL     = 0x07  # all of above
 
+# Evaluation levels
 LEVEL_EXECUTE = 5
 LEVEL_DISPSPECIAL = 4
 LEVEL_DISPLAY = 3
 LEVEL_MESSAGE = 2
 LEVEL_FLAT = 1
 LEVEL_RAW = 0
+
+# Regexp: Check whether a string starts with a vowel.
+re_vowelstart = re.compile('^[aeiou]', re.IGNORECASE)
 
 class EvalPropFrame:
     """One stack frame in the EvalPropContext. Note that depth starts at 1.
