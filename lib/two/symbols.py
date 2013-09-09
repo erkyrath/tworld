@@ -133,8 +133,6 @@ def define_globals():
         if sep is not None:
             sep = str(sep)
         first = True
-        # We use raw mode, but if the ctx is in cooked mode, we'll fake
-        # in WordNode state at the end.
         for obj in ls:
             if first:
                 first = False
@@ -144,6 +142,8 @@ def define_globals():
             res = yield ctx.evalobj(obj, evaltype=EVALTYPE_RAW)
             if not (res is None or res == ''):
                 ctx.accum_append(str(res), raw=True)
+        # We used raw mode, but if the ctx is in cooked mode, we'll fake
+        # in WordNode state at the end.
         if ctx.cooked and ctx.textstate is twcommon.gentext.RunOnNode:
             ctx.textstate = twcommon.gentext.WordNode
 

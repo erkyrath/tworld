@@ -1247,6 +1247,11 @@ class EvalPropContext(object):
         # End of nodls interaction.
         if len(suppstack) > 0:
             self.accum.append('[$if without matching $end]')
+            
+        # We used raw mode, but if the ctx is in cooked mode, we'll fake
+        # in WordNode state at the end.
+        if self.cooked and self.textstate is twcommon.gentext.RunOnNode:
+            self.textstate = twcommon.gentext.WordNode
 
     @tornado.gen.coroutine
     def perform_event(self, text, texteval, otext, otexteval):
