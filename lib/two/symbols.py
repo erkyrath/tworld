@@ -142,11 +142,10 @@ def define_globals():
                 if sep:
                     ctx.accum.append(sep)
             res = yield ctx.evalobj(obj, evaltype=EVALTYPE_RAW)
-            if res is not two.evalctx.Accumulated:
+            if not (res is None or res == ''):
                 ctx.accum_append(str(res), raw=True)
         if ctx.cooked and ctx.textstate is twcommon.gentext.RunOnNode:
             ctx.textstate = twcommon.gentext.WordNode
-        return '' ### tacky
 
     @scriptfunc('style', group='_')
     def global_style(style):
@@ -156,7 +155,6 @@ def define_globals():
         nod = twcommon.interp.Style(style)
         # Non-printing element, append directly
         ctx.accum.append(nod.describe())
-        return '' ### tacky
         
     @scriptfunc('endstyle', group='_')
     def global_endstyle(style):
@@ -166,7 +164,6 @@ def define_globals():
         nod = twcommon.interp.EndStyle(style)
         # Non-printing element, append directly
         ctx.accum.append(nod.describe())
-        return '' ### tacky
         
     @scriptfunc('locals', group='_')
     def global_locals():
@@ -639,7 +636,7 @@ def define_globals():
             ctx.set_cooked(cooked)
             
         res = yield ctx.evalobj(obj, evaltype=EVALTYPE_RAW)
-        if res is not two.evalctx.Accumulated:
+        if not (res is None or res == ''):
             ctx.accum_append(str(res))
             
         if cooked is not None:

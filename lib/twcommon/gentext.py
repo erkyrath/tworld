@@ -150,11 +150,8 @@ class SymbolNode(GenNodeClass):
     @tornado.gen.coroutine
     def perform(self, ctx, propname, gentext):
         res = yield ctx.evalobj(self.symbol)
-        if res is not ctx._Accumulated: ### terrible
-            if res is not None:
-                val = str(res)
-                if val:
-                    ctx.accum_append(val)
+        if not (res is None or res == ''):
+            ctx.accum_append(str(res))
     
 class SeqNode(GenNodeClass):
     """A sequence of subnodes; they are all rendered in sequence.

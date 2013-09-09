@@ -38,10 +38,6 @@ LEVEL_MESSAGE = 2
 LEVEL_FLAT = 1
 LEVEL_RAW = 0
 
-# Singleton object that signifies that the result of an evaluation is
-# the accum buffer of the EvalPropContext.
-Accumulated = twcommon.misc.SuiGeneris('Accumulated')
-
 class EvalPropFrame:
     """One stack frame in the EvalPropContext. Note that depth starts at 1.
 
@@ -77,11 +73,6 @@ class EvalPropContext(object):
     # We'll push contexts on here as we nest them. (It is occasionally
     # necessary to find the "current" context without a handy reference.)
     context_stack = []
-
-    # This is provided so that the gentext module can check it without
-    # importing this module. This is a terrible solution and should go
-    # away someday.
-    _Accumulated = Accumulated
 
     @staticmethod
     def get_current_context():
@@ -257,34 +248,30 @@ class EvalPropContext(object):
                 res = res.get('text', '')
             return str_or_null(res)
         if (self.level == LEVEL_MESSAGE):
-            if res is Accumulated:
+            if self.accum:
                 # Skip all styles, links, etc. Just paste together strings.
-                return ''.join([ val for val in self.accum if type(val) is str ])
-            return str(res)
+                return ''.join([ val for val in self.accum if type(val) is str ]) + str_or_null(res)
+            return str_or_null(res)
         if (self.level == LEVEL_DISPLAY):
-            if res is Accumulated:
+            if self.accum:
+                if not (res is None or res == ''):
+                    self.accum.append(str(res))
                 optimize_accum(self.accum)
                 return self.accum
             return str_or_null(res)
         if (self.level == LEVEL_DISPSPECIAL):
             if self.wasspecial:
                 return res
-            if res is Accumulated:
-                optimize_accum(self.accum)
-                return self.accum
-            if not res and self.accum:
-                # I am deeply suspicious of this case. It leaves {code}
-                # properties as second-class citizens, because they don't
-                # return Accumulated. (Therefore, for example, a print()
-                # followed by a return value doesn't concatenate them.
-                # Also, a 0 return value is wrongly ignored.)
-                # I guess we should rely on the presence of self.accum
-                # and drop Accumulated entirely?
+            if self.accum:
+                if not (res is None or res == ''):
+                    self.accum.append(str(res))
                 optimize_accum(self.accum)
                 return self.accum
             return str_or_null(res)
         if (self.level == LEVEL_EXECUTE):
-            if res is Accumulated:
+            if self.accum:
+                if not (res is None or res == ''):
+                    self.accum.append(str(res))
                 optimize_accum(self.accum)
                 return self.accum
             return res
@@ -299,9 +286,8 @@ class EvalPropContext(object):
         is ignored). For other types, the symbol may be provided as handy
         context.
 
-        Returns an object, or the special ref Accumulated to indicate a
-        description array. (The latter only at MESSAGE/DISPLAY/DISPSPECIAL/
-        EXECUTE level.)
+        Returns an object, or fills out a description array and returns that.
+        (The latter only at MESSAGE/DISPLAY/DISPSPECIAL/EXECUTE level.)
 
         The top-level call to evalobj() may set up the description accumulator
         and linktargets. Lower-level calls use the existing ones.
@@ -420,12 +406,11 @@ class EvalPropContext(object):
                     self.task.log.error('ExecRunawayException: User script exceeded depth limit!')
                     raise ExecRunawayException('Script ran too deep; aborting!')
                 yield self.interpolate_text(res.get('text', ''))
-                return Accumulated
+                return None
             except LoopBodyException as ex:
                 raise Exception('"%s" outside loop' % (ex.statement,))
             except ReturnException as ex:
-                ### use ex.returnvalue?
-                return Accumulated
+                return ex.returnvalue
             except ExecRunawayException:
                 raise  # Let this through
             except Exception as ex:
@@ -466,12 +451,11 @@ class EvalPropContext(object):
                 finally:
                     if toplevel:
                         tree.final_context(self)
-                return Accumulated
+                return None
             except LoopBodyException as ex:
                 raise Exception('"%s" outside loop' % (ex.statement,))
             except ReturnException as ex:
-                ### use ex.returnvalue?
-                return Accumulated
+                return ex.returnvalue
             except ExecRunawayException:
                 raise  # Let this through
             except Exception as ex:
@@ -1220,7 +1204,7 @@ class EvalPropContext(object):
                     continue
                 # {text} objects have already added their contents to
                 # the accum array.
-                if subres is not Accumulated:
+                if not (subres is None or subres == ''):
                     # Anything not a {text} object gets interpolated as
                     # a string.
                     self.accum_append(str(subres), raw=True)
