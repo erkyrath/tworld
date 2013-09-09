@@ -208,7 +208,8 @@ class ShuffleNode(GenNodeClass):
             yield gentext.perform(ctx, propname, nod)
             return
 
-        ls = ctx.genparams.get(self.prefix, None)
+        shufflekey = propname+self.prefix
+        ls = ctx.genparams.get(shufflekey, None)
         if ls is None:
             ls = list(range(count))
         if len(ls) == 1:
@@ -218,7 +219,7 @@ class ShuffleNode(GenNodeClass):
         else:
             seed = self.computeseed(ctx, propname)
             index = ls.pop(seed % len(ls))
-        ctx.genparams[self.prefix] = ls
+        ctx.genparams[shufflekey] = ls
         nod = self.nodes[index]
         yield gentext.perform(ctx, propname, nod)
 
