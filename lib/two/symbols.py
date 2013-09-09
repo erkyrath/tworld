@@ -629,8 +629,12 @@ def define_globals():
         return two.execute.LocationProxy(locid)
 
     @scriptfunc('display', group='gentext', yieldy=True)
-    def global_gentext_display(obj, cooked=None):
+    def global_gentext_display(obj, cooked=None, seed=None):
         ctx = EvalPropContext.get_current_context()
+        origseed = ctx.genseed
+        if seed is not None:
+            ctx.genseed = str(seed).encode()
+            
         origcooked = ctx.cooked
         if cooked is not None:
             ctx.set_cooked(cooked)
@@ -641,6 +645,9 @@ def define_globals():
             
         if cooked is not None:
             ctx.set_cooked(origcooked)
+
+        if seed is not None:
+            ctx.genseed = origseed
     
     @scriptfunc('datetime', group='datetime')
     def global_datetime_datetime(year, month, day, **kwargs):
