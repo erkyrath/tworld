@@ -286,7 +286,7 @@ def parse_prop(prop):
     if prop.startswith('*'):
         key, dummy, val = prop[1:].partition(' ')
         
-        if not val and key != 'code':
+        if not val and key not in ('code', 'gentext'):
             error('%s must be followed by a value' % (key,))
             return None
         
@@ -312,6 +312,8 @@ def parse_prop(prop):
             return {'type':'panic', 'text':val} # theoretically the text is optional
         elif key == 'text':
             return {'type':'text', 'text':val}
+        elif key == 'gentext':
+            return {'type':'gentext', 'text':val}
         elif key == 'code':
             return {'type':'code', 'text':val}
         elif key == 'selfdesc':
@@ -455,6 +457,14 @@ def prop_to_string(val):
         if '\n\n' in val:
             return val.replace('\n\n', '\n\t')
         return val
+    if key == 'gentext':
+        val = val['text']
+        if '\n' not in text:
+            return '*gentext %s' % (text,)
+        else:
+            ls = [ '  '+val for val in text.split('\n') ]
+            text = '\n'.join(ls)
+            return '*gentext\n%s' % (text,)
     if key == 'code':
         text = val['text']
         if '\n' not in text:
