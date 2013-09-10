@@ -189,7 +189,7 @@ def define_globals():
         """
         if twcommon.misc.is_typed_dict(object, 'text'):
             return object
-        if twcommon.misc.is_typed_dict(object, 'code'):
+        if twcommon.misc.is_typed_dict(object, 'code') or twcommon.misc.is_typed_dict(object, 'gentext'):
             return { 'type':'text', 'text':object.get('text', '') }
         return { 'type':'text', 'text':str(object) }
 
@@ -205,7 +205,7 @@ def define_globals():
                 res['args'] = args
                 return res
             return object
-        if twcommon.misc.is_typed_dict(object, 'text'):
+        if twcommon.misc.is_typed_dict(object, 'text') or twcommon.misc.is_typed_dict(object, 'gentext'):
             # Convert the {text} into {code}
             object = object.get('text', '')
         res = { 'type':'code', 'text':str(object) }
@@ -233,6 +233,8 @@ def define_globals():
             return isinstance(object, dict) and object.get('type', None) == 'code'
         if typ is global_text:
             return isinstance(object, dict) and object.get('type', None) == 'text'
+        if typ is global_gentext_gentext:
+            return isinstance(object, dict) and object.get('type', None) == 'gentext'
         if typ is global_datetime_datetime:
             return isinstance(object, datetime.datetime)
         return isinstance(object, typ)
@@ -627,6 +629,19 @@ def define_globals():
         if not locid:
             return None
         return two.execute.LocationProxy(locid)
+
+    @scriptfunc('gentext', group='gentext')
+    def global_gentext_gentext(object=''):
+        """Wrap a string as a {gentext} object.
+        """
+        if twcommon.misc.is_typed_dict(object, 'gentext'):
+            # Return the object unchanged.
+            return object
+        if twcommon.misc.is_typed_dict(object, 'text') or twcommon.misc.is_typed_dict(object, 'code'):
+            # Convert the {text} into {gentext}
+            object = object.get('text', '')
+        res = { 'type':'gentext', 'text':str(object) }
+        return res
 
     @scriptfunc('display', group='gentext', yieldy=True)
     def global_gentext_display(obj, cooked=None, seed=None):
