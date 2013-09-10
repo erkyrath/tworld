@@ -1097,7 +1097,9 @@ def define_commands():
         if action is None:
             action = conn.populaceactions.get(cmd.action)
         if action is None:
-            raise ErrorMessageException('Action is not available.')
+            # Drop this silently; it's probably the result of net lag.
+            task.log.warning('Action not available: %s', cmd.action)
+            return
         res = yield two.execute.perform_action(task, cmd, conn, action)
         
     @command('dropfocus', doeswrite=True)
