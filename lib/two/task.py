@@ -61,7 +61,7 @@ class Task(object):
     CPU_TICK_LIMIT = 500
 
     # Limit on how deep the eval stack can get.
-    STACK_DEPTH_LIMIT = 8
+    STACK_DEPTH_LIMIT = 10
     
     def __init__(self, app, cmdobj, connid, twwcid, queuetime):
         self.app = app
