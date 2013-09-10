@@ -648,6 +648,53 @@ def define_globals():
 
         if seed is not None:
             ctx.genseed = origseed
+            
+    @scriptfunc('A', group='gentext')
+    def global_gentext_a():
+        ctx = EvalPropContext.get_current_context()
+        ctx.accum_append(twcommon.gentext.ANode())
+    
+    @scriptfunc('An', group='gentext')
+    def global_gentext_an():
+        ctx = EvalPropContext.get_current_context()
+        ctx.accum_append(twcommon.gentext.ANode())
+    
+    @scriptfunc('AForm', group='gentext')
+    def global_gentext_aform():
+        ctx = EvalPropContext.get_current_context()
+        ctx.accum_append(twcommon.gentext.AFormNode())
+    
+    @scriptfunc('AnForm', group='gentext')
+    def global_gentext_anform():
+        ctx = EvalPropContext.get_current_context()
+        ctx.accum_append(twcommon.gentext.AnFormNode())
+    
+    @scriptfunc('RunOn', group='gentext')
+    def global_gentext_runon():
+        ### Doesn't work right now, due to the way print messes with
+        ### textstate.
+        ctx = EvalPropContext.get_current_context()
+        ctx.accum_append(twcommon.gentext.RunOnNode())
+    
+    @scriptfunc('Para', group='gentext')
+    def global_gentext_para():
+        ctx = EvalPropContext.get_current_context()
+        ctx.accum_append(twcommon.gentext.ParaNode())
+    
+    @scriptfunc('Stop', group='gentext')
+    def global_gentext_stop():
+        ctx = EvalPropContext.get_current_context()
+        ctx.accum_append(twcommon.gentext.StopNode())
+    
+    @scriptfunc('Semi', group='gentext')
+    def global_gentext_semi():
+        ctx = EvalPropContext.get_current_context()
+        ctx.accum_append(twcommon.gentext.SemiNode())
+    
+    @scriptfunc('Comma', group='gentext')
+    def global_gentext_comma():
+        ctx = EvalPropContext.get_current_context()
+        ctx.accum_append(twcommon.gentext.CommaNode())
     
     @scriptfunc('datetime', group='datetime')
     def global_datetime_datetime(year, month, day, **kwargs):
@@ -1108,6 +1155,7 @@ def find_symbol(app, loctx, key, locals=None, dependencies=None):
 from twcommon.misc import is_typed_dict
 import twcommon.access
 import twcommon.interp
+import twcommon.gentext
 import two.grammar
 import two.execute
 import two.ipool
