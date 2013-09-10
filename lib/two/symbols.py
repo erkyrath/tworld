@@ -165,6 +165,15 @@ def define_globals():
         # Non-printing element, append directly
         ctx.accum.append(nod.describe())
         
+    @scriptfunc('parabreak', group='_')
+    def global_parabreak():
+        ctx = EvalPropContext.get_current_context()
+        if ctx.accum is None:
+            raise Exception('style() in non-printing context')
+        nod = twcommon.interp.ParaBreak()
+        # Non-printing element, append directly
+        ctx.accum.append(nod.describe())
+        
     @scriptfunc('locals', group='_')
     def global_locals():
         """Return a dictionary that reflects the current set of local
