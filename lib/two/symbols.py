@@ -671,10 +671,8 @@ def define_globals():
     
     @scriptfunc('RunOn', group='gentext')
     def global_gentext_runon():
-        ### Doesn't work right now, due to the way print messes with
-        ### textstate.
         ctx = EvalPropContext.get_current_context()
-        ctx.accum_append(twcommon.gentext.RunOnNode())
+        ctx.accum_append(twcommon.gentext.RunOnExplicitNode())
     
     @scriptfunc('Para', group='gentext')
     def global_gentext_para():

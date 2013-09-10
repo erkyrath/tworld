@@ -1420,7 +1420,7 @@ class EvalPropContext(object):
         # the current state.
         if isinstance(val, GenNodeClass):
             nodtyp = type(val)
-            if nodtyp in (RunOnNode, CommaNode, SemiNode, StopNode, ParaNode):
+            if nodtyp in (RunOnNode, RunOnExplicitNode, CommaNode, SemiNode, StopNode, ParaNode):
                 # Retain the more severe break form.
                 if self.textstate.precedence < nodtyp.precedence:
                     self.textstate = nodtyp
@@ -1435,7 +1435,7 @@ class EvalPropContext(object):
 
         # Based on the current state, add a space or punctuation or
         # whatever before the new text.
-        if self.textstate is RunOnNode:
+        if self.textstate in (RunOnNode, RunOnExplicitNode):
             pass
         elif self.textstate in (BeginNode, StopNode, ParaNode):
             if self.textstate is StopNode:
@@ -1613,7 +1613,7 @@ def resolve_argument_spec(spec, args, kwargs):
 from twcommon.access import ACC_VISITOR, ACC_MEMBER
 import twcommon.interp
 from twcommon.interp import InterpNode
-from twcommon.gentext import GenNodeClass, SymbolNode, SeqNode, AltNode, ShuffleNode, BeginNode, WordNode, ANode, AFormNode, AnFormNode, RunOnNode, RunOnCapNode, ParaNode, StopNode, SemiNode, CommaNode
+from twcommon.gentext import GenNodeClass, SymbolNode, SeqNode, AltNode, ShuffleNode, BeginNode, WordNode, ANode, AFormNode, AnFormNode, RunOnNode, RunOnExplicitNode, RunOnCapNode, ParaNode, StopNode, SemiNode, CommaNode
 import two.execute
 import two.symbols
 import twcommon.gentext
