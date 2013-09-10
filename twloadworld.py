@@ -361,7 +361,7 @@ def append_to_prop(dic, key, ln, indent=0):
             val['_templist'].append(subls)
         else:
             val[subkey] = subval
-    elif type(val) is dict and val.get('type', None) == 'code':
+    elif type(val) is dict and val.get('type', None) in ('code', 'gentext'):
         if '_baseindent' not in val:
             val['_baseindent'] = indent
         indentstr = '  ' * (indent - val['_baseindent'])
