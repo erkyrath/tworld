@@ -302,7 +302,7 @@ class IfKeyNode(GenNodeClass):
         self.truenode = truenod
         self.falsenode = falsenod
     def dump(self, depth, gentext):
-        sys.stdout.write('%s =- %s\n' % (self.key, repr(self.value)))
+        sys.stdout.write('%s == %s\n' % (self.key, repr(self.value)))
         gentext.dump(depth+1, self.truenode)
         gentext.dump(depth+1, self.falsenode)
 
@@ -315,7 +315,39 @@ class IfKeyNode(GenNodeClass):
             if self.falsenode is not None:
                 yield gentext.perform(ctx, propname, self.falsenode)
 
-                
+class SwitchKeyNode(GenNodeClass):
+    """Select one of a set of subnodes, based on a generation parameter.
+    """
+    def __init__(self, key, *nodes):
+        self.key = key
+        self.switch = {}
+        self.childlist = []
+        self.elsenode = None
+        for ix in range(0, len(nodes)-1, 2):
+            key = nodes[ix]
+            nod = nodes[ix+1]
+            self.switch[key] = nod
+            self.childlist.append( (key, nod) )
+        if (len(nodes) % 2):
+            self.elsenode = nodes[-1]
+    def dump(self, depth, gentext):
+        sys.stdout.write('%s\n' % (self.key,))
+        for (key, nod) in self.childlist:
+            sys.stdout.write('%s%s' % ('  '*depth, key,))
+            gentext.dump(depth+1, nod)
+        sys.stdout.write('%s%s' % ('  '*depth, '(else)',))
+        gentext.dump(depth+1, self.elsenode)
+            
+    @tornado.gen.coroutine
+    def perform(self, ctx, propname, gentext):
+        val = ctx.genparams.get(self.key, None)
+        if val in self.switch:
+            nod = self.switch[val]
+            yield gentext.perform(ctx, propname, nod)
+        else:
+            if self.elsenode:
+                yield gentext.perform(ctx, propname, self.elsenode)
+
 class StaticNodeClass(GenNodeClass):
     """Subclass for nodes that just represent themselves, literally,
     in the output stream.
@@ -396,6 +428,7 @@ call_node_class_map = {
     'Weight': WeightNode,
     'SetKey': SetKeyNode,
     'IfKey': IfKeyNode,
+    'SwitchKey': SwitchKeyNode,
     }
 
 def evalnode(nod, prefix=b''):
