@@ -179,7 +179,9 @@ def define_globals():
             ctx.accum.append(['exlink', target.strip()])
         else:
             ackey = EvalPropContext.build_action_key()
-            ctx.linktargets[ackey] = target
+            if twcommon.misc.is_typed_dict(target, 'code'):
+                target = target.get('text', '')
+            ctx.linktargets[ackey] = str(target)
             ctx.accum.append(['link', ackey])
         
     @scriptfunc('endlink', group='_')
