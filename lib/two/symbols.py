@@ -165,11 +165,37 @@ def define_globals():
         # Non-printing element, append directly
         ctx.accum.append(nod.describe())
         
+    @scriptfunc('link', group='_')
+    def global_link(target, external=False):
+        ctx = EvalPropContext.get_current_context()
+        if ctx.accum is None:
+            raise Exception('link() in non-printing context')
+        # Assemble an appropriate desc element. Same as interpolate_text() in
+        # evalctx.py.
+        # Non-printing element, append directly.
+        if external:
+            if not twcommon.interp.Link.looks_url_like(target):
+                raise Exception('External link target does not look like a URL: %s' % (target,))
+            ctx.accum.append(['exlink', target.strip()])
+        else:
+            ackey = EvalPropContext.build_action_key()
+            ctx.linktargets[ackey] = target
+            ctx.accum.append(['link', ackey])
+        
+    @scriptfunc('endlink', group='_')
+    def global_endlink(external=False):
+        ctx = EvalPropContext.get_current_context()
+        if ctx.accum is None:
+            raise Exception('endlink() in non-printing context')
+        nod = twcommon.interp.EndLink(external=external)
+        # Non-printing element, append directly
+        ctx.accum.append(nod.describe())
+        
     @scriptfunc('parabreak', group='_')
     def global_parabreak():
         ctx = EvalPropContext.get_current_context()
         if ctx.accum is None:
-            raise Exception('style() in non-printing context')
+            raise Exception('parabreak() in non-printing context')
         nod = twcommon.interp.ParaBreak()
         # Non-printing element, append directly
         ctx.accum.append(nod.describe())
