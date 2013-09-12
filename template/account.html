@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block page_title %}
+My Account
+{% end %}
+
+{% block head_ext %}
+<link rel="stylesheet" href="{{ static_url('css/form.css') }}" type="text/css">
+<script src="{{ static_url('js/jquery-1.9.1.js') }}" type="text/javascript"></script>
+<script src="{{ static_url('js/account.js') }}" type="text/javascript"></script>
+{% end %}
+
+{% block body %}
+
+<h2>My Account</h2>
+
+<div class="WideAuthForm">
+ <div class="FormSection">
+  <div style="font-size:1.2em;">{{ name }} &nbsp; ({{ email }})</div>
+  <p class="FloatRight"><a id="change_pw_link" href="#">Change password</a></p>
+ </div>
+ <div class="FormDivider">
+ </div>
+ <div class="FormSection">
+  {% if isbuild %}
+   You have <a href="/build">build permission</a>.
+  {% else %}
+   You do not have <a href="/nobuild">build permission</a>.
+  {% end %}
+ </div>
+</div>
+
+<div id="change_pw_form" class="AuthForm"
+ {% if not formerror %}
+   style="display:none;"
+ {% end %}
+ >
+<form method="post" action="/account">
+ {% module xsrf_form_html() %}
+ <div class="FormSection">
+  <input class="FormInput" autocomplete="disabled"
+   id="oldpassword_field" name="oldpassword" type="password" placeholder="Old password"
+   >
+ </div>
+ <div class="FormSection">
+  <input class="FormInput" autocomplete="disabled"
+   id="newpassword_field" name="password" type="password" placeholder="New password"
+   >
+ </div>
+ <div class="FormSection">
+  <input class="FormInput" autocomplete="disabled"
+   id="newpassword2_field" name="password2" type="password" placeholder="New password again"
+   >
+ </div>
+ <div class="FormSection">
+  <input class="FormButton FloatRight" name="changepw" type="submit" value="Change Password">
+  &nbsp;
+ </div>
+{% if formerror %}
+ <div class="FormSection FormError">
+  {{ formerror }}
+ </div>
+{% end %}
+</form>
+</div>
+
+{% end %}
