@@ -8,6 +8,9 @@ My Account
 <link rel="stylesheet" href="{{ static_url('css/form.css') }}" type="text/css">
 <script src="{{ static_url('js/jquery-1.9.1.js') }}" type="text/javascript"></script>
 <script src="{{ static_url('js/account.js') }}" type="text/javascript"></script>
+<script type="text/javascript">
+var show_pwchange_initially = {% if formerror %} true {% else %} false {% end %};
+</script>
 {% end %}
 
 {% block body %}
@@ -30,11 +33,7 @@ My Account
  </div>
 </div>
 
-<div id="change_pw_form" class="AuthForm"
- {% if not formerror %}
-   style="display:none;"
- {% end %}
- >
+<div id="change_pw_form" class="AuthForm">
 <form method="post" action="/account">
  {% module xsrf_form_html() %}
  <div class="FormSection">
