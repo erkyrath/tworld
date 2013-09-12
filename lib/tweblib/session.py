@@ -209,6 +209,21 @@ class SessionMgr(object):
         # Create a sign-in session too, and we're done.
         sessionid = yield tornado.gen.Task(self.create_session, handler, uid, email, name)
         return sessionid
+    
+    @tornado.gen.coroutine
+    def change_password(self, uid, password):
+        """
+        Change an existing player's password.
+        """
+        # Both the salt and password strings are stored as bytes, although
+        # they'll really be ascii hex digits.
+        pwsalt = self.random_bytes(8)
+        saltedpw = pwsalt + b':' + password
+        cryptpw = hashlib.sha1(saltedpw).hexdigest().encode()
+        
+        yield motor.Op(self.app.mongodb.players.update,
+                       {'_id':uid},
+                       {'$set': {'pwsalt': pwsalt, 'password':cryptpw}})
         
     @tornado.gen.coroutine
     def create_session(self, handler, uid, email, name):

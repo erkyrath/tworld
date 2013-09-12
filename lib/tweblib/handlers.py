@@ -441,9 +441,13 @@ class AccountHandler(MyRequestHandler):
                         isbuild=self.twisbuild)
             return
 
-        ###
+        try:
+            yield self.application.twsessionmgr.change_password(self.twsession['uid'], password)
+            # Success.
+            formerror = 'Password changed.'
+        except MessageException as ex:
+            formerror = str(ex)
 
-        formerror = 'Password changed.'
         self.render('account.html', formerror=formerror,
                     name=self.twsession.get('name', '???'),
                     email=self.twsession.get('email', '???'),
