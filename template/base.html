@@ -21,7 +21,7 @@
 {% if twsessionstatus %}
  <div class="HeadControls">
   {% if twsessionstatus == 'auth' %}
-   Welcome, {{ twsession.get('name', '???') }}<br>
+   Welcome, <a href="/account">{{ twsession.get('name', '???') }}</a><br>
    <a href="/logout">Sign out</a>
   {% elif twsessionstatus == 'unauth' %}
    <a href="/">Sign in</a>

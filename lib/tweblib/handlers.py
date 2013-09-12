@@ -353,6 +353,102 @@ class RecoverHandler(MyRequestHandler):
     def get(self):
         self.render('recover.html')
 
+class AccountHandler(MyRequestHandler):
+    """The page for updating your account state. (Currently, this is just
+    changing your password.)
+    """
+    @tornado.gen.coroutine
+    def prepare(self):
+        """
+        Called before every get/post invocation for this handler. We use
+        the opportunity to store the various build permission flags.
+        """
+        yield self.find_current_session()
+        if self.twsessionstatus != 'auth':
+            raise tornado.web.HTTPError(403, 'You are not signed in.')
+        res = yield motor.Op(self.application.mongodb.players.find_one,
+                             { '_id':self.twsession['uid'] })
+        if not res:
+            raise tornado.web.HTTPError(403, 'You do not exist.')
+        self.twisadmin = res.get('admin', False)
+        self.twisbuild = (self.twisadmin or res.get('build', False))
+        
+    def get_template_namespace(self):
+        map = super().get_template_namespace()
+        # Add a couple of default values. The handlers may or may not override
+        # these Nones.
+        map['formerror'] = None
+        return map
+
+    @tornado.gen.coroutine
+    def get(self):
+        self.render('account.html',
+                    name=self.twsession.get('name', '???'),
+                    email=self.twsession.get('email', '???'),
+                    isbuild=self.twisbuild)
+        
+    @tornado.gen.coroutine
+    def post(self):
+
+        # Apply canonicalizations to the passwords.
+        oldpassword = self.get_argument('oldpassword', '')
+        oldpassword = unicodedata.normalize('NFKC', oldpassword)
+        oldpassword = oldpassword.encode()  # to UTF8 bytes
+        password = self.get_argument('password', '')
+        password = unicodedata.normalize('NFKC', password)
+        password = password.encode()  # to UTF8 bytes
+        password2 = self.get_argument('password2', '')
+        password2 = unicodedata.normalize('NFKC', password2)
+        password2 = password2.encode()  # to UTF8 bytes
+        
+        formerror = None
+        formfocus = 'name'
+        
+        if (not oldpassword):
+            formerror = 'You must enter your old password.'
+            formfocus = 'oldpassword'
+        elif (not password):
+            formerror = 'You must enter your new password.'
+            formfocus = 'password'
+        elif (not password2):
+            formerror = 'You must enter your new password twice.'
+            formfocus = 'password2'
+        elif (len(password) < 6):
+            formerror = 'Please use at least six characters in your password.'
+            formfocus = 'password'
+        elif (len(password) > 128):
+            formerror = 'Please use no more than 128 characters in your password.'
+            formfocus = 'password'
+        elif (password != password2):
+            formerror = 'The passwords you entered were not the same.'
+            password2 = ''
+            formfocus = 'password2'
+
+        if not formerror:
+            try:
+                res = yield self.application.twsessionmgr.find_player(self, self.twsession['email'], oldpassword)
+                if not res:
+                    formerror = 'Your current password does not match what you entered.'
+                elif res['_id'] != self.twsession['uid']:
+                    formerror = 'Your account ID did not match.'
+            except MessageException as ex:
+                formerror = str(ex)
+            
+        if formerror:
+            self.render('account.html', formerror=formerror,
+                        name=self.twsession.get('name', '???'),
+                        email=self.twsession.get('email', '???'),
+                        isbuild=self.twisbuild)
+            return
+
+        ###
+
+        formerror = 'Password changed.'
+        self.render('account.html', formerror=formerror,
+                    name=self.twsession.get('name', '???'),
+                    email=self.twsession.get('email', '???'),
+                    isbuild=self.twisbuild)
+
 class LogOutHandler(MyRequestHandler):
     """The sign-out page.
     """

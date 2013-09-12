@@ -13,6 +13,21 @@
   font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
 }
 
+.WideAuthForm {
+  width: 80%;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 30px;
+  margin-bottom: 30px;
+  border: 1px solid #BBB;
+  border-radius: 8px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  background: #EED;
+
+  font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
+}
+
 .FormSection {
   margin: 15px 20px;
   color: #666;
