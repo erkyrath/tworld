@@ -70,6 +70,14 @@ def define_commands():
             val = 'Server broadcast: Server is shutting down!'
         for stream in app.webconns.all():
             stream.write(wcproto.message(0, {'cmd':'messageall', 'text':val}))
+        # Bump the lastactive timestamp, if possible.
+        try:
+            yield motor.Op(app.mongodb.config.update,
+                           {'key':'lastactive'},
+                           {'key':'lastactive', 'val':task.starttime}, upsert=True)
+        except:
+            pass
+        # Tell the app to shut down.
         app.shutdown(restartreason)
         # At this point ioloop is still running, but the command queue
         # is frozen. A sys.exit will be along shortly.
@@ -78,9 +86,24 @@ def define_commands():
     def cmd_dbconnected(app, task, cmd, stream):
         # We've connected (or reconnected) to mongodb. Re-synchronize any
         # data that we had cached from there.
-        # Right now this means: Load up the localization data.
+        # Right now this means: Bump the lastactive timestamp.
+        # Load up the localization data.
         # Awaken any inhabited instances.
         # Go through the list of players who are in the world.
+        lastactive = None
+        lastactivediff = None
+        try:
+            res = yield motor.Op(app.mongodb.config.find_one,
+                                 {'key':'lastactive'})
+            if res:
+                lastactive = res['val']
+                lastactivediff = task.starttime - lastactive
+        except:
+            pass
+        task.log.info('server last known active: %s (%s ago)', lastactive, lastactivediff)
+        yield motor.Op(app.mongodb.config.update,
+                       {'key':'lastactive'},
+                       {'key':'lastactive', 'val':task.starttime}, upsert=True)
         try:
             task.app.localize = yield twcommon.localize.load_localization(task.app)
         except Exception as ex:
@@ -123,6 +146,10 @@ def define_commands():
         # Go through all the awake instances. Those that are still
         # inhabited, bump their timers. Those that have not been inhabited
         # for a while, put to sleep.
+        # But first, bump the lastactive timestamp.
+        yield motor.Op(app.mongodb.config.update,
+                       {'key':'lastactive'},
+                       {'key':'lastactive', 'val':task.starttime}, upsert=True)
         # Go through the list of players who are in the world.
         iidset = set()
         cursor = app.mongodb.playstate.find({'iid':{'$ne':None}},

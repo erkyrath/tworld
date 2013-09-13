@@ -80,6 +80,7 @@ class Tworld(object):
         res.start()
 
         # This periodic command puts uninhabited instances to sleep.
+        # Also bumps the lastactive timestamp.
         # (Every minute, plus an uneven fraction of a second.)
         def func():
             self.queue_command({'cmd':'checkuninhabited'})
