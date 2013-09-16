@@ -208,7 +208,6 @@ class PropCache:
 
     @tornado.gen.coroutine
     def resolve_dirty(self, ent):
-        self.log.debug('### resolving dirty entry: %s', ent)
         dbname = ent.tup[0]
         if dbname not in writable_collections:
             # Maybe we should update the equivalent writable entry here,
