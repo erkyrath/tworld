@@ -13,6 +13,10 @@ detects that too and does an update.
 
 Currently, this lives in the app, but its lifespan is just the duration of one
 task. A future version may hang around longer.
+
+### Future version should also do work in write_all_dirty() to break apart
+### objmap sets larger than 1. Deepcopy all values, so that there's no
+### id sharing any more.
 """
 
 import tornado.gen
