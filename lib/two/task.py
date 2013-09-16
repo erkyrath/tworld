@@ -266,7 +266,7 @@ class Task(object):
         Any exception raised by this function is considered serious, and
         throws a full stack trace into the logs.
         """
-        self.log.debug('Handling message %s', self.cmdobj)
+        self.log.debug('Handling message %s: %s', self.cmdobj.cmd, str(self.cmdobj.cmd[:64]))
 
         if self.app.shuttingdown:
             raise Exception('The server is shutting down.')
