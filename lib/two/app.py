@@ -221,6 +221,7 @@ class Tworld(object):
 
         # Write back any necessary property DB changes and drop the propcache.
         try:
+            self.propcache.dump() ####
             yield self.propcache.write_all_dirty()
         except Exception as ex:
             self.log.error('Error clearing propcache: %s', cmdobj, exc_info=True)

@@ -2,10 +2,14 @@
 Property cache: sits on top of the database and keeps known values in memory.
 
 (Also keeps known *non*-values in memory; that is, a hit that returns nothing
-is cached as a nothing.)
+is cached so that we can return that fact.)
 
-This also tracks mutable values, and is able to write them back to the
-database if they change.
+When a property is changed or deleted, we add a cache entry with the dirty
+flag. At the end of the task, we call write_all_dirty() to resolve these
+back to the database (update or delete).
+
+This also tracks mutable values. If a list or dict changes, write_all_dirty()
+detects that too and does an update.
 
 Currently, this lives in the app, but its lifespan is just the duration of one
 task. A future version may hang around longer.
@@ -25,9 +29,11 @@ class PropCache:
         self.app = app
         self.log = self.app.log
 
-        self.objmap = {}  # maps id(val) to PropEntry
         self.propmap = {}  # maps tuple to PropEntry
-        # propmap contains not-found entries; objmap does not.
+        self.objmap = {}  # maps id(val) to set of PropEntry
+        # objmap only contains entries for mutable values. A given value
+        # may be in more than one property; that's why objmap contains
+        # sets. (But we break these apart at write_all_dirty() time.)
 
     def final(self):
         """Shut down and clean up.
@@ -48,6 +54,17 @@ class PropCache:
         self.app = None
         self.objmap = None
         self.propmap = None
+
+    def dump(self):
+        """Print out cache contents. For debugging only.
+        """
+        print('Propcache: %d entries' % (len(self.propmap)))
+        for ent in self.propmap.values():
+            print('  %s' % (ent,))
+        if self.objmap:
+            print('...and %d in objmap' % (len(self.objmap)))
+            for (id, oset) in self.objmap.items():
+                print('  %s: %s' % (id, oset,))
 
     @staticmethod
     def query_for_tuple(tup):
@@ -98,8 +115,15 @@ class PropCache:
         else:
             val = res['val']
             ent = PropEntry(val, tup, query, found=True)
-            self.objmap[ent.id] = ent
+            
         self.propmap[tup] = ent
+        if ent.mutable:
+            assert ent.found
+            oset = self.objmap.get(ent.id, None)
+            if oset is None:
+                self.objmap[ent.id] = set((ent,))
+            else:
+                oset.add(ent)
 
         if not ent.found:
             # Cached "not found" value
@@ -108,52 +132,62 @@ class PropCache:
 
     @tornado.gen.coroutine
     def set(self, tup, val):
-        """Set a new object in the database (and the cache). If we had
-        an object cached at this tuple, it's discarded.
+        """Set a new (dirty) object in the cache. If we had an object cached
+        at this tuple, it's discarded. (No database write occurs here.)
         """
         ent = self.propmap.get(tup, None)
         if ent:
             if ent.found and ent.val is val:
                 # It's already there (exactly the same object).
                 return
+            # A property is cached. Drop this entry.
             del self.propmap[tup]
-            if ent.found:
-                del self.objmap[ent.id]
+            if ent.mutable:
+                oset = self.objmap.get(ent.id, None)
+                if oset is not None:
+                    oset.discard(ent)
+                    if not oset:
+                        del self.objmap[ent.id]
+            ent = None
 
+        # Create new entry.
         dbname = tup[0]
         assert dbname in writable_collections
         query = PropCache.query_for_tuple(tup)
-        newval = dict(query)
-        newval['val'] = val
-
-        yield motor.Op(self.app.mongodb[dbname].update,
-                       query, newval,
-                       upsert=True)
-
-        ent = PropEntry(val, tup, query, found=True)
-        self.objmap[ent.id] = ent
+        ent = PropEntry(val, tup, query, found=True, dirty=True)
         self.propmap[tup] = ent
+        if ent.mutable:
+            oset = self.objmap.get(ent.id, None)
+            if oset is None:
+                self.objmap[ent.id] = set((ent,))
+            else:
+                oset.add(ent)
         
     @tornado.gen.coroutine
     def delete(self, tup):
-        """Delete an object from the database (and the cache).
+        """Set a new (dirty) object in the cache, representing not-found.
+        (No database write occurs here.)
         """
         ent = self.propmap.get(tup, None)
         if ent:
             if not ent.found:
                 # It's already non-there.
                 return
+            # A property is cached. Drop this entry.
             del self.propmap[tup]
-            del self.objmap[ent.id]
+            if ent.mutable:
+                oset = self.objmap.get(ent.id, None)
+                if oset is not None:
+                    oset.discard(ent)
+                    if not oset:
+                        del self.objmap[ent.id]
+            ent = None
 
+        # Create new (not-found) entry.
         dbname = tup[0]
         assert dbname in writable_collections
         query = PropCache.query_for_tuple(tup)
-        
-        yield motor.Op(self.app.mongodb[dbname].remove,
-                       query)
-
-        ent = PropEntry(None, tup, query, found=False)
+        ent = PropEntry(None, tup, query, found=False, dirty=True)
         self.propmap[tup] = ent
         
     def get_by_object(self, val):
@@ -164,46 +198,55 @@ class PropCache:
         return self.objmap.get(id(val), None)
 
     def dirty_entries(self):
-        return [ ent for ent in self.objmap.values() if ent.dirty() ]
+        return [ ent for ent in self.propmap.values() if ent.isdirty() ]
 
     @tornado.gen.coroutine
     def write_all_dirty(self):
         ls = self.dirty_entries()
         for ent in ls:
-            yield self.write_dirty(ent)
+            yield self.resolve_dirty(ent)
 
     @tornado.gen.coroutine
-    def write_dirty(self, ent):
-        assert ent.found
+    def resolve_dirty(self, ent):
+        self.log.debug('### resolving dirty entry: %s', ent)
         dbname = ent.tup[0]
         if dbname not in writable_collections:
             # Maybe we should update the equivalent writable entry here,
             # but we'll just skip it.
             self.log.warning('Unable to update %s entry: %s', dbname, ent.key)
-            ent.origval = deepcopy(ent.val)
+            if ent.mutable:
+                ent.origval = deepcopy(ent.val)
             return
-        
-        query = PropCache.query_for_tuple(ent.tup)
-        newval = dict(ent.query)
-        newval['val'] = ent.val
 
-        yield motor.Op(self.app.mongodb[dbname].update,
-                       query, newval,
-                       upsert=True)
-        ent.origval = deepcopy(ent.val)
+        if ent.found:
+            # Resolve update.
+            newval = dict(ent.query)
+            newval['val'] = ent.val
+            yield motor.Op(self.app.mongodb[dbname].update,
+                           ent.query, newval,
+                           upsert=True)
+            if ent.mutable:
+                ent.origval = deepcopy(ent.val)
+        else:
+            # Resolve delete.
+            yield motor.Op(self.app.mongodb[dbname].remove,
+                           ent.query)
+        ent.dirty = False
 
 class PropEntry:
     """Represents a database entry, or perhaps the lack of a database entry.
     """
     
-    def __init__(self, val, tup, query, found=True):
+    def __init__(self, val, tup, query, found=True, dirty=False):
         self.val = val
         self.tup = tup  # Dependency key
         self.dbname = tup[0]  # Collection name
         self.key = tup[-1]
         self.query = query  # Query in the collection
         self.found = found  # Was a database entry found at all?
-        
+        self.dirty = dirty  # Needs to be written back?
+
+        # Mutable entries will be added to objmap.
         if not found:
             self.mutable = False
         else:
@@ -220,17 +263,21 @@ class PropEntry:
             val = repr(self.val)
             if len(val) > 32:
                 val = val[:32] + '...'
-        return '<PropEntry %s: %s>' % (self.tup, val)
+        isdirty = 'DIRTY:' if self.isdirty() else ''
+        return '<PropEntry %s%s: %s>' % (isdirty, self.tup, val)
 
-    def dirty(self):
+    def isdirty(self):
         """Has this value changed since we cached it?
-        (Always false for immutable and not-found values.)
+        (Always true if we created this entry for a set/delete.)
         
         ### This will fail to detect changes that compare equal. That is,
         ### if an array [1] changes to [1.0], this will not notice the
         ### difference.
         """
-        return self.mutable and (self.val != self.origval)
+        if self.dirty:
+            return True
+        if self.mutable and (self.val != self.origval):
+            return True
 
 def deepcopy(val):
     """Return a copy of a value. For immutable values, this returns the

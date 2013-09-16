@@ -59,6 +59,8 @@ class TestPropcache(tornado.testing.AsyncTestCase):
 
         ### _t = []; x = _t; y = _t; del x; del y
         ### x = True; y = True; del x; del y
+        ### _t = []; x = _t; y = _t; _t.append(1)
+        ### _t = {}; x = _t; y = _t; x['one'] = 1
         
 class TestDeepCopy(unittest.TestCase):
     def test_deepcopy(self):
