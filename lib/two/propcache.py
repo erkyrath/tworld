@@ -199,7 +199,10 @@ class PropCache:
         *identity* of the value!
         Returns a PropEntry (if found) or None (if not).
         """
-        return self.objmap.get(id(val), None)
+        oset = self.objmap.get(id(val), None)
+        if oset:
+            return list(oset)[0]
+        return None
 
     def dirty_entries(self):
         return [ ent for ent in self.propmap.values() if ent.isdirty() ]
