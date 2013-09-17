@@ -1279,6 +1279,7 @@ class BuildAddWorldHandler(BuildBaseHandler):
         try:
             uid = self.twsession['uid']
             world = { 'creator':uid, 'name':'New World',
+                      'createtime':twcommon.misc.now(),
                       'copyable':True, 'instancing':'standard' }
 
             wid = yield motor.Op(self.application.mongodb.worlds.insert,

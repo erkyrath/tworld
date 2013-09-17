@@ -13,7 +13,7 @@ schema to the current version. Use the --upgradedb option in this case.
 """
 
 # The database version created by this version of the script.
-DBVERSION = 5
+DBVERSION = 6
 
 import sys
 import os
@@ -141,6 +141,12 @@ def upgrade_to_v5():
                 val['focus'] = True
             db.worldprop.update({'_id':prop['_id']}, {'$set':{'val':val}})
 
+def upgrade_to_v6():
+    print('Upgrading to v6...')
+    db.worlds.update({'createtime':None},
+                     {'$set':{'createtime':datetime.datetime.now(datetime.timezone.utc),}},
+                     multi=True)
+
 # if curversion is None, we're brand-new.
 if curversion is not None and curversion < DBVERSION:
     if not opts.upgradedb:
@@ -154,6 +160,8 @@ if curversion is not None and curversion < DBVERSION:
         upgrade_to_v4()
     if curversion < 5:
         upgrade_to_v5()
+    if curversion < 6:
+        upgrade_to_v6()
     db.config.update({'key':'dbversion'},
                      {'key':'dbversion', 'val':DBVERSION}, upsert=True)
 else:
