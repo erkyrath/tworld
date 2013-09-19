@@ -172,6 +172,9 @@ def define_commands():
             iid = instance.iid
             if instance.lastinhabited < tooold:
                 app.log.info('Sleeping instance %s', iid)
+                yield motor.Op(app.mongodb.instances.update,
+                               {'_id':iid},
+                               {'$set':{'lastawake':task.starttime}})
                 instance = yield motor.Op(app.mongodb.instances.find_one,
                                           {'_id':iid})
                 loctx = two.task.LocContext(None, wid=instance['wid'], scid=instance['scid'], iid=iid)
@@ -572,8 +575,18 @@ def define_commands():
 
         awakening = app.ipool.notify_instance(newiid)
         if awakening:
-            ### figure out lastawake, put in local!
             app.log.info('Awakening instance %s', newiid)
+            lastawake = None
+            res = yield motor.Op(app.mongodb.instances.find_one,
+                                 {'_id':newiid})
+            if res:
+                lastawake = res.get('lastawake', None)
+                if isinstance(lastawake, bool):
+                    task.log.warning('Instance lastawake was %s at awake (entry)!', lastawake)
+                    lastawake = task.starttime
+            yield motor.Op(app.mongodb.instances.update,
+                           {'_id':newiid},
+                           {'$set':{'lastawake':True}})
             loctx = two.task.LocContext(None, wid=newwid, scid=newscid, iid=newiid)
             task.resetticks()
             # If the instance/world has an on_wake property, run it.
@@ -584,7 +597,8 @@ def define_commands():
             if awakenhook and twcommon.misc.is_typed_dict(awakenhook, 'code'):
                 ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
                 try:
-                    yield ctx.eval(awakenhook, evaltype=EVALTYPE_RAW)
+                    args = { '_slept':lastawake }
+                    yield ctx.eval(awakenhook, evaltype=EVALTYPE_RAW, locals=args)
                 except Exception as ex:
                     task.log.warning('Caught exception (awakening instance): %s', ex, exc_info=app.debugstacktraces)
                 ctx = None
