@@ -86,10 +86,8 @@ def define_commands():
     def cmd_dbconnected(app, task, cmd, stream):
         # We've connected (or reconnected) to mongodb. Re-synchronize any
         # data that we had cached from there.
-        # Right now this means: Bump the lastactive timestamp.
-        # Load up the localization data.
-        # Awaken any inhabited instances.
-        # Go through the list of players who are in the world.
+        
+        # First, grab and then update the lastactive value.
         lastactive = None
         lastactivediff = None
         try:
@@ -104,27 +102,56 @@ def define_commands():
         yield motor.Op(app.mongodb.config.update,
                        {'key':'lastactive'},
                        {'key':'lastactive', 'val':task.starttime}, upsert=True)
+        
+        # Load up the localization data.
         try:
             task.app.localize = yield twcommon.localize.load_localization(task.app)
         except Exception as ex:
             task.log.warning('Caught exception (loading localization data): %s', ex, exc_info=app.debugstacktraces)
-        
-        iidset = set()
+
+        # Awaken any inhabited instances. If an instance is marked awake
+        # but uninhabited, put it to sleep.
+        # Go through the list of players who are in the world.
+        inhabset = set()
         cursor = app.mongodb.playstate.find({'iid':{'$ne':None}},
                                             {'_id':1, 'iid':1})
         while (yield cursor.fetch_next):
             playstate = cursor.next_object()
             iid = playstate['iid']
             if iid:
-                iidset.add(iid)
+                inhabset.add(iid)
         # cursor autoclose
-        iidls = list(iidset)
+        # Go through the list of apparently-awake instances.
+        awakeset = set()
+        cursor = app.mongodb.instances.find({'lastawake':True},
+                                            {'_id':1})
+        while (yield cursor.fetch_next):
+            instance = cursor.next_object()
+            iid = instance['_id']
+            if iid:
+                awakeset.add(iid)
+        # cursor autoclose
+        # In an ideal world, inhabset is a subset of awakeset. But we'll
+        # be careful.
+        iidls = list(inhabset.union(awakeset))
         iidls.sort()  # Just for consistency
         for iid in iidls:
+            if iid not in inhabset:
+                # Instance should be asleep. We don't call the hook, just
+                # set lastawake to the lastactive time.
+                task.log.warning('Instance %s found awake, but with no players! Marking it asleep.', iid)
+                yield motor.Op(app.mongodb.instances.update,
+                               {'_id':iid},
+                               {'$set':{'lastawake':lastactive}})
+                continue
+            # Instance should be awake. Call the hook and set lastawake true.
+            # The hook's _slept argument will be lastactive.
             awakening = app.ipool.notify_instance(iid)
             if awakening:
-                ### figure out lastawake, put in local!
-                app.log.info('Awakening instance %s', iid)
+                app.log.info('Awakening instance %s (slept roughly %s)', iid, lastactive)
+                yield motor.Op(app.mongodb.instances.update,
+                               {'_id':iid},
+                               {'$set':{'lastawake':True}})
                 instance = yield motor.Op(app.mongodb.instances.find_one,
                                           {'_id':iid})
                 loctx = two.task.LocContext(None, wid=instance['wid'], scid=instance['scid'], iid=iid)
@@ -137,7 +164,8 @@ def define_commands():
                 if awakenhook and twcommon.misc.is_typed_dict(awakenhook, 'code'):
                     ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
                     try:
-                        yield ctx.eval(awakenhook, evaltype=EVALTYPE_RAW)
+                        args = { '_slept':lastactive }
+                        yield ctx.eval(awakenhook, evaltype=EVALTYPE_RAW, locals=args)
                     except Exception as ex:
                         task.log.warning('Caught exception (awakening instance): %s', ex, exc_info=app.debugstacktraces)
 
