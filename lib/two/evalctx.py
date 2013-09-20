@@ -789,6 +789,35 @@ class EvalPropContext(object):
         return res
         
     @tornado.gen.coroutine
+    def execcode_dictcomp(self, nod):
+        targets = []
+        iters = []
+        ifss = []
+        for comp in nod.generators:
+            target = yield self.execcode_expr_store(comp.target)
+            iter = yield self.execcode_expr(comp.iter)
+            ifs = comp.ifs
+            targets.append(target)
+            iters.append(iter)
+            ifss.append(ifs)
+        res = {}
+        for tup in itertools.product(*iters):
+            flag = True
+            for target, val, ifs in zip(targets, tup, ifss):
+                yield target.store(self, self.loctx, val)
+                for ifnod in ifs:
+                    flag = yield self.execcode_expr(ifnod)
+                    if not flag:
+                        break
+                if not flag:
+                    break
+            if flag:
+                keyval = yield self.execcode_expr(nod.key)
+                valueval = yield self.execcode_expr(nod.value)
+                res[keyval] = valueval
+        return res
+        
+    @tornado.gen.coroutine
     def execcode_attribute(self, nod):
         argument = yield self.execcode_expr(nod.value)
         key = nod.attr
@@ -987,6 +1016,7 @@ class EvalPropContext(object):
         ast.Compare: execcode_compare,
         ast.ListComp: execcode_listcomp,
         ast.SetComp: execcode_setcomp,
+        ast.DictComp: execcode_dictcomp,
         ast.Attribute: execcode_attribute,
         ast.Subscript: execcode_subscript,
         ast.Call: execcode_call,
