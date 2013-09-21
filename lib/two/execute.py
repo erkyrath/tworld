@@ -1083,7 +1083,7 @@ def generate_update(task, conn, dirty):
                 if pos > 0:
                     if numpeople == 2:
                         populacedesc.append(' and ')
-                    elif pos >= numpeople-2:
+                    elif pos > numpeople-2:
                         populacedesc.append(', and ')
                     else:
                         populacedesc.append(', ')
