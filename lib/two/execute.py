@@ -976,6 +976,7 @@ def generate_update(task, conn, dirty):
         msg['focus'] = False ### probably needs to be something for linking out of the void
         msg['populace'] = False
         msg['locale'] = { 'desc': '...' }
+        msg['insttool'] = False
         conn.write(msg)
         return
 
@@ -1114,7 +1115,29 @@ def generate_update(task, conn, dirty):
     if dirty & DIRTY_TOOL:
         conn.toolactions.clear()
         conn.tooldependencies.clear()
-        ### msg['insttool'] = ...
+        
+        tooldesc = False
+        try:
+            altloctx = two.task.LocContext(uid=loctx.uid, wid=loctx.wid, scid=loctx.scid, iid=loctx.iid, locid=None)
+            toolsym = yield two.symbols.find_symbol(app, altloctx, 'instancepane', dependencies=conn.tooldependencies)
+            
+            if toolsym is not None:
+                ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_DISPLAY)
+                try:
+                    tooldesc = yield ctx.eval(toolsym, evaltype=EVALTYPE_RAW)
+                except Exception as ex:
+                    task.log.warning('Exception rendering instancepane: %s', ex, exc_info=app.debugstacktraces)
+                    tooldesc = '[Exception: %s]' % (str(ex),)
+            
+                if ctx.linktargets:
+                    conn.toolactions.update(ctx.linktargets)
+                if ctx.dependencies:
+                    conn.tooldependencies.update(ctx.dependencies)
+        except:
+            # No instancepane symbol in the world
+            pass
+
+        msg['insttool'] = tooldesc
         
     conn.write(msg)
     

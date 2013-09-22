@@ -1368,6 +1368,9 @@ function cmd_update(obj) {
             focuspane_set(obj.focus);
         toolpane_portal_addremove();
     }
+    if (obj.insttool !== undefined) {
+        toolpane_insttool_set(obj.insttool);
+    }
 }
 
 function cmd_updateplist(obj) {
