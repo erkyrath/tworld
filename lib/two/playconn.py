@@ -124,12 +124,14 @@ class PlayerConnection(object):
         self.localeactions = {}
         self.focusactions = {}
         self.populaceactions = {}
+        self.toolactions = {}
 
         # Sets of what change keys will cause the location (focus, etc)
         # text to change.
         self.localedependencies = set()
         self.focusdependencies = set()
         self.populacedependencies = set()
+        self.tooldependencies = set()
 
         # Only used by the /eval command.
         self.debuglocals = {}
@@ -148,10 +150,12 @@ class PlayerConnection(object):
         self.localeactions = None
         self.focusactions = None
         self.populaceactions = None
+        self.toolactions = None
 
         self.localedependencies = None
         self.focusdependencies = None
         self.populacedependencies = None
+        self.tooldependencies = None
         
     def write(self, msg):
         """Shortcut to send a message to a player via this connection.

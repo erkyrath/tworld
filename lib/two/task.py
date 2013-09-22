@@ -10,11 +10,12 @@ import twcommon.misc
 from twcommon.excepts import MessageException, ErrorMessageException
 from twcommon.excepts import SymbolError, ExecRunawayException
 
-DIRTY_WORLD = 0x01  # Instance, really
-DIRTY_LOCALE = 0x02
-DIRTY_FOCUS = 0x04
-DIRTY_POPULACE = 0x08
-DIRTY_ALL = 0x0F  # All of the above
+DIRTY_WORLD    = 0x01  # World/instance data (creator, etc)
+DIRTY_LOCALE   = 0x02  # Main location description
+DIRTY_FOCUS    = 0x04  # Closeup view description
+DIRTY_POPULACE = 0x08  # Who is in the location
+DIRTY_TOOL     = 0x10  # Toolpane "control panel" description
+DIRTY_ALL      = 0x1F  # All of the above
 
 class LocContext(object):
     """
@@ -466,6 +467,9 @@ class Task(object):
                 if not (dirty & DIRTY_FOCUS):
                     if not conn.focusdependencies.isdisjoint(changeset):
                         dirty |= DIRTY_FOCUS
+                if not (dirty & DIRTY_TOOL):
+                    if not conn.tooldependencies.isdisjoint(changeset):
+                        dirty |= DIRTY_TOOL
                 if dirty:
                     updateconns[conn.connid] = dirty
 

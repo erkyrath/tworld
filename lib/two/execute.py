@@ -1111,6 +1111,10 @@ def generate_update(task, conn, dirty):
         if focusspecial:
             msg['focusspecial'] = True
     
+    if dirty & DIRTY_TOOL:
+        conn.toolactions.clear()
+        conn.tooldependencies.clear()
+        
     conn.write(msg)
     
 
@@ -1359,7 +1363,7 @@ def perform_action(task, cmd, conn, target):
                                     'lastmoved': task.starttime,
                                     'lastlocid': None,
                                     'portto':portto }})
-            task.set_dirty(uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_WORLD | DIRTY_POPULACE)
+            task.set_dirty(uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_WORLD | DIRTY_POPULACE | DIRTY_TOOL)
             task.set_data_change( ('playstate', uid, 'iid') )
             task.set_data_change( ('playstate', uid, 'locid') )
             if loctx.iid:
@@ -1388,7 +1392,7 @@ def perform_action(task, cmd, conn, target):
         
     
 # Late imports, to avoid circularity
-from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_POPULACE, DIRTY_FOCUS
+from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_POPULACE, DIRTY_FOCUS, DIRTY_TOOL
 from two.evalctx import EvalPropContext
 from two.evalctx import EVALTYPE_SYMBOL, EVALTYPE_RAW, EVALTYPE_CODE, EVALTYPE_TEXT
 from two.evalctx import LEVEL_EXECUTE, LEVEL_DISPSPECIAL, LEVEL_DISPLAY, LEVEL_MESSAGE, LEVEL_FLAT, LEVEL_RAW

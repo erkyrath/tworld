@@ -333,7 +333,7 @@ def define_commands():
                                 'portto':portto,
                                 'lastlocid': None,
                                 'lastmoved':task.starttime }})
-        task.set_dirty(cmd.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_WORLD | DIRTY_POPULACE)
+        task.set_dirty(cmd.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_WORLD | DIRTY_POPULACE | DIRTY_TOOL)
         task.set_data_change( ('playstate', cmd.uid, 'iid') )
         task.set_data_change( ('playstate', cmd.uid, 'locid') )
         if oldloctx.iid:
@@ -639,7 +639,7 @@ def define_commands():
                                 'lastmoved': task.starttime,
                                 'lastlocid': None,
                                 'portto':None }})
-        task.set_dirty(cmd.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_WORLD | DIRTY_POPULACE)
+        task.set_dirty(cmd.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_WORLD | DIRTY_POPULACE | DIRTY_TOOL)
         task.set_data_change( ('playstate', cmd.uid, 'iid') )
         task.set_data_change( ('playstate', cmd.uid, 'locid') )
         task.set_data_change( ('populace', newiid, newlocid) )
@@ -780,19 +780,29 @@ def define_commands():
     def cmd_meta_actionmaps(app, task, cmd, conn):
         val = 'Locale action map: %s' % (conn.localeactions,)
         conn.write({'cmd':'message', 'text':val})
-        val = 'Populace action map: %s' % (conn.populaceactions,)
-        conn.write({'cmd':'message', 'text':val})
-        val = 'Focus action map: %s' % (conn.focusactions,)
-        conn.write({'cmd':'message', 'text':val})
+        if conn.populaceactions:
+            val = 'Populace action map: %s' % (conn.populaceactions,)
+            conn.write({'cmd':'message', 'text':val})
+        if conn.focusactions:
+            val = 'Focus action map: %s' % (conn.focusactions,)
+            conn.write({'cmd':'message', 'text':val})
+        if conn.toolactions:
+            val = 'Tool action map: %s' % (conn.toolactions,)
+            conn.write({'cmd':'message', 'text':val})
 
     @command('meta_dependencies', restrict='debug')
     def cmd_meta_dependencies(app, task, cmd, conn):
         val = 'Locale dependency set: %s' % (conn.localedependencies,)
         conn.write({'cmd':'message', 'text':val})
-        val = 'Populace dependency set: %s' % (conn.populacedependencies,)
-        conn.write({'cmd':'message', 'text':val})
-        val = 'Focus dependency set: %s' % (conn.focusdependencies,)
-        conn.write({'cmd':'message', 'text':val})
+        if conn.populacedependencies:
+            val = 'Populace dependency set: %s' % (conn.populacedependencies,)
+            conn.write({'cmd':'message', 'text':val})
+        if conn.focusdependencies:
+            val = 'Focus dependency set: %s' % (conn.focusdependencies,)
+            conn.write({'cmd':'message', 'text':val})
+        if conn.tooldependencies:
+            val = 'Tool dependency set: %s' % (conn.tooldependencies,)
+            conn.write({'cmd':'message', 'text':val})
         
     @command('meta_showipool', restrict='debug')
     def cmd_meta_showipool(app, task, cmd, conn):
@@ -1166,6 +1176,8 @@ def define_commands():
         if action is None:
             action = conn.populaceactions.get(cmd.action)
         if action is None:
+            action = conn.toolactions.get(cmd.action)
+        if action is None:
             # Drop this silently; it's probably the result of net lag.
             task.log.warning('Action not available: %s', cmd.action)
             return
@@ -1189,5 +1201,5 @@ import two.evalctx
 import two.task
 from two.evalctx import LEVEL_EXECUTE
 from two.evalctx import EVALTYPE_RAW, EVALTYPE_CODE
-from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_POPULACE, DIRTY_FOCUS
+from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_POPULACE, DIRTY_FOCUS, DIRTY_TOOL
 from twcommon.access import ACC_VISITOR

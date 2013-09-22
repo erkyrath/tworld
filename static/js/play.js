@@ -1270,6 +1270,20 @@ function cmd_event(obj) {
 }
 
 function cmd_update(obj) {
+    if (false) {
+        /* Debug log message: what's in the update? */
+        var upsum = '';
+        jQuery.each(obj, function(key, val) {
+                if (key == 'cmd')
+                    return;
+                val = ''+val;
+                val = val.slice(0,32);
+                upsum = upsum + ' ' + key + '=' + val + ',';
+            }
+            );
+        console.log('### update summary: ' + upsum);
+    }
+
     if (obj.world !== undefined) {
         toolpane_set_world(obj.world.world, obj.world.scope, obj.world.creator);
         /* Changing worlds is a good time to deselect the plist entry. */
