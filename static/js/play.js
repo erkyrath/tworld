@@ -754,9 +754,11 @@ function toolpane_insttool_update(desc) {
         el.text('[Error rendering description: ' + ex + ']');
         contentls = [ el ];
     }
+    var baseel = $('<div>', { 'class':'ToolText' });
     for (var ix=0; ix<contentls.length; ix++) {
-        seg.bodyel.append(contentls[ix]);
+        baseel.append(contentls[ix]);
     }
+    seg.bodyel.append(baseel);
 }
 
 function localepane_set_locale(desc, title) {

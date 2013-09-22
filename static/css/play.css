@@ -343,6 +343,14 @@ div.ToolData {
   margin: 0.25em 15px;
 }
 
+div.ToolText {
+  margin: 0.25em 15px;
+}
+
+#rightcol div.ToolText a {
+  text-decoration: underline;
+}
+
 h3.ToolTitle {
   font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
   font-size: 1.0em;
