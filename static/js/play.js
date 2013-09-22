@@ -731,6 +731,14 @@ function toolpane_insttool_set(desc) {
         uiprefs['toolseg_min_insttool'] = false;
         seg = toolpane_build_segment('insttool', false);
         toolpane_add_segment('insttool', 'prefs', true);
+
+        /* Scroll the segment to the top of the right column. As usual,
+           the math here is experimentally deduced, a.k.a. "crap". */
+        var pos = seg.segel.position().top - $('#rightcol .ToolOutline').position().top;
+        if (!uiprefs.smooth_scroll)
+            $('#rightcol').scrollTop(pos);
+        else
+            $('#rightcol').stop().animate({ 'scrollTop': pos }, 200);
     }
     else {
         seg.bodyel.empty();
