@@ -220,7 +220,7 @@ function setup_event_handlers() {
 function open_websocket() {
     try {
         var url = 'ws://' + window.location.host + '/websocket';
-        console.log('### creating websocket ' + url);
+        //console.log('### creating websocket ' + url);
         websocket = new WebSocket(url);
     }
     catch (ex) {
@@ -306,6 +306,8 @@ function toolpane_build_segment(key, hasmenu) {
         toolpane_fill_pane_plist(seg);
     else if (key == 'portal')
         toolpane_fill_pane_portal(seg);
+    else if (key == 'insttool')
+        toolpane_fill_pane_insttool(seg);
     else
         console.log('Unrecognized toolpane segment: ' + key);
 
@@ -314,7 +316,7 @@ function toolpane_build_segment(key, hasmenu) {
     return seg;
 }
 
-function toolpane_add_segment(key, aftersegkey) {
+function toolpane_add_segment(key, aftersegkey, aboveflag) {
     var seg = toolsegments[key];
     var afterseg = toolsegments[aftersegkey];
 
@@ -326,7 +328,10 @@ function toolpane_add_segment(key, aftersegkey) {
     seg.rightbutel.css({display:'none'});
 
     if (afterseg) {
-        afterseg.segel.after(seg.segel);
+        if (!aboveflag)
+            afterseg.segel.after(seg.segel);
+        else
+            afterseg.segel.before(seg.segel);
     }
     else {
         $('#rightcol .ToolFooter').before(seg.segel);
@@ -705,6 +710,52 @@ function toolpane_portal_update() {
             seg.noflexel.text(localize('client.label.only_shared'));
         seg.noflexel.show();
         seg.flexel.hide();
+    }
+}
+
+/* This is called every time the insttool desc changes. It posts, removes, or
+   updates the "tool for this instance" tool segment.
+*/
+function toolpane_insttool_set(desc) {
+    if (!desc || !desc.length) {
+        /* Remove if necessary. */
+        if (toolsegments['insttool'])
+            toolpane_remove_segment('insttool');
+        return;
+    }
+
+    var seg = toolsegments['insttool'];
+    if (!seg) {
+        /* Make sure it appears open -- but don't bother notifying the
+           server. */
+        uiprefs['toolseg_min_insttool'] = false;
+        seg = toolpane_build_segment('insttool', false);
+        toolpane_add_segment('insttool', 'prefs', true);
+    }
+    else {
+        seg.bodyel.empty();
+    }
+    toolpane_insttool_update(desc);
+}
+
+function toolpane_fill_pane_insttool(seg) {
+    seg.titleel.text(localize('client.tool.title.insttool'));
+}
+
+function toolpane_insttool_update(desc) {
+    var seg = toolsegments['insttool'];
+
+    var contentls;
+    try {
+        contentls = parse_description(desc);
+    }
+    catch (ex) {
+        var el = $('<p>');
+        el.text('[Error rendering description: ' + ex + ']');
+        contentls = [ el ];
+    }
+    for (var ix=0; ix<contentls.length; ix++) {
+        seg.bodyel.append(contentls[ix]);
     }
 }
 
@@ -1270,18 +1321,19 @@ function cmd_event(obj) {
 }
 
 function cmd_update(obj) {
-    if (false) {
+    if (true) {
         /* Debug log message: what's in the update? */
         var upsum = '';
         jQuery.each(obj, function(key, val) {
                 if (key == 'cmd')
                     return;
-                val = ''+val;
-                val = val.slice(0,32);
-                upsum = upsum + ' ' + key + '=' + val + ',';
+                val = JSON.stringify(val);
+                if (val.length > 32)
+                    val = val.slice(0,32) + '...';
+                upsum = upsum + ' ' + key + ':' + val + ',';
             }
             );
-        console.log('### update summary: ' + upsum);
+        console.log('### update summary:' + upsum);
     }
 
     if (obj.world !== undefined) {
@@ -1909,7 +1961,7 @@ function evhan_websocket_close(ev) {
 }
 
 function evhan_websocket_message(ev) {
-    console.log(('### message: ' + ev.data).slice(0,100));
+    //console.log(('### message: ' + ev.data).slice(0,100));
     var obj = null;
     var cmd = null;
     try {

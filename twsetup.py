@@ -323,6 +323,7 @@ default_localize_entries = """
 
 +client.tool.title.portals: Portals
 +client.tool.title.this_portal: This Portal
++client.tool.title.insttool: This Instance
 +client.tool.title.preferences: Preferences
 
 +client.tool.menu.return_to_start: Return to Start

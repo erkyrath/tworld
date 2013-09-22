@@ -1114,6 +1114,7 @@ def generate_update(task, conn, dirty):
     if dirty & DIRTY_TOOL:
         conn.toolactions.clear()
         conn.tooldependencies.clear()
+        ### msg['insttool'] = ...
         
     conn.write(msg)
     
