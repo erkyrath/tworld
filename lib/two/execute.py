@@ -1122,7 +1122,7 @@ def generate_update(task, conn, dirty):
             toolsym = yield two.symbols.find_symbol(app, altloctx, 'instancepane', dependencies=conn.tooldependencies)
             
             if toolsym is not None:
-                ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_DISPLAY)
+                ctx = EvalPropContext(task, loctx=altloctx, level=LEVEL_DISPLAY)
                 try:
                     tooldesc = yield ctx.eval(toolsym, evaltype=EVALTYPE_RAW)
                 except Exception as ex:

@@ -557,6 +557,8 @@ def define_globals():
                 raise Exception('No current player')
             if not ctx.loctx.locid:
                 return None
+            if ctx.dependencies is not None:
+                ctx.dependencies.add( ('playstate', ctx.uid, 'locid') )
             return two.execute.LocationProxy(ctx.loctx.locid)
         
         if isinstance(obj, ObjectId):
@@ -582,6 +584,8 @@ def define_globals():
                 raise KeyError('No such player')
             if res['iid'] != ctx.loctx.iid:
                 return None
+            if ctx.dependencies is not None:
+                ctx.dependencies.add( ('playstate', obj.uid, 'locid') )
             return two.execute.LocationProxy(res['locid'])
         
         ctx = EvalPropContext.get_current_context()
