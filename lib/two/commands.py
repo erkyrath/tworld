@@ -792,17 +792,20 @@ def define_commands():
 
     @command('meta_dependencies', restrict='debug')
     def cmd_meta_dependencies(app, task, cmd, conn):
-        val = 'Locale dependency set: %s' % (conn.localedependencies,)
-        conn.write({'cmd':'message', 'text':val})
-        if conn.populacedependencies:
-            val = 'Populace dependency set: %s' % (conn.populacedependencies,)
-            conn.write({'cmd':'message', 'text':val})
-        if conn.focusdependencies:
-            val = 'Focus dependency set: %s' % (conn.focusdependencies,)
-            conn.write({'cmd':'message', 'text':val})
-        if conn.tooldependencies:
-            val = 'Tool dependency set: %s' % (conn.tooldependencies,)
-            conn.write({'cmd':'message', 'text':val})
+        def keyfunc(tup):
+            return [ tup[-1] ] + tup[ 0 : -1 ]
+        def func(label, depset):
+            if not depset:
+                return
+            conn.write({'cmd':'message', 'text':label+' dependency set:'})
+            ls = [ [ str(val) for val in tup ] for tup in depset ]
+            ls.sort(key=keyfunc)
+            for tup in ls:
+                conn.write({'cmd':'message', 'text':'- ' + str(tup)})
+        func('Locale', conn.localedependencies)
+        func('Populace', conn.populacedependencies)
+        func('Focus', conn.focusdependencies)
+        func('Tool', conn.tooldependencies)
         
     @command('meta_showipool', restrict='debug')
     def cmd_meta_showipool(app, task, cmd, conn):
