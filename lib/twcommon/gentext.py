@@ -289,7 +289,10 @@ class SetKeyNode(GenNodeClass):
 
     @tornado.gen.coroutine
     def perform(self, ctx, propname, gentext):
-        ctx.genparams[self.key] = self.value
+        val = self.value
+        if isinstance(val, SymbolNode):
+            val = yield ctx.evalobj(val.symbol)
+        ctx.genparams[self.key] = val
         if self.node is not None:
             yield gentext.perform(ctx, propname, self.node)
             
