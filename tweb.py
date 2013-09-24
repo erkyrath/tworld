@@ -271,6 +271,24 @@ class TwebApplication(tornado.web.Application):
         ls = [ player.uid for player in players ]
         return len(set(ls))
 
+    def tworld_players_connected_count_active(self):
+        """How many players are currently connected, and how many
+        are not idle? Returns an ordered pair. Also fast.
+        """
+        players = self.twconntable.all()
+        # Sort by idle time, most-active first.
+        players.sort(key=lambda player:player.lastmsgtime, reverse=True)
+        map = {}
+        now = twcommon.misc.now()
+        mindelta = datetime.timedelta(minutes=5)
+        activecount = 0
+        for player in players:
+            if player.uid not in map:
+                map[player.uid] = player
+                if (now - player.lastmsgtime) < mindelta:
+                    activecount += 1
+        return ( len(map), activecount )
+
     @tornado.gen.coroutine
     def tworld_players_connected_list(self):
         """Return a list of structures representing connected players
@@ -372,6 +390,7 @@ application = TwebApplication(
         'tworld_app_title': lambda handler:opts.app_title,
         'tworld_app_banner': lambda handler:opts.app_banner,
         'tworld_connected_count': lambda handler:handler.application.tworld_players_connected_count(),
+        'tworld_connected_count_active': lambda handler:handler.application.tworld_players_connected_count_active(),
         },
     **appoptions)
 
