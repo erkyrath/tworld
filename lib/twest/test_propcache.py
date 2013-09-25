@@ -34,7 +34,7 @@ class TestPropcache(tornado.testing.AsyncTestCase):
     @classmethod
     def setUpClass(cla):
         cla.app = MockApplication()
-        cla.app.log.info('Set up MockApplication')
+        #cla.app.log.info('Set up MockApplication')
 
     @classmethod
     def tearDownClass(cla):
@@ -277,10 +277,90 @@ class TestPropcache(tornado.testing.AsyncTestCase):
         res = yield self.get_db_prop(instq('map'))
         self.assertEqual(res, {'tt':33})
         
-        ### _t = []; x = _t; y = _t; del x; del y
-        ### x = True; y = True; del x; del y
-        ### _t = []; x = _t; y = _t; _t.append(1)
-        ### _t = {}; x = _t; y = _t; x['one'] = 1
+    @tornado.testing.gen_test
+    def test_prop_aliasing(self):
+        yield self.resetTables()
+        cache = two.propcache.PropCache(self.app)
+
+        instq = lambda key: ('instanceprop', self.exiid, self.exlocid, key)
+
+        # x = True; y = True; del x; del y
+
+        yield cache.set(instq('xx'), True)
+        yield cache.set(instq('yy'), True)
+        yield cache.delete(instq('xx'))
+        yield cache.delete(instq('yy'))
+
+        res = yield cache.get(instq('xx'))
+        self.assertTrue(res is None)
+        res = yield cache.get(instq('yy'))
+        self.assertTrue(res is None)
+        
+        self.assertTrue(cache.get_by_object(True) is None)
+
+        yield cache.write_all_dirty()
+        self.assertEqual(cache.dirty_entries(), [])
+
+        # _t = []; x = _t; y = _t; del x; del y
+        
+        ls = [2,3,4]
+        yield cache.set(instq('xxx'), ls)
+        yield cache.set(instq('yyy'), ls)
+
+        res = cache.get_by_object(ls)  # might get either prop
+        self.assertTrue(res.val is ls)
+        self.assertTrue(res.key in ('xxx', 'yyy'))
+        
+        yield cache.delete(instq('xxx'))
+        yield cache.delete(instq('yyy'))
+        
+        yield cache.write_all_dirty()
+        self.assertEqual(cache.dirty_entries(), [])
+
+        res = yield cache.get(instq('xxx'))
+        self.assertTrue(res is None)
+        res = yield cache.get(instq('yyy'))
+        self.assertTrue(res is None)
+        
+        # _t = []; x = _t; y = _t; _t.append(1)
+
+        ls = [2,3,4]
+        yield cache.set(instq('xx'), ls)
+        yield cache.set(instq('yy'), ls)
+
+        ls.append(1)
+        
+        res = yield cache.get(instq('xx'))
+        self.assertEqual(res.val, [2,3,4,1])
+        res = yield cache.get(instq('yy'))
+        self.assertEqual(res.val, [2,3,4,1])
+        
+        ls.insert(0, -1)
+        
+        yield cache.write_all_dirty()
+        self.assertEqual(cache.dirty_entries(), [])
+
+        res = yield cache.get(instq('xx'))
+        self.assertEqual(res.val, [-1,2,3,4,1])
+        res = yield cache.get(instq('yy'))
+        self.assertEqual(res.val, [-1,2,3,4,1])
+
+        # _t = {}; x = _t; y = _t; x['one'] = 1
+        
+        map = {}
+        yield cache.set(instq('map'), map)
+        yield cache.set(instq('map2'), map)
+
+        map['one'] = 1
+        
+        yield cache.write_all_dirty()
+        self.assertEqual(cache.dirty_entries(), [])
+
+        res = yield cache.get(instq('map'))
+        self.assertEqual(res.val, {'one':1})
+        res = yield cache.get(instq('map2'))
+        self.assertEqual(res.val, {'one':1})
+        
         
 class TestDeepCopy(unittest.TestCase):
     def test_deepcopy(self):
