@@ -67,6 +67,7 @@ python3 tweb.py --config=tworld.conf
 
 * License
 
+Copyright (c) 2013, Andrew Plotkin.
 Open-source under the MIT license. See the "LICENSE" file.
 
 This package includes the following third-party software:

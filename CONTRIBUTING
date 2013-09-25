@@ -1,0 +1,11 @@
+Tworld is copyright (c) 2013, Andrew Plotkin. It is open-source under
+the MIT license. See the LICENSE file. It will *always* be available
+under the MIT license, but I may someday also make it available under
+a different license.
+
+For simplicity, I intend to maintain this entire application under my
+ownership. (Except for the third-party jQuery libraries which are
+noted in the README file.)
+
+Therefore, if you contribute code to Tworld, I will ask that you transfer
+the copyright to me.
