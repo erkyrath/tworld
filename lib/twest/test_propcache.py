@@ -1,3 +1,8 @@
+"""
+To run:   python3 -m tornado.testing twest.test_propcache
+(The twest, two, twcommon modules must be in your PYTHON_PATH.)
+"""
+
 import logging
 import unittest
 import ast
