@@ -4,6 +4,7 @@ import ast
 
 from bson.objectid import ObjectId
 import tornado.gen
+import tornado.ioloop
 import tornado.testing
 import motor
 
@@ -21,8 +22,6 @@ class MockApplication:
     def disconnect(self):
         self.client.disconnect()
 
-### This doesn't work. (The test hangs trying to deal with mongodb.)
-#
 class TestPropcache(tornado.testing.AsyncTestCase):
     @classmethod
     def setUpClass(cla):
@@ -35,27 +34,25 @@ class TestPropcache(tornado.testing.AsyncTestCase):
         cla.app.disconnect()
         cla.app = None
 
+    def get_new_ioloop(self):
+        return tornado.ioloop.IOLoop.instance()
+        
     @tornado.gen.coroutine
     def resetTables(self):
-        self.app.log.info('### B %s %s', self.app.mongodb, self.app.mongodb['instanceprop'])
-        yield motor.Op(self.app.mongodb['instanceprop'].remove,
+        yield motor.Op(self.app.mongodb.instanceprop.remove,
                        {})
-        self.app.log.info('### C')
-        yield motor.Op(self.app.mongodb['instanceprop'].insert,
+        yield motor.Op(self.app.mongodb.instanceprop.insert,
                        {'key':'x', 'val':1})
-        self.app.log.info('### D')
+        yield motor.Op(self.app.mongodb.instanceprop.insert,
+                       {'key':'y', 'val':2})
+        yield motor.Op(self.app.mongodb.instanceprop.insert,
+                       {'key':'ls', 'val':[1,2,3]})
+        yield motor.Op(self.app.mongodb.instanceprop.insert,
+                       {'key':'map', 'val':{'one':1, 'two':2, 'three':3}})
 
-    #@tornado.testing.gen_test
-    def XXXtest_simple(self):
-        ### I think this can't be made to work in Motor 0.1.1?
-        self.app.log.info('### A')
-        #yield self.resetTables()
-        def func(result, error):
-            self.app.log.info('### ok')
-            self.stop()
-        self.app.mongodb['instanceprop'].remove({}, callback=func)
-        self.app.log.info('### waiting...')
-        self.wait()
+    @tornado.testing.gen_test
+    def test_simple(self):
+        yield self.resetTables()
 
         ### _t = []; x = _t; y = _t; del x; del y
         ### x = True; y = True; del x; del y
