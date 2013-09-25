@@ -72,6 +72,10 @@ class PropCache:
 
     @staticmethod
     def query_for_tuple(tup):
+        """Takes a four-el tuple (see below). Returns an object suitable
+        for use in a mongodb operation, e.g.:
+        yield motor.Op(self.app.mongodb[tup[0]].find_one, query)
+        """
         (db, id1, id2, key) = tup
         if db == 'worldprop':
             return {'wid':id1, 'locid':id2, 'key':key}
@@ -196,8 +200,9 @@ class PropCache:
         
     def get_by_object(self, val):
         """Check whether a value is in the cache. This is keyed by the
-        *identity* of the value!
-        Returns a PropEntry (if found) or None (if not).
+        *identity* of the value! Only locates mutable entries.
+        Returns a PropEntry (if found) or None (if not). If an object
+        is shared between several properties, returns an arbitrary one.
         """
         oset = self.objmap.get(id(val), None)
         if oset:
