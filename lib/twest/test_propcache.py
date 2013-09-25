@@ -205,6 +205,78 @@ class TestPropcache(tornado.testing.AsyncTestCase):
         res = yield cache.get(instq('x'), dependencies=deps)
         self.assertTrue(res is None)
 
+    @tornado.testing.gen_test
+    def test_mutable_values(self):
+        yield self.resetTables()
+        cache = two.propcache.PropCache(self.app)
+
+        instq = lambda key: ('instanceprop', self.exiid, self.exlocid, key)
+
+        res = yield cache.get(instq('ls'))
+        self.assertFalse(res.isdirty())
+
+        ls = res.val
+        ls.append(4)
+        
+        self.assertFalse(res.dirty)
+        self.assertTrue(res.isdirty())
+        
+        res2 = yield cache.get(instq('ls'))
+        self.assertEqual(res2.val, [1,2,3,4])
+        
+        res = yield self.get_db_prop(instq('ls'))
+        self.assertEqual(res, [1,2,3])
+
+        self.assertEqual(len(cache.dirty_entries()), 1)
+
+        yield cache.write_all_dirty()
+        self.assertEqual(cache.dirty_entries(), [])
+        
+        res = yield self.get_db_prop(instq('ls'))
+        self.assertEqual(res, [1,2,3,4])
+        
+        res2 = yield cache.get(instq('ls'))
+        self.assertEqual(res2.val, [1,2,3,4])
+        
+        res = yield cache.get(instq('map'))
+        map = res.val
+        self.assertTrue(cache.get_by_object(map) is res)
+
+        ls[0] = 'zero'
+        map['zero'] = 'ZERO'
+
+        self.assertTrue(cache.get_by_object(map) is res)
+        self.assertEqual(len(cache.dirty_entries()), 2)
+
+        yield cache.write_all_dirty()
+        self.assertEqual(cache.dirty_entries(), [])
+        
+        res2 = yield cache.get(instq('ls'))
+        self.assertEqual(res2.val, ['zero',2,3,4])
+        res2 = yield cache.get(instq('map'))
+        self.assertEqual(res2.val, {'one':1, 'two':2, 'three':3, 'zero':'ZERO'})
+
+        res = yield self.get_db_prop(instq('ls'))
+        self.assertEqual(res, ['zero',2,3,4])
+        res = yield self.get_db_prop(instq('map'))
+        self.assertEqual(res, {'one':1, 'two':2, 'three':3, 'zero':'ZERO'})
+        
+        map['tt'] = 44
+        yield cache.set(instq('map'), {'tt':33})
+        map['tt'] = 55
+
+        self.assertEqual(len(cache.dirty_entries()), 1)
+
+        yield cache.write_all_dirty()
+        self.assertEqual(cache.dirty_entries(), [])
+        
+        res2 = yield cache.get(instq('map'))
+        self.assertEqual(res2.val, {'tt':33})
+        self.assertFalse(res2.val is map)
+
+        res = yield self.get_db_prop(instq('map'))
+        self.assertEqual(res, {'tt':33})
+        
         ### _t = []; x = _t; y = _t; del x; del y
         ### x = True; y = True; del x; del y
         ### _t = []; x = _t; y = _t; _t.append(1)
