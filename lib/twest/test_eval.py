@@ -351,6 +351,15 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
             res = yield ctx.eval('True and nosuch', evaltype=EVALTYPE_CODE)
         with self.assertRaises(SymbolError):
             res = yield ctx.eval('False or nosuch', evaltype=EVALTYPE_CODE)
-        
+
+        res = yield ctx.eval('3 if True else 4', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 3)
+        res = yield ctx.eval('3 if False else 4', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 4)
+        res = yield ctx.eval('3 if True else nosuch', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 3)
+        res = yield ctx.eval('nosuch if False else 4', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 4)
+            
 from two.evalctx import LEVEL_EXECUTE, LEVEL_DISPSPECIAL, LEVEL_DISPLAY, LEVEL_MESSAGE, LEVEL_FLAT, LEVEL_RAW
 from two.evalctx import EVALTYPE_SYMBOL, EVALTYPE_RAW, EVALTYPE_CODE, EVALTYPE_TEXT

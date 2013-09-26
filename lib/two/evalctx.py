@@ -731,7 +731,16 @@ class EvalPropContext(object):
                 return res
             leftval = rightval
         return True
-        
+
+    @tornado.gen.coroutine
+    def execcode_ifexp(self, nod):
+        val = yield self.execcode_expr(nod.test)
+        if val:
+            res = yield self.execcode_expr(nod.body)
+        else:
+            res = yield self.execcode_expr(nod.orelse)
+        return res
+    
     @tornado.gen.coroutine
     def execcode_listcomp(self, nod):
         targets = []
@@ -1014,6 +1023,7 @@ class EvalPropContext(object):
         ast.BinOp: execcode_binop,
         ast.BoolOp: execcode_boolop,
         ast.Compare: execcode_compare,
+        ast.IfExp: execcode_ifexp,
         ast.ListComp: execcode_listcomp,
         ast.SetComp: execcode_setcomp,
         ast.DictComp: execcode_dictcomp,
