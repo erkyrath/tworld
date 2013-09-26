@@ -691,7 +691,7 @@ def define_commands():
     @command('meta_help')
     def cmd_meta_help(app, task, cmd, conn):
         conn.write({'cmd':'message', 'text':'Quick help:'})
-        conn.write({'cmd':'message', 'text':'Type to speak out loud (to nearby players). A message that begins with a colon (\u201C:dance\u201D) will appear as a pose (\u201CBelford dances\u201D).'})
+        conn.write({'cmd':'message', 'text':'Type to speak out loud (to nearby players). A message that begins with a colon (\u201C:dances\u201D) will appear as a pose (\u201CBelford dances\u201D).'})
         conn.write({'cmd':'message', 'text':'Other commands:'})
         conn.write({'cmd':'message', 'text':'/shout text: Send message to all players in the same world (instance) as you.'})
         conn.write({'cmd':'message', 'text':'/refresh: Reload the current location. (Or you can use your browser\'s refresh button.)'})
