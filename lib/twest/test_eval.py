@@ -19,6 +19,9 @@ import two.execute
 import two.task
 from two.execute import EvalPropContext
 
+import twest.mock
+from twest.mock import NotFound
+
 class MockApplication:
     def __init__(self):
         self.log = logging.getLogger('tworld')
@@ -176,11 +179,13 @@ class TestEval(unittest.TestCase):
         self.assertSpecResolvesRaise('*ls, x', 3)
         self.assertSpecResolvesRaise('*ls, x=0', x=4, z=5)
         
-class TestEvalAsync(tornado.testing.AsyncTestCase):
+class TestEvalAsync(twest.mock.MockAppTestCase):
+    
     @tornado.testing.gen_test
     def test_simple_literals(self):
-        app = MockApplication()
-        task = two.task.Task(app, None, 1, 2, twcommon.misc.now())
+        yield self.resetTables()
+        
+        task = two.task.Task(self.app, None, 1, 2, twcommon.misc.now())
         loctx = two.task.LocContext(uid=ObjectId())
         ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
         

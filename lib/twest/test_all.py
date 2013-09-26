@@ -11,6 +11,7 @@ This is a simplified version of the runner in tornado.testing.
 
 import sys
 import unittest
+import tornado.options
 import tornado.testing
 
 testlist = [
@@ -19,6 +20,10 @@ testlist = [
     ]
 
 if __name__ == '__main__':
+
+    # Sets up some logging stuff. Plus we may use the options someday.
+    tornado.options.parse_command_line()
+    
     argv = [sys.argv[0]] + testlist
     kwargs = {}
     unittest.main(module=None, argv=argv, **kwargs)
