@@ -456,6 +456,7 @@ class Task(object):
         # Go through the data changes, setting dirty bits as needed.
         # (But we try to do as little work as possible.)
         if changeset:
+            #self.log.debug('Task changeset: %s', changeset)
             for conn in connections:
                 dirty = updateconns.get(conn.connid, 0)
                 if not (dirty & DIRTY_LOCALE):
