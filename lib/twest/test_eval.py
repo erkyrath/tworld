@@ -292,7 +292,65 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         with self.assertRaises(KeyError):
             yield ctx.eval('random.xyzzy', evaltype=EVALTYPE_CODE)
 
+    @tornado.testing.gen_test
+    def test_simple_ops(self):
+        yield self.resetTables()
         
+        task = two.task.Task(self.app, None, 1, 2, twcommon.misc.now())
+        ctx = EvalPropContext(task, loctx=self.loctx, level=LEVEL_EXECUTE)
 
+        res = yield ctx.eval('1+5', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 6)
+        res = yield ctx.eval('x+5', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 6)
+        res = yield ctx.eval('x+y', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 3)
+        
+        res = yield ctx.eval('1-5', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, -4)
+        res = yield ctx.eval('2*7', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 14)
+        res = yield ctx.eval('7/2', evaltype=EVALTYPE_CODE)
+        self.assertAlmostEqual(res, 3.5)
+        res = yield ctx.eval('7//2', evaltype=EVALTYPE_CODE)
+        self.assertAlmostEqual(res, 3)
+        res = yield ctx.eval('7**2', evaltype=EVALTYPE_CODE)
+        self.assertAlmostEqual(res, 49)
+        res = yield ctx.eval('7%3', evaltype=EVALTYPE_CODE)
+        self.assertAlmostEqual(res, 1)
+        res = yield ctx.eval('5&6', evaltype=EVALTYPE_CODE)
+        self.assertAlmostEqual(res, 4)
+        res = yield ctx.eval('5|6', evaltype=EVALTYPE_CODE)
+        self.assertAlmostEqual(res, 7)
+        res = yield ctx.eval('5^6', evaltype=EVALTYPE_CODE)
+        self.assertAlmostEqual(res, 3)
+        res = yield ctx.eval('5<<1', evaltype=EVALTYPE_CODE)
+        self.assertAlmostEqual(res, 10)
+        res = yield ctx.eval('5>>1', evaltype=EVALTYPE_CODE)
+        self.assertAlmostEqual(res, 2)
+        
+        res = yield ctx.eval('"xy"+"ZW"', evaltype=EVALTYPE_CODE)
+        self.assertAlmostEqual(res, 'xyZW')
+        res = yield ctx.eval('"x"*3', evaltype=EVALTYPE_CODE)
+        self.assertAlmostEqual(res, 'xxx')
+        res = yield ctx.eval('[1,2]+[3,4]', evaltype=EVALTYPE_CODE)
+        self.assertAlmostEqual(res, [1,2,3,4])
+        res = yield ctx.eval('"%s:%s"%(1,"x")', evaltype=EVALTYPE_CODE)
+        self.assertAlmostEqual(res, '1:x')
+
+        res = yield ctx.eval('True and False and True', evaltype=EVALTYPE_CODE)
+        self.assertAlmostEqual(res, False)
+        res = yield ctx.eval('False or True or False', evaltype=EVALTYPE_CODE)
+        self.assertAlmostEqual(res, True)
+        res = yield ctx.eval('True and False and nosuch', evaltype=EVALTYPE_CODE)
+        self.assertAlmostEqual(res, False)
+        res = yield ctx.eval('False or True or nosuch', evaltype=EVALTYPE_CODE)
+        self.assertAlmostEqual(res, True)
+
+        with self.assertRaises(SymbolError):
+            res = yield ctx.eval('True and nosuch', evaltype=EVALTYPE_CODE)
+        with self.assertRaises(SymbolError):
+            res = yield ctx.eval('False or nosuch', evaltype=EVALTYPE_CODE)
+        
 from two.evalctx import LEVEL_EXECUTE, LEVEL_DISPSPECIAL, LEVEL_DISPLAY, LEVEL_MESSAGE, LEVEL_FLAT, LEVEL_RAW
 from two.evalctx import EVALTYPE_SYMBOL, EVALTYPE_RAW, EVALTYPE_CODE, EVALTYPE_TEXT
