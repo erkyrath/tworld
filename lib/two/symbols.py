@@ -495,11 +495,12 @@ def define_globals():
         ctx.task.write_event(others, val)
         
     @scriptfunc('move', group='_', yieldy=True)
-    def global_move(dest, you=None, oleave=None, oarrive=None):
-        """Move the player to another location in the same world, like {move}.
-        The first argument must be a location or location key. The rest
-        of the arguments must be string or {text}; they are messages displayed
-        for the player and other players.
+    def global_move(dest, you=None, oleave=None, oarrive=None, player=None):
+        """Move a player to another location in the same world, like {move}.
+        The first argument must be a location or location key. The you, oleave,
+        and oarrive arguments must be string or {text}; they are messages
+        displayed for the player and other players. The player argument
+        must be a PlayerProxy or None (the current player).
         """
         ctx = EvalPropContext.get_current_context()
         
@@ -517,6 +518,13 @@ def define_globals():
             if not res:
                 raise KeyError('No such location: %s' % (dest,))
             locid = res['_id']
+
+        if player is None:
+            pass
+        elif isinstance(player, two.execute.PlayerProxy):
+            pass
+        else:
+            raise TypeError('move: player must be a player or None')
             
         youeval = False
         oleaveeval = False
@@ -540,7 +548,7 @@ def define_globals():
             else:
                 oarrive = str(oarrive)
                 
-        yield ctx.perform_move(locid, you, youeval, oleave, oleaveeval, oarrive, oarriveeval)
+        yield ctx.perform_move(locid, you, youeval, oleave, oleaveeval, oarrive, oarriveeval, player=player)
         
     @scriptfunc('location', group='_', yieldy=True)
     def global_location(obj=None):

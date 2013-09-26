@@ -1398,27 +1398,50 @@ class EvalPropContext(object):
             self.task.write_event(others, val)
 
     @tornado.gen.coroutine
-    def perform_move(self, locid, text, texteval, oleave, oleaveeval, oarrive, oarriveeval):
+    def perform_move(self, locid, text, texteval, oleave, oleaveeval, oarrive, oarriveeval, player=None):
         assert isinstance(locid, ObjectId)
         if self.level != LEVEL_EXECUTE:
             raise Exception('Moves may only occur in action code')
         if not (self.caps & EVALCAP_MOVE):
             raise Exception('Moves not permitted in this code')
 
+        if player is None:
+            playeruid = self.uid
+        else:
+            playeruid = player.uid
+            
         player = yield motor.Op(self.app.mongodb.players.find_one,
-                                {'_id':self.uid},
+                                {'_id':playeruid},
                                 {'name':1})
+        if not player:
+            raise Exception('No such player')
         playername = player['name']
-                
+
+        playstate = yield motor.Op(self.app.mongodb.playstate.find_one,
+                                   {'_id':playeruid})
+        if playstate['iid'] != self.loctx.iid:
+            raise Exception('Player is not in the current instance')
+
+        # We must now construct a loctx for the moving player.
+        if playeruid == self.uid:
+            # The simple (old-fashioned) case.
+            loctx = self.loctx
+        else:
+            # We know the player is in our instance, so this is not
+            # too bad.
+            loctx = two.task.LocContext(
+                playeruid, wid=self.loctx.wid, scid=self.loctx.scid,
+                iid=playstate['iid'], locid=playstate['locid'])
+            
         # If the location has an on_leave property, run it.
         try:
-            leavehook = yield two.symbols.find_symbol(self.app, self.loctx, 'on_leave')
+            leavehook = yield two.symbols.find_symbol(self.app, loctx, 'on_leave')
         except:
             leavehook = None
         if leavehook and twcommon.misc.is_typed_dict(leavehook, 'code'):
-            ctx = EvalPropContext(self.task, loctx=self.loctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
+            ctx = EvalPropContext(self.task, loctx=loctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
             try:
-                args = { '_from':two.execute.LocationProxy(self.loctx.locid),
+                args = { '_from':two.execute.LocationProxy(loctx.locid),
                          '_to':two.execute.LocationProxy(locid) }
                 yield ctx.eval(leavehook, evaltype=EVALTYPE_RAW, locals=args)
             except Exception as ex:
@@ -1429,49 +1452,49 @@ class EvalPropContext(object):
         if msg is None:
             msg = self.app.localize('action.oleave') % (playername,) # '%s leaves.'
         elif oleaveeval:
-            ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+            ctx = EvalPropContext(self.task, loctx=loctx, level=LEVEL_MESSAGE)
             msg = yield ctx.eval(msg, evaltype=EVALTYPE_TEXT)
         if msg:
-            others = yield self.task.find_locale_players(notself=True)
+            others = yield self.task.find_locale_players(uid=playeruid, notself=True)
             if others:
                 self.task.write_event(others, msg)
 
         # Move the player to the new location.
-        lastlocid = self.loctx.locid
+        lastlocid = loctx.locid
         yield motor.Op(self.app.mongodb.playstate.update,
-                       {'_id':self.uid},
+                       {'_id':playeruid},
                        {'$set':{'locid':locid,
                                 'focus':None,
                                 'lastlocid': lastlocid,
                                 'lastmoved': self.task.starttime }})
-        self.task.set_dirty(self.uid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_POPULACE)
-        self.task.set_data_change( ('playstate', self.uid, 'locid') )
+        self.task.set_dirty(playeruid, DIRTY_FOCUS | DIRTY_LOCALE | DIRTY_POPULACE)
+        self.task.set_data_change( ('playstate', playeruid, 'locid') )
         if lastlocid:
-            self.task.set_data_change( ('populace', self.loctx.iid, lastlocid) )
-        self.task.set_data_change( ('populace', self.loctx.iid, locid) )
-        self.task.clear_loctx(self.uid)
+            self.task.set_data_change( ('populace', loctx.iid, lastlocid) )
+        self.task.set_data_change( ('populace', loctx.iid, locid) )
+        self.task.clear_loctx(playeruid)
         
         msg = oarrive
         if msg is None:
             msg = self.app.localize('action.oarrive') % (playername,) # '%s arrives.'
         elif oarriveeval:
-            ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+            ctx = EvalPropContext(self.task, loctx=loctx, level=LEVEL_MESSAGE)
             msg = yield ctx.eval(msg, evaltype=EVALTYPE_TEXT)
         if msg:
-            others = yield self.task.find_locale_players(notself=True)
+            others = yield self.task.find_locale_players(uid=playeruid, notself=True)
             if others:
                 self.task.write_event(others, msg)
                 
         msg = text
         if msg:
             if texteval:
-                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
+                ctx = EvalPropContext(self.task, loctx=loctx, level=LEVEL_MESSAGE)
                 msg = yield ctx.eval(msg, evaltype=EVALTYPE_TEXT)
-            self.task.write_event(self.uid, msg)
+            self.task.write_event(playeruid, msg)
 
         # If the location has an on_enter property, run it.
         try:
-            newloctx = yield self.task.get_loctx(self.uid)
+            newloctx = yield self.task.get_loctx(playeruid)
             enterhook = yield two.symbols.find_symbol(self.app, newloctx, 'on_enter')
         except:
             enterhook = None
