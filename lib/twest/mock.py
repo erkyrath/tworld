@@ -19,6 +19,9 @@ class MockApplication:
         self.client = motor.MotorClient(tz_aware=True).open_sync()
         self.mongodb = self.client['testdb']
 
+        # Set up a propcache, which is needed to evaluate property expressions.
+        self.propcache = two.propcache.PropCache(self)
+
     def disconnect(self):
         self.client.disconnect()
 
@@ -26,11 +29,11 @@ class MockAppTestCase(tornado.testing.AsyncTestCase):
     @classmethod
     def setUpClass(cla):
         cla.app = MockApplication()
-        cla.app.log.info('Set up MockApplication')
+        #cla.app.log.info('Set up MockApplication')
 
     @classmethod
     def tearDownClass(cla):
-        cla.app.log.info('Tear down MockApplication')
+        #cla.app.log.info('Tear down MockApplication')
         cla.app.disconnect()
         cla.app = None
 

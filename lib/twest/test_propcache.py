@@ -48,6 +48,8 @@ class TestPropcache(twest.mock.MockAppTestCase):
     @tornado.testing.gen_test
     def test_simple_ops(self):
         yield self.resetTables()
+        
+        # Fresh propcache for each test (don't use app.propcache).
         cache = two.propcache.PropCache(self.app)
         deps = set()
 
@@ -174,6 +176,8 @@ class TestPropcache(twest.mock.MockAppTestCase):
     @tornado.testing.gen_test
     def test_mutable_values(self):
         yield self.resetTables()
+        
+        # Fresh propcache for each test (don't use app.propcache).
         cache = two.propcache.PropCache(self.app)
 
         instq = lambda key: ('instanceprop', self.exiid, self.exlocid, key)
@@ -246,6 +250,8 @@ class TestPropcache(twest.mock.MockAppTestCase):
     @tornado.testing.gen_test
     def test_prop_aliasing(self):
         yield self.resetTables()
+        
+        # Fresh propcache for each test (don't use app.propcache).
         cache = two.propcache.PropCache(self.app)
 
         instq = lambda key: ('instanceprop', self.exiid, self.exlocid, key)
