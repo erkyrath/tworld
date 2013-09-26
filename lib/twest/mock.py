@@ -1,3 +1,7 @@
+"""
+Infrastructure for unit tests.
+"""
+
 import logging
 
 import tornado.gen
@@ -7,11 +11,17 @@ import motor
 
 import twcommon.misc
 import two.propcache
+import two.symbols
 
 NotFound = twcommon.misc.SuiGeneris('NotFound')
 
 class MockApplication:
-    def __init__(self):
+    """
+    Mock for the Tworld Application class. This contains a DB connection.
+    Depending on the setup arguments, it builds various other components
+    for itself as well.
+    """
+    def __init__(self, propcache=False, globals=False):
         self.log = logging.getLogger('tworld')
 
         # Set up a mongo connection. This can't be yieldy, because it's
@@ -19,16 +29,28 @@ class MockApplication:
         self.client = motor.MotorClient(tz_aware=True).open_sync()
         self.mongodb = self.client['testdb']
 
-        # Set up a propcache, which is needed to evaluate property expressions.
-        self.propcache = two.propcache.PropCache(self)
+        if propcache:
+            # Set up a propcache, which is needed to evaluate property expressions.
+            self.propcache = two.propcache.PropCache(self)
+
+        if globals:
+            # Set up the global symbol table.
+            self.global_symbol_table = two.symbols.define_globals()
 
     def disconnect(self):
         self.client.disconnect()
 
 class MockAppTestCase(tornado.testing.AsyncTestCase):
+    """
+    Base class for Tworld test cases that need an Application to run in.
+    The mockappargs dict determines the setup parameters of the
+    MockApplication.
+    """
+    mockappargs = {}
+    
     @classmethod
     def setUpClass(cla):
-        cla.app = MockApplication()
+        cla.app = MockApplication(**cla.mockappargs)
         #cla.app.log.info('Set up MockApplication')
 
     @classmethod

@@ -1,10 +1,6 @@
 """
 To run:   python3 -m tornado.testing twest.test_eval
 (The twest, two, twcommon modules must be in your PYTHON_PATH.)
-
-This is just a sketch of how unit tests should go. Ultimately I will
-need to connect to mongodb (in a test database), and mock up entries
-for the world, instance, player, etc.
 """
 
 import logging
@@ -14,10 +10,14 @@ import ast
 from bson.objectid import ObjectId
 import tornado.testing
 
+import motor
+
 import twcommon.misc
 import two.execute
+import two.symbols
 import two.task
 from two.execute import EvalPropContext
+from twcommon.excepts import SymbolError
 
 import twest.mock
 from twest.mock import NotFound
@@ -180,19 +180,69 @@ class TestEval(unittest.TestCase):
         self.assertSpecResolvesRaise('*ls, x=0', x=4, z=5)
         
 class TestEvalAsync(twest.mock.MockAppTestCase):
+    mockappargs = { 'propcache':True, 'globals':True }
     
+    @tornado.gen.coroutine
+    def resetTables(self):
+        # Invent some arbitrary objids for the world and instance.
+        self.exuid = ObjectId()
+        self.exwid = ObjectId()
+        self.exiid = ObjectId()
+        self.exlocid = ObjectId()
+        self.exscid = ObjectId()
+        self.loctx = two.task.LocContext(
+            uid=self.exuid, wid=self.exwid, scid=self.exscid,
+            iid=self.exiid, locid=self.exlocid)
+        
+        yield motor.Op(self.app.mongodb.worldprop.remove,
+                       {})
+        yield motor.Op(self.app.mongodb.worldprop.insert,
+                       {'wid':self.exwid, 'locid':self.exlocid,
+                        'key':'x', 'val':0})
+        yield motor.Op(self.app.mongodb.worldprop.insert,
+                       {'wid':self.exwid, 'locid':self.exlocid,
+                        'key':'w', 'val':'world'})
+        yield motor.Op(self.app.mongodb.worldprop.insert,
+                       {'wid':self.exwid, 'locid':None,
+                        'key':'r', 'val':11})
+        yield motor.Op(self.app.mongodb.worldprop.insert,
+                       {'wid':self.exwid, 'locid':self.exlocid,
+                        'key':'r', 'val':12})
+        
+        yield motor.Op(self.app.mongodb.instanceprop.remove,
+                       {})
+        yield motor.Op(self.app.mongodb.instanceprop.insert,
+                       {'iid':self.exiid, 'locid':self.exlocid,
+                        'key':'x', 'val':1})
+        yield motor.Op(self.app.mongodb.instanceprop.insert,
+                       {'iid':self.exiid, 'locid':self.exlocid,
+                        'key':'y', 'val':2})
+        yield motor.Op(self.app.mongodb.instanceprop.insert,
+                       {'iid':self.exiid, 'locid':self.exlocid,
+                        'key':'ls', 'val':[1,2,3]})
+        yield motor.Op(self.app.mongodb.instanceprop.insert,
+                       {'iid':self.exiid, 'locid':self.exlocid,
+                        'key':'map', 'val':{'one':1, 'two':2, 'three':3}})
+        yield motor.Op(self.app.mongodb.instanceprop.insert,
+                       {'iid':self.exiid, 'locid':None,
+                        'key':'r', 'val':13})
+        yield motor.Op(self.app.mongodb.instanceprop.insert,
+                       {'iid':self.exiid, 'locid':self.exlocid,
+                        'key':'r', 'val':14})
+        
     @tornado.testing.gen_test
     def test_simple_literals(self):
         yield self.resetTables()
         
         task = two.task.Task(self.app, None, 1, 2, twcommon.misc.now())
-        loctx = two.task.LocContext(uid=ObjectId())
-        ctx = EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
+        ctx = EvalPropContext(task, loctx=self.loctx, level=LEVEL_EXECUTE)
         
         res = yield ctx.eval('3', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, 3)
         res = yield ctx.eval('-3.5', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, -3.5)
+        res = yield ctx.eval('None', evaltype=EVALTYPE_CODE)
+        self.assertTrue(res is None)
         res = yield ctx.eval('True', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, True)
         res = yield ctx.eval('"foo"', evaltype=EVALTYPE_CODE)
@@ -211,6 +261,37 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         self.assertEqual(res, {'x':'yy', 'one':1})
         res = yield ctx.eval('{1, 2, 3}', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, set([1, 2, 3]))
+        
+    @tornado.testing.gen_test
+    def test_simple_props(self):
+        yield self.resetTables()
+        
+        task = two.task.Task(self.app, None, 1, 2, twcommon.misc.now())
+        ctx = EvalPropContext(task, loctx=self.loctx, level=LEVEL_EXECUTE)
+
+        res = yield ctx.eval('x', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 1)
+        res = yield ctx.eval('r', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 14)
+        res = yield ctx.eval('ls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [1,2,3])
+        res = yield ctx.eval('map', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, {'one':1, 'two':2, 'three':3})
+        
+        res = yield ctx.eval('_', evaltype=EVALTYPE_CODE)
+        self.assertTrue(res is self.app.global_symbol_table)
+        res = yield ctx.eval('player', evaltype=EVALTYPE_CODE)
+        self.assertTrue(isinstance(res, two.execute.PlayerProxy))
+        res = yield ctx.eval('random', evaltype=EVALTYPE_CODE)
+        self.assertTrue(isinstance(res, two.symbols.ScriptNamespace))
+        res = yield ctx.eval('random.choice', evaltype=EVALTYPE_CODE)
+        self.assertTrue(isinstance(res, two.symbols.ScriptFunc))
+
+        with self.assertRaises(SymbolError):
+            yield ctx.eval('xyzzy', evaltype=EVALTYPE_CODE)
+        with self.assertRaises(KeyError):
+            yield ctx.eval('random.xyzzy', evaltype=EVALTYPE_CODE)
+
         
 
 from two.evalctx import LEVEL_EXECUTE, LEVEL_DISPSPECIAL, LEVEL_DISPLAY, LEVEL_MESSAGE, LEVEL_FLAT, LEVEL_RAW
