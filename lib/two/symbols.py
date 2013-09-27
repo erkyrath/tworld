@@ -1078,6 +1078,7 @@ def define_globals():
     globmap['bool'] = bool
     globmap['list'] = list
     globmap['dict'] = dict
+    globmap['set'] = set
     globmap['len'] = len
     globmap['max'] = max
     globmap['min'] = min
