@@ -1159,19 +1159,8 @@ class EvalPropContext(object):
             return None
 
         if restype == 'panic':
-            # Display an event.
-            val = res.get('text', None)
-            if val:
-                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
-                newval = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
-                self.task.write_event(uid, newval)
-            val = res.get('otext', None)
-            if val:
-                others = yield self.task.find_locale_players(notself=True)
-                ctx = EvalPropContext(self.task, parent=self, level=LEVEL_MESSAGE)
-                newval = yield ctx.eval(val, evaltype=EVALTYPE_TEXT)
-                self.task.write_event(others, newval)
-            self.app.queue_command({'cmd':'tovoid', 'uid':uid, 'portin':True})
+            # Panic the player out.
+            yield self.perform_panic(res.get('text', None), True, res.get('otext', None), True)
             return None
 
         if restype == 'move':
@@ -1397,6 +1386,62 @@ class EvalPropContext(object):
                 val = otext
             self.task.write_event(others, val)
 
+    @tornado.gen.coroutine
+    def perform_panic(self, text, texteval, otext, otexteval, player=None):
+        if self.level != LEVEL_EXECUTE:
+            raise Exception('Panics may only occur in action code')
+        if not (self.caps & EVALCAP_MOVE):
+            raise Exception('Panics not permitted in this code')
+
+        if player is None:
+            playeruid = self.uid
+        else:
+            playeruid = player.uid
+            
+        player = yield motor.Op(self.app.mongodb.players.find_one,
+                                {'_id':playeruid},
+                                {'name':1})
+        if not player:
+            raise Exception('No such player')
+        playername = player['name']
+
+        playstate = yield motor.Op(self.app.mongodb.playstate.find_one,
+                                   {'_id':playeruid})
+        if playstate['iid'] != self.loctx.iid:
+            raise Exception('Player is not in the current instance')
+
+        # We must now construct a loctx for the moving player.
+        if playeruid == self.uid:
+            # The simple (old-fashioned) case.
+            loctx = self.loctx
+        else:
+            # We know the player is in our instance, so this is not
+            # too bad.
+            loctx = two.task.LocContext(
+                playeruid, wid=self.loctx.wid, scid=self.loctx.scid,
+                iid=playstate['iid'], locid=playstate['locid'])
+
+        msg = text
+        if msg:
+            if texteval:
+                ctx = EvalPropContext(self.task, loctx=loctx, level=LEVEL_MESSAGE)
+                msg = yield ctx.eval(msg, evaltype=EVALTYPE_TEXT)
+            self.task.write_event(playeruid, msg)
+
+        msg = otext
+        if msg is None:
+            pass
+        elif otexteval:
+            ctx = EvalPropContext(self.task, loctx=loctx, level=LEVEL_MESSAGE)
+            msg = yield ctx.eval(msg, evaltype=EVALTYPE_TEXT)
+        if msg:
+            others = yield self.task.find_locale_players(uid=playeruid, notself=True)
+            if others:
+                self.task.write_event(others, msg)
+
+        # Send them off. (The tovoid handles hooks.)
+        self.app.queue_command({'cmd':'tovoid', 'uid':playeruid, 'portin':True})
+            
     @tornado.gen.coroutine
     def perform_move(self, locid, text, texteval, oleave, oleaveeval, oarrive, oarriveeval, player=None):
         assert isinstance(locid, ObjectId)

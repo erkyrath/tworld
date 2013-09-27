@@ -494,6 +494,38 @@ def define_globals():
         others = yield ctx.task.find_location_players(iid, locid)
         ctx.task.write_event(others, val)
         
+    @scriptfunc('panic', group='_', yieldy=True)
+    def global_panic(you=None, others=None, player=None):
+        """Panic a player out, optionally displaying messages first.
+        The you and others arguments must be string or {text}. The player
+        argument must be a PlayerProxy or None (the current player).
+        """
+        ctx = EvalPropContext.get_current_context()
+        
+        if player is None:
+            pass
+        elif isinstance(player, two.execute.PlayerProxy):
+            pass
+        else:
+            raise TypeError('panic: player must be a player or None')
+
+        youeval = False
+        otherseval = False
+        if you:
+            if is_typed_dict(you, 'text'):
+                you = you.get('text', None)
+                youeval = True
+            else:
+                you = str(you)
+        if others:
+            if is_typed_dict(others, 'text'):
+                others = others.get('text', None)
+                otherseval = True
+            else:
+                others = str(others)
+                
+        yield ctx.perform_panic(you, youeval, others, otherseval, player=player)
+        
     @scriptfunc('move', group='_', yieldy=True)
     def global_move(dest, you=None, oleave=None, oarrive=None, player=None):
         """Move a player to another location in the same world, like {move}.
