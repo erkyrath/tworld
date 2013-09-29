@@ -3,6 +3,7 @@ To run:   python3 -m tornado.testing twest.test_funcs
 (The twest, two, twcommon modules must be in your PYTHON_PATH.)
 """
 
+import datetime
 import logging
 import unittest
 import ast
@@ -165,6 +166,40 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         self.assertIn(res, [0,1,2])
         res = yield ctx.eval('random.randrange(4, 6)', evaltype=EVALTYPE_CODE)
         self.assertIn(res, [4,5])
+        
+    @tornado.testing.gen_test
+    def test_datetime(self):
+        yield self.resetTables()
+        
+        task = two.task.Task(self.app, None, 1, 2, twcommon.misc.now())
+        ctx = EvalPropContext(task, loctx=self.loctx, level=LEVEL_EXECUTE)
+
+        res = yield ctx.eval('datetime.now', evaltype=EVALTYPE_CODE)
+        self.assertTrue(res is task.starttime)
+        res = yield ctx.eval('datetime.datetime(2013,5,1)', evaltype=EVALTYPE_CODE)
+        self.assertTrue(isinstance(res, datetime.datetime))
+        self.assertEqual(res, datetime.datetime(year=2013, month=5, day=1, tzinfo=datetime.timezone.utc))
+        
+        res = yield ctx.eval('datetime.now.year', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, task.starttime.year)
+        res = yield ctx.eval('datetime.now.month', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, task.starttime.month)
+        res = yield ctx.eval('datetime.now.day', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, task.starttime.day)
+        res = yield ctx.eval('datetime.now.hour', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, task.starttime.hour)
+        res = yield ctx.eval('datetime.now.minute', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, task.starttime.minute)
+        res = yield ctx.eval('datetime.now.second', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, task.starttime.second)
+        res = yield ctx.eval('datetime.now.microsecond', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, task.starttime.microsecond)
+        res = yield ctx.eval('datetime.now.min', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, task.starttime.min)
+        res = yield ctx.eval('datetime.now.max', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, task.starttime.max)
+        res = yield ctx.eval('datetime.now.resolution', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, task.starttime.resolution)
         
 from two.evalctx import LEVEL_EXECUTE, LEVEL_DISPSPECIAL, LEVEL_DISPLAY, LEVEL_MESSAGE, LEVEL_FLAT, LEVEL_RAW
 from two.evalctx import EVALTYPE_SYMBOL, EVALTYPE_RAW, EVALTYPE_CODE, EVALTYPE_TEXT
