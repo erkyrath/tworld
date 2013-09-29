@@ -247,6 +247,8 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         self.assertEqual(res, True)
         res = yield ctx.eval('"foo"', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, 'foo')
+        res = yield ctx.eval('\'bar\'', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 'bar')
         res = yield ctx.eval('"X\xA0\u1234"', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, 'X\xA0\u1234')
         res = yield ctx.eval('[]', evaltype=EVALTYPE_CODE)
@@ -492,11 +494,42 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         self.assertIn(res, [4,5])
         
     @tornado.testing.gen_test
+    def test_global_assign(self):
+        yield self.resetTables()
+        
+        task = two.task.Task(self.app, None, 1, 2, twcommon.misc.now())
+        task.set_writable()
+        ctx = EvalPropContext(task, loctx=self.loctx, level=LEVEL_EXECUTE)
+        
+        res = yield ctx.eval('z = 7\nz', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 7)
+        res = yield ctx.eval('x1,x2 = 1,2\n[x2,x1]', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [2,1])
+        res = yield ctx.eval('ls[1] = 7\nls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [1,7,3])
+        res = yield ctx.eval('ls[0:2] = [6,5,4]\nls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [6,5,4,3])
+        res = yield ctx.eval('map["one"] = "ONE"\nmap', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, {'one':'ONE', 'two':2, 'three':3})
+        res = yield ctx.eval('z1=z2=_z3=9\nz1,z2,_z3', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, (9,9,9))
+        
+    @tornado.testing.gen_test
     def test_global_statements(self):
         yield self.resetTables()
         
         task = two.task.Task(self.app, None, 1, 2, twcommon.misc.now())
         ctx = EvalPropContext(task, loctx=self.loctx, level=LEVEL_EXECUTE)
+        
+        res = yield ctx.eval('_tmp = 7\n_tmp', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 7)
+        res = yield ctx.eval('_tmp = [1,2,3]\n_tmp[1] = 7\n_tmp', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [1,7,3])
+
+        with self.assertRaises(NameError):
+            res = yield ctx.eval('_tmp = 7\ndel _tmp\n_tmp', evaltype=EVALTYPE_CODE)
+        res = yield ctx.eval('_tmp = [1,2,3]\ndel _tmp[1]\n_tmp', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [1,3])
 
         res = yield ctx.eval('pass', evaltype=EVALTYPE_CODE)
         self.assertIsNone(res)
