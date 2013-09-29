@@ -491,7 +491,42 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         res = yield ctx.eval('random.randrange(4, 6)', evaltype=EVALTYPE_CODE)
         self.assertIn(res, [4,5])
         
+    @tornado.testing.gen_test
+    def test_global_statements(self):
+        yield self.resetTables()
+        
+        task = two.task.Task(self.app, None, 1, 2, twcommon.misc.now())
+        ctx = EvalPropContext(task, loctx=self.loctx, level=LEVEL_EXECUTE)
 
+        res = yield ctx.eval('pass', evaltype=EVALTYPE_CODE)
+        self.assertIsNone(res)
+        
+        res = yield ctx.eval('return 17', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 17)
+        res = yield ctx.eval('return 17\nreturn 18', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 17)
+        
+        res = yield ctx.eval('_x = 0\nwhile True:\n _x = _x+1\n if _x >= 3:\n  return _x', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 3)
+        res = yield ctx.eval('_x = 0\nwhile True:\n _x = _x+1\n if _x >= 3:\n  break\nreturn _x', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 3)
+        
+        res = yield ctx.eval('if True:\n return 3\nelse:\n return 4', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 3)
+        res = yield ctx.eval('if False:\n return 3\nelse:\n return 4', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 4)
+
+        res = yield ctx.eval('if True:\n return 3\nelse:\n return nosuch', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 3)
+        res = yield ctx.eval('if False:\n return nosuch\nelse:\n return 4', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 4)
+
+        res = yield ctx.eval('_sum = 0\nfor _x in ls:\n _sum = _sum + _x\n_sum', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 6)
+        res = yield ctx.eval('for _x in ls:\n if _x == 2:\n  return _x', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 2)
+        res = yield ctx.eval('_sum = 0\nfor _x in ls:\n if _x == 2:\n  continue\n _sum = _sum + _x\n_sum', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 4)
         
 from two.evalctx import LEVEL_EXECUTE, LEVEL_DISPSPECIAL, LEVEL_DISPLAY, LEVEL_MESSAGE, LEVEL_FLAT, LEVEL_RAW
 from two.evalctx import EVALTYPE_SYMBOL, EVALTYPE_RAW, EVALTYPE_CODE, EVALTYPE_TEXT
