@@ -402,6 +402,28 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         self.assertTrue(res)
         
     @tornado.testing.gen_test
+    def test_comprehensions(self):
+        yield self.resetTables()
+        
+        task = two.task.Task(self.app, None, 1, 2, twcommon.misc.now())
+        ctx = EvalPropContext(task, loctx=self.loctx, level=LEVEL_EXECUTE)
+        
+        res = yield ctx.eval('[_x+1 for _x in ls]', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [2,3,4])
+        res = yield ctx.eval('[_x+1 for _x in [0,1,2,3] if _x != 2]', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [1,2,4])
+        res = yield ctx.eval('[_x+_y for _x in [0,1,2,3] for _y in [5,6,7]]', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [5, 6, 7, 6, 7, 8, 7, 8, 9, 8, 9, 10])
+        res = yield ctx.eval('[_x+_y for _x in [0,1,2,3] if _x%2 for _y in [5,6,7]]', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [6, 7, 8, 8, 9, 10])
+        res = yield ctx.eval('[_x+_y for _x in [0,1,2,3] for _y in [5,6,7] if _x%2]', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [6, 7, 8, 8, 9, 10])
+        res = yield ctx.eval('[_x+_y for _x in [0,1,2,3] if _x%2 for _y in [5,6,7] if _y==6]', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [7,9])
+        res = yield ctx.eval('[(_y,_x) for _x,_y in ["XY", (7,8), (9,10)]]', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [('Y','X'), (8,7), (10,9)])
+
+    @tornado.testing.gen_test
     def test_global_funcs(self):
         yield self.resetTables()
         
@@ -494,7 +516,7 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         self.assertIn(res, [4,5])
         
     @tornado.testing.gen_test
-    def test_global_assign(self):
+    def test_assignments(self):
         yield self.resetTables()
         
         task = two.task.Task(self.app, None, 1, 2, twcommon.misc.now())
@@ -515,7 +537,7 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         self.assertEqual(res, (9,9,9))
         
     @tornado.testing.gen_test
-    def test_global_statements(self):
+    def test_statements(self):
         yield self.resetTables()
         
         task = two.task.Task(self.app, None, 1, 2, twcommon.misc.now())
