@@ -22,10 +22,6 @@ from twcommon.excepts import SymbolError
 import twest.mock
 from twest.mock import NotFound
 
-class MockApplication:
-    def __init__(self):
-        self.log = logging.getLogger('tworld')
-
 class TestEval(unittest.TestCase):
     def test_optimize_accum(self):
         optimize_accum = two.evalctx.optimize_accum
