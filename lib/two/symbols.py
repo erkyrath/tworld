@@ -1151,6 +1151,16 @@ def define_globals():
 
 # Table of what attributes can be read from what types. Used by
 # type_getattr_allowed().
+#
+# Some type methods are omitted because they invoke arbitrary code without
+# Tworld limitations. For example, list.sort(key=foo) will invoke foo as
+# a Python function. If foo were somehow evil (a native infinite loop),
+# it would hang the interpreter. Contrariwise, if foo were a valid {code}
+# object, it would fail. We want to avoid both of these outcomes.
+#
+# (We might someday add code to return a usable Tworld wrapper for
+# list.sort.)
+#
 type_getattr_table = {
     datetime.timedelta: set(['days', 'max', 'microseconds', 'min', 'resolution', 'seconds', 'total_seconds']),
     datetime.datetime: set(['min', 'max', 'resolution', 'year', 'month', 'day', 'hour', 'minute', 'second', 'microsecond']),
