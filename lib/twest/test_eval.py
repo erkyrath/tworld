@@ -423,6 +423,24 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         res = yield ctx.eval('[(_y,_x) for _x,_y in ["XY", (7,8), (9,10)]]', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, [('Y','X'), (8,7), (10,9)])
 
+        task.resetticks()
+
+        res = yield ctx.eval('{_x for _x in ls}', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, {1,2,3})
+        res = yield ctx.eval('{_x|1 for _x in ls}', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, {1,3})
+        res = yield ctx.eval('{_x for _x in [1,2,3,4,1] if _x%2}', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, {1,3})
+        res = yield ctx.eval('{_x+_y for _x in [0,1,2,3] for _y in [5,6,7]}', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, {5, 6, 7, 8, 9, 10})
+        
+        res = yield ctx.eval('{_x:11 for _x in ls}', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, {1:11, 2:11, 3:11})
+        res = yield ctx.eval('{_x:_x+1 for _x in ls if _x==3}', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, {3:4})
+        res = yield ctx.eval('{(_x,_y):(_x+_y) for _x in [1,2] for _y in [5,6,7]}', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, {(2,7): 9, (1,5): 6, (2,6): 8, (1,6): 7, (1,7): 8, (2,5): 7})
+        
     @tornado.testing.gen_test
     def test_global_funcs(self):
         yield self.resetTables()
