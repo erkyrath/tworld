@@ -16,6 +16,7 @@ import tornado.testing
 
 testlist = [
     'twest.test_eval',
+    'twest.test_funcs',
     'twest.test_propcache',
     ]
 
