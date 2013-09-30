@@ -179,6 +179,8 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         res = yield ctx.eval('datetime.datetime(2013,5,1)', evaltype=EVALTYPE_CODE)
         self.assertTrue(isinstance(res, datetime.datetime))
         self.assertEqual(res, datetime.datetime(year=2013, month=5, day=1, tzinfo=datetime.timezone.utc))
+        res = yield ctx.eval('datetime.datetime(year=2013, month=5, day=2, hour=3, minute=4, second=5, microsecond=500000)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, datetime.datetime(year=2013, month=5, day=2, hour=3, minute=4, second=5, microsecond=500000, tzinfo=datetime.timezone.utc))
         
         res = yield ctx.eval('datetime.now.year', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, task.starttime.year)
@@ -200,6 +202,23 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         self.assertEqual(res, task.starttime.max)
         res = yield ctx.eval('datetime.now.resolution', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, task.starttime.resolution)
+
+        res = yield ctx.eval('datetime.timedelta()', evaltype=EVALTYPE_CODE)
+        self.assertTrue(isinstance(res, datetime.timedelta))
+        self.assertEqual(res, datetime.timedelta())
+        res = yield ctx.eval('datetime.timedelta(days=1, seconds=2, milliseconds=3)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, datetime.timedelta(days=1, seconds=2, milliseconds=3))
+        res = yield ctx.eval('datetime.timedelta(hours=1, minutes=2, weeks=3)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, datetime.timedelta(hours=1, minutes=2, weeks=3))
+        res = yield ctx.eval('datetime.timedelta(hours=1, minutes=2, weeks=3).total_seconds()', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 1818120)
+        res = yield ctx.eval('datetime.timedelta().min', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, datetime.timedelta().min)
+        res = yield ctx.eval('datetime.timedelta().max', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, datetime.timedelta().max)
+        res = yield ctx.eval('datetime.timedelta().resolution', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, datetime.timedelta().resolution)
+        
         
 from two.evalctx import LEVEL_EXECUTE, LEVEL_DISPSPECIAL, LEVEL_DISPLAY, LEVEL_MESSAGE, LEVEL_FLAT, LEVEL_RAW
 from two.evalctx import EVALTYPE_SYMBOL, EVALTYPE_RAW, EVALTYPE_CODE, EVALTYPE_TEXT
