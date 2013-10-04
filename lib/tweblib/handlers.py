@@ -14,11 +14,11 @@ import tornado.web
 import tornado.gen
 import tornado.escape
 import tornado.websocket
-import tornado.process
 
 import motor
 
 import tweblib.session
+import tweblib.mailer
 import twcommon.misc
 from twcommon.excepts import MessageException
 from twcommon.misc import sluggify
@@ -417,42 +417,9 @@ class RecoverHandler(MyRequestHandler):
             message = self.render_string('mail_recover.txt',
                                          hostname=self.application.twopts.hostname,
                                          key=key)
-            
-            mailargs = self.application.twopts.email_command
-            if not mailargs:
-                raise MessageException('Unable to send recovery email -- email command not configured.')
-            if not isinstance(mailargs, list):
-                mailargs = mailargs.split()
-            def replace_array_el(ls, was, to):
-                try:
-                    ls[ls.index(was)] = to
-                except:
-                    pass
-            replace_array_el(mailargs, '$TO', email)
-            replace_array_el(mailargs, '$FROM', self.application.twopts.email_from)
-            replace_array_el(mailargs, '$SUBJECT', 'Password change request')
-            
-            proc = tornado.process.Subprocess(mailargs,
-                                              close_fds=True,
-                                              stdin=tornado.process.Subprocess.STREAM,
-                                              stdout=tornado.process.Subprocess.STREAM)
 
-            # We'll read from the subprocess, throwing away all output,
-            # but triggering a callback when its stdout closes.
-            callkey = ObjectId() # unique key
-            proc.stdout.read_until_close(
-                (yield tornado.gen.Callback(callkey)),
-                lambda dat:None)
-            
-            # Now push in the message body.
-            proc.stdin.write(message, callback=proc.stdin.close)
-            proc.stdin.close()
-            
-            # And wait for that close callback.
-            res = yield tornado.gen.Wait(callkey)
-
-            res = proc.returncode
-            self.application.twlog.info('Email sent, result: %s', res)
+            mailer = tweblib.mailer.Mailer(self.application)
+            yield mailer.send(email, 'Password change request', message)
 
         except MessageException as ex:
             formerror = str(ex)
