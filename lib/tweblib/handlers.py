@@ -367,7 +367,9 @@ class RecoverHandler(MyRequestHandler):
         name = tornado.escape.squeeze(name.strip())
         
         formerror = None
-        if (not name):
+        if self.twsessionstatus == 'auth':
+            formerror = 'You are already signed in!'
+        elif (not name):
             formerror = 'You must enter your player name or email address.'
         if formerror:
             self.render('recover.html', formerror=formerror, init_name=name)
@@ -440,8 +442,80 @@ class RecoverHandler(MyRequestHandler):
 class Recover2Handler(MyRequestHandler):
     """The page for changing a lost password, in recovery.
     """
-    pass
+    @tornado.gen.coroutine
+    def get(self, key):
+        res = yield motor.Op(self.application.mongodb.pwrecover.find_one,
+                             { 'key':key })
+        if not res:
+            raise tornado.web.HTTPError(404)
+        uid = res['_id']
+        self.render('recover2.html', key=key)
+
+    @tornado.gen.coroutine
+    def post(self, key):
+        res = yield motor.Op(self.application.mongodb.pwrecover.find_one,
+                             { 'key':key })
+        if not res:
+            raise tornado.web.HTTPError(404)
+        uid = res['_id']
+
+        # Apply canonicalizations to the passwords.
+        password = self.get_argument('password', '')
+        password = unicodedata.normalize('NFKC', password)
+        password = password.encode()  # to UTF8 bytes
+        password2 = self.get_argument('password2', '')
+        password2 = unicodedata.normalize('NFKC', password2)
+        password2 = password2.encode()  # to UTF8 bytes
+        
+        formerror = None
+        formfocus = 'name'
+        
+        if self.twsessionstatus == 'auth':
+            formerror = 'You are already signed in!'
+        elif (not password):
+            formerror = 'You must enter your new password.'
+            formfocus = 'password'
+        elif (not password2):
+            formerror = 'You must enter your new password twice.'
+            formfocus = 'password2'
+        elif (len(password) < 6):
+            formerror = 'Please use at least six characters in your password.'
+            formfocus = 'password'
+        elif (len(password) > 128):
+            formerror = 'Please use no more than 128 characters in your password.'
+            formfocus = 'password'
+        elif (password != password2):
+            formerror = 'The passwords you entered were not the same.'
+            password2 = ''
+            formfocus = 'password2'
+
+        if formerror:
+            self.render('recover2.html', key=key, formerror=formerror)
+            return
+
+        try:
+            yield self.application.twsessionmgr.change_password(uid, password)
+            # Success.
+            yield motor.Op(self.application.mongodb.pwrecover.remove,
+                           { 'key':key })
+            formerror = None
+        except MessageException as ex:
+            formerror = str(ex)
+
+        if formerror:
+            self.render('recover2.html', key=key, formerror=formerror)
+            return
+
+        self.render('recover2.html', key=key, pwchanged=True)
     
+    def get_template_namespace(self):
+        map = super().get_template_namespace()
+        # Add a couple of default values. The handlers may or may not override
+        # these Nones.
+        map['formerror'] = None
+        map['pwchanged'] = False
+        return map
+
 class AccountHandler(MyRequestHandler):
     """The page for updating your account state. (Currently, this is just
     changing your password.)
