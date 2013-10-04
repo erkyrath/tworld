@@ -5,14 +5,48 @@ Recover Password
 {% end %}
 
 {% block head_ext %}
+<link rel="stylesheet" href="{{ static_url('css/form.css') }}" type="text/css">
 {% end %}
 
 {% block body %}
 
-<h2>Password Recovery</h2>
+<h2>Recover Password</h2>
+
+{% if not mailsent %}
+
+<div class="AuthForm">
+<form method="post" action="/recover">
+ {% module xsrf_form_html() %}
+ <div class="FormSection">
+  <input class="FormInput" autocapitalize="off"
+   id="login_field" name="name" type="text" placeholder="Name or email"
+   {% if init_name %} value="{{init_name}}" {% else %} autofocus="autofocus" {% end %}
+   >
+ </div>
+ <div class="FormSection">
+  <input class="FormButton FloatRight" name="commit" type="submit" value="Submit">
+  &nbsp;
+ </div>
+{% if formerror %}
+ <div class="FormSection FormError">
+  {{ formerror }}
+ </div>
+{% end %}
+</form>
+</div>
 
 <p>
-This feature is not yet implemented.
+Enter your account name or email address above. You will receive an
+email message containing a URL and further instructions.
 </p>
+
+{% else %}
+
+<p>
+A message has been sent to your account's email address.
+Please wait for it to arrive.
+</p>
+
+{% end %}
 
 {% end %}

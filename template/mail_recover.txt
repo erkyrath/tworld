@@ -1,0 +1,11 @@
+This is an automated message from the Tworld server. If you recently
+used the the "forgot my password" request, visit this URL to enter a
+new password:
+
+http://{{hostname}}/recover/{{key}}
+
+If you haven't entered any such request, just ignore this message.
+Thanks.
+
+-- The Tworld Server (http://{{hostname}}/)
+
