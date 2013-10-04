@@ -79,6 +79,34 @@ class SessionMgr(object):
         return res
     
     @tornado.gen.coroutine
+    def find_player_nopw(self, handler, name):
+        """
+        Locate the player whose name *or* email address is given. Return
+        the player dict. If the player is not found, return None.
+
+        This is the same as above, but doesn't require a password.
+        We use this only for password recovery.
+        """
+        if (not self.app.mongodb):
+            raise MessageException('Database not available.')
+
+        if ('@' in name):
+            key = 'email'
+        else:
+            key = 'name'
+            
+        try:
+            res = yield motor.Op(self.app.mongodb.players.find_one,
+                                 { key: name })
+        except Exception as ex:
+            raise MessageException('Database error: %s' % ex)
+
+        if not res:
+            return None
+
+        return res
+    
+    @tornado.gen.coroutine
     def create_player(self, handler, email, name, password):
         """
         Create a player entry with the given parameters. Also create a
@@ -340,6 +368,23 @@ class SessionMgr(object):
             
         except Exception as ex:
             self.app.twlog.error('Error expiring old sessions: %s', ex)
+
+    @tornado.gen.coroutine
+    def monitor_pwrecover(self):
+        """
+        This has nothing to do with sessions, but it's an easy place to
+        stick it. Once an hour, we trim out all pwrecover entries more than
+        24 hours old.
+        """
+        now = twcommon.misc.now()
+        yesterday = now - datetime.timedelta(days=1)
+
+        try:
+            self.app.twlog.info('Performing pwrecover cleanup')
+            res = yield motor.Op(self.app.mongodb.pwrecover.remove,
+                                 {'changed': {'$lt': yesterday}})
+        except Exception as ex:
+            self.app.twlog.error('Error expiring old pwrecover: %s', ex)
 
     @tornado.gen.coroutine
     def monitor_trashprop(self):

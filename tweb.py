@@ -56,6 +56,9 @@ tornado.options.define(
 tornado.options.define(
     'port', type=int, default=4000,
     help='port number to listen on')
+tornado.options.define(
+    'hostname', type=str, default='localhost',
+    help='host name to display in URLs')
 
 tornado.options.define(
     'debug', type=bool,
@@ -129,6 +132,7 @@ handlers = [
     (r'/', tweblib.handlers.MainHandler),
     (r'/register', tweblib.handlers.RegisterHandler),
     (r'/recover', tweblib.handlers.RecoverHandler),
+    (r'/recover/([0-9a-f]+)', tweblib.handlers.Recover2Handler),
     (r'/logout', tweblib.handlers.LogOutHandler),
     (r'/play', tweblib.handlers.PlayHandler),
     (r'/account', tweblib.handlers.AccountHandler),
@@ -217,8 +221,12 @@ class TwebApplication(tornado.web.Application):
         res = tornado.ioloop.PeriodicCallback(self.twsessionmgr.monitor_sessions, 60000)
         res.start()
 
+        # The pwrecover expiration monitor. Runs once per hour.
+        res = tornado.ioloop.PeriodicCallback(self.twsessionmgr.monitor_pwrecover, 3600050)
+        res.start()
+
         # The trashprop expiration monitor. Runs once per hour.
-        res = tornado.ioloop.PeriodicCallback(self.twsessionmgr.monitor_trashprop, 3600050)
+        res = tornado.ioloop.PeriodicCallback(self.twsessionmgr.monitor_trashprop, 3601050)
         res.start()
         
 

@@ -14,6 +14,7 @@ import tornado.web
 import tornado.gen
 import tornado.escape
 import tornado.websocket
+import tornado.process
 
 import motor
 
@@ -351,8 +352,126 @@ class RecoverHandler(MyRequestHandler):
     """
     @tornado.gen.coroutine
     def get(self):
-        self.render('recover.html')
+        try:
+            name = self.get_cookie('tworld_name', None)
+            name = tornado.escape.url_unescape(name)
+        except:
+            name = None
+        self.render('recover.html', init_name=name)
 
+    @tornado.gen.coroutine
+    def post(self):
+        # Apply canonicalizations to the name.
+        name = self.get_argument('name', '')
+        name = unicodedata.normalize('NFKC', name)
+        name = tornado.escape.squeeze(name.strip())
+        
+        formerror = None
+        if (not name):
+            formerror = 'You must enter your player name or email address.'
+        if formerror:
+            self.render('recover.html', formerror=formerror, init_name=name)
+            return
+
+        try:
+            res = yield self.application.twsessionmgr.find_player_nopw(self, name)
+        except MessageException as ex:
+            formerror = str(ex)
+            self.render('recover.html', formerror=formerror, init_name=name)
+            return
+
+        try:
+            if not res:
+                raise MessageException('There is no such player.')
+       
+            uid = res['_id']
+            email = res['email']
+
+            rec = yield motor.Op(self.application.mongodb.pwrecover.find_one,
+                                 { '_id':uid })
+            if rec:
+                raise MessageException('A recovery email has already been sent for this account. Please wait for it to arrive. If the message has been lost, you may try again in 24 hours.')
+
+            # Invent a random key string, avoiding collision, even though
+            # collision is unlikely.
+            while True:
+                key = self.application.twsessionmgr.random_bytes(16).decode()
+                rec = yield motor.Op(self.application.mongodb.pwrecover.find_one,
+                                     { 'key':key })
+                if not rec:
+                    break
+
+            rec = {
+                '_id':uid, 'key':key,
+                'createtime':twcommon.misc.now(),
+                }
+
+            yield motor.Op(self.application.mongodb.pwrecover.insert, rec)
+            
+            self.application.twlog.warning('Player lost password: %s', email)
+
+            # Send the email. We set this up as a subprocess call to
+            # /bin/mail (or equivalent), using Tornado's async subprocess
+            # wrapper.
+
+            message = self.render_string('mail_recover.txt',
+                                         hostname=self.application.twopts.hostname,
+                                         key=key)
+            
+            mailargs = self.applications.twopts.email_command
+            if not isinstance(mailargs, list):
+                mailargs = mailargs.split()
+            try:
+                ls[ls.index('$TO')] = email
+            except:
+                pass
+            try:
+                ls[ls.index('$FROM')] = self.applications.twopts.email_from
+            except:
+                pass
+            try:
+                ls[ls.index('$SUBJECT')] = 'Password change request'
+            except:
+                pass
+            
+            proc = tornado.process.Subprocess(mailargs,
+                                              close_fds=True,
+                                              stdin=tornado.process.Subprocess.STREAM,
+                                              stdout=tornado.process.Subprocess.STREAM)
+
+            # We'll read from the subprocess, throwing away all output,
+            # but triggering a callback when its stdout closes.
+            proc.stdout.read_until_close(WAIT, lambda dat:...)
+            
+            # Now push in the message body.
+            proc.stdin.write(message, callback=proc.stdin.close)
+
+            # And wait for that close callback.
+            ### waited?
+
+            
+
+        except MessageException as ex:
+            formerror = str(ex)
+            self.render('recover.html', formerror=formerror, init_name=name)
+            return
+        
+        self.render('recover.html', mailsent=True)
+        
+    def get_template_namespace(self):
+        map = super().get_template_namespace()
+        # Add a couple of default values. The handlers may or may not override
+        # these Nones.
+        map['formerror'] = None
+        map['init_name'] = None
+        map['mailsent'] = False
+        return map
+
+class Recover2Handler(MyRequestHandler):
+    """The page for changing a lost password, in recovery.
+    """
+    pass
+    
 class AccountHandler(MyRequestHandler):
     """The page for updating your account state. (Currently, this is just
     changing your password.)

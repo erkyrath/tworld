@@ -185,6 +185,8 @@ db.playprefs.create_index('uid')  # not unique
 # Compound index
 db.playprefs.create_index([('uid', pymongo.ASCENDING), ('key', pymongo.ASCENDING)], unique=True)
 
+db.pwrecover.create_index('key', unique=True)
+
 # Compound index
 db.locations.create_index([('wid', pymongo.ASCENDING), ('key', pymongo.ASCENDING)], unique=True)
 
