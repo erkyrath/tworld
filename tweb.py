@@ -58,7 +58,14 @@ tornado.options.define(
     help='port number to listen on')
 tornado.options.define(
     'hostname', type=str, default='localhost',
-    help='host name to display in URLs')
+    help='host name to display in absolute URLs')
+
+tornado.options.define(
+    'email_from', type=str,
+    help='return address for automated email')
+tornado.options.define(
+    'email_command', type=str,
+    help='shell command to send email')
 
 tornado.options.define(
     'debug', type=bool,

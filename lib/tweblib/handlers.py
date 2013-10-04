@@ -418,21 +418,19 @@ class RecoverHandler(MyRequestHandler):
                                          hostname=self.application.twopts.hostname,
                                          key=key)
             
-            mailargs = self.applications.twopts.email_command
+            mailargs = self.application.twopts.email_command
+            if not mailargs:
+                raise MessageException('Unable to send recovery email -- email command not configured.')
             if not isinstance(mailargs, list):
                 mailargs = mailargs.split()
-            try:
-                ls[ls.index('$TO')] = email
-            except:
-                pass
-            try:
-                ls[ls.index('$FROM')] = self.applications.twopts.email_from
-            except:
-                pass
-            try:
-                ls[ls.index('$SUBJECT')] = 'Password change request'
-            except:
-                pass
+            def replace_array_el(ls, was, to):
+                try:
+                    ls[ls.index(was)] = to
+                except:
+                    pass
+            replace_array_el(mailargs, '$TO', email)
+            replace_array_el(mailargs, '$FROM', self.application.twopts.email_from)
+            replace_array_el(mailargs, '$SUBJECT', 'Password change request')
             
             proc = tornado.process.Subprocess(mailargs,
                                               close_fds=True,
@@ -441,15 +439,20 @@ class RecoverHandler(MyRequestHandler):
 
             # We'll read from the subprocess, throwing away all output,
             # but triggering a callback when its stdout closes.
-            proc.stdout.read_until_close(WAIT, lambda dat:...)
+            callkey = ObjectId() # unique key
+            proc.stdout.read_until_close(
+                (yield tornado.gen.Callback(callkey)),
+                lambda dat:None)
             
             # Now push in the message body.
             proc.stdin.write(message, callback=proc.stdin.close)
-
-            # And wait for that close callback.
-            ### waited?
-
+            proc.stdin.close()
             
+            # And wait for that close callback.
+            res = yield tornado.gen.Wait(callkey)
+
+            res = proc.returncode
+            self.application.twlog.info('Email sent, result: %s', res)
 
         except MessageException as ex:
             formerror = str(ex)
