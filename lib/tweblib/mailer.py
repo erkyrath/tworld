@@ -46,12 +46,12 @@ class Mailer(object):
                                           stdin=tornado.process.Subprocess.STREAM,
                                           stdout=tornado.process.Subprocess.STREAM)
 
-        # We'll read from the subprocess, throwing away all output,
-        # but triggering a callback when its stdout closes.
+        # We'll read from the subprocess, logging all output,
+        # and triggering a callback when its stdout closes.
         callkey = ObjectId() # unique key
         proc.stdout.read_until_close(
             (yield tornado.gen.Callback(callkey)),
-            lambda dat:None)
+            lambda dat:self.log.info('Email script output: %s', dat))
         
         # Now push in the message body.
         proc.stdin.write(body, callback=proc.stdin.close)
