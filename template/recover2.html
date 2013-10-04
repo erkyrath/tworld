@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block page_title %}
+Recover Password
+{% end %}
+
+{% block head_ext %}
+<link rel="stylesheet" href="{{ static_url('css/form.css') }}" type="text/css">
+{% end %}
+
+{% block body %}
+
+<h2>Recover Password</h2>
+
+{% if not pwchanged %}
+
+<div id="change_pw_form" class="AuthForm">
+<form method="post" action="/recover/{{key}}">
+ {% module xsrf_form_html() %}
+ <div class="FormSection">
+  <input class="FormInput" autocomplete="disabled"
+   id="newpassword_field" name="password" type="password" placeholder="New password"
+   >
+ </div>
+ <div class="FormSection">
+  <input class="FormInput" autocomplete="disabled"
+   id="newpassword2_field" name="password2" type="password" placeholder="New password again"
+   >
+ </div>
+ <div class="FormSection">
+  <input class="FormButton FloatRight" name="changepw" type="submit" value="Change Password">
+  &nbsp;
+ </div>
+{% if formerror %}
+ <div class="FormSection FormError">
+  {{ formerror }}
+ </div>
+{% end %}
+</form>
+</div>
+
+{% else %}
+
+<p>
+Your password has been changed.
+You may now <a href="/">sign in with it</a>.
+</p>
+
+{% end %}
+
+{% end %}
