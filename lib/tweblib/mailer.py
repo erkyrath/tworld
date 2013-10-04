@@ -7,6 +7,7 @@ have configured.
 """
 
 import datetime
+import shlex
 
 from bson.objectid import ObjectId
 import tornado.gen
@@ -34,8 +35,7 @@ class Mailer(object):
         mailargs = self.app.twopts.email_command
         if not mailargs:
             raise MessageException('Unable to send recovery email -- email command not configured.')
-        if not isinstance(mailargs, list):
-            mailargs = mailargs.split()
+        mailargs = shlex.split(mailargs)
             
         replace_array_el(mailargs, '$TO', toaddr)
         replace_array_el(mailargs, '$FROM', self.app.twopts.email_from)
