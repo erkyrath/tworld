@@ -472,7 +472,15 @@ function build_portlist_fields() {
     build_geninput_cell(cellel, pageplistkey, 'plistkey');
 
     var cellel = $('#build_plist_external_cell');
-    build_geninput_cell(cellel, pageplistexternal, 'plistexternal');
+    build_geninput_cell(cellel, pageplistexternal, 'plistexternal', function (val) {
+            if (val && !pageplistexternal) {
+                $('.BuildPropListURL').slideDown(200);
+            }
+            else if (!val && pageplistexternal) {
+                $('.BuildPropListURL').slideUp(200);
+            }
+            pageplistexternal = val;
+        });
 
     $('#button_delete_portlist').on('click', function() {
             $('#button_delete_confirm').filter(":hidden").slideDown(200);
@@ -595,7 +603,13 @@ function update_portal(tableref, port, nocopy) {
         }
     }
     desc.push($('<br>'));
-    desc.push($('<em>').text(NBSP + NBSP + '(by ' + port.creatorname + ')'));
+    desc.push($('<em>').text(NBSP + ' (by ' + port.creatorname + ')'));
+    var url = 'http://' + servername + '/portlink/' + port.id;
+    var urlel = $('<div>', {'class':'BuildPropListURL'}).text(NBSP+' ');
+    urlel.append($('<a>', {href:url, 'class':'ExternalLink', 'target':'_blank'}).text(url));
+    if (!pageplistexternal)
+        urlel.css({display:'none'});
+    desc.push(urlel);
 
     var portref = tableref.portmap[port.id];
     if (portref !== undefined) {

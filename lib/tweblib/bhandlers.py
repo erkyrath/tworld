@@ -584,6 +584,7 @@ class BuildPortListHandler(BuildBaseHandler):
             
         self.render('build_portlist.html',
                     wid=str(wid), worldname=worldname,
+                    servername=json.dumps(self.application.twopts.hostname),
                     locarray=json.dumps(locarray), locations=locations,
                     plistid=str(plistid), plistkey=json.dumps(plistkey),
                     plistexternal=json.dumps(plistexternal),
