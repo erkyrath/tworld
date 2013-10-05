@@ -483,7 +483,6 @@ def define_commands():
         
         portal = yield motor.Op(app.mongodb.portals.find_one,
                                 {'_id':portid})
-        
         wid = portal['wid']
         locid = portal['locid']
         
@@ -498,12 +497,28 @@ def define_commands():
                                 {'_id':uid},
                                 {'plistid':1})
         plistid = player['plistid']
-        
-        portid = yield two.execute.create_portal_for_player(app, uid, plistid, wid, scid, locid, silent=True)
-        app.log.info('URL-based portal created: %s', portid)
 
+        # Create a portal (or return the existing one, if already present)
+        # The "silent" argument just means that an existing duplicate will
+        # be returned without complaint.
+        newportid = yield two.execute.create_portal_for_player(app, uid, plistid, wid, scid, locid, silent=True)
+        app.log.info('URL-based portal: %s', newportid)
+
+        # Check that the new portal exists *and* is in the right place.
+        newportal = yield motor.Op(app.mongodb.portals.find_one,
+                                   {'_id':newportid,
+                                    'iid':None, 'plistid':plistid})
+        if not newportal:
+            raise ErrorMessageException('externalcopyportal: new portal was not correct: %s' % (newportid,))
+        
         if cmd.focus:
-            pass ####?
+            # Focus the new portal, as if by the plistselect command.
+            msg = app.localize('message.desc_own_portlist')
+            focusobj = ['portlist', plistid, False, msg, False, newportid]
+            yield motor.Op(app.mongodb.playstate.update,
+                           {'_id':uid},
+                           {'$set':{'focus':focusobj}})
+            task.set_dirty(uid, DIRTY_FOCUS)
         
     @command('notifydatachange', isserver=True, doeswrite=True)
     def cmd_notifydatachange(app, task, cmd, stream):
