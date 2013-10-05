@@ -486,12 +486,12 @@ def define_commands():
         world = yield motor.Op(app.mongodb.worlds.find_one,
                                 {'_id':wid})
         if not world:
-            raise ErrorMessageException('buildcopyportal: no such world: %s' % (wid,))
+            raise ErrorMessageException('externalcopyportal: no such world: %s' % (wid,))
 
         loc = yield motor.Op(app.mongodb.locations.find_one,
                              {'_id':locid})
         if not loc:
-            raise ErrorMessageException('buildcopyportal: no such location: %s' % (locid,))
+            raise ErrorMessageException('externalcopyportal: no such location: %s' % (locid,))
 
         player = yield motor.Op(app.mongodb.players.find_one,
                                 {'_id':uid},
