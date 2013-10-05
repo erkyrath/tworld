@@ -81,6 +81,29 @@ class MyHandlerMixin:
             return None
         return res['val']
         
+    @tornado.gen.coroutine
+    def check_external_portal(self, portid):
+        """Check to make sure a portal is okay for external linking.
+        (This lives here because a couple of different handlers use it.)
+        Returns the portal DB object, or raises an exception.
+        """
+        portal = yield motor.Op(self.application.mongodb.portals.find_one,
+                                { '_id':portid })
+        if not portal:
+            raise MessageException('No such portal')
+        if portal['iid'] is not None:
+            raise MessageException('Portal is not world-level')
+        plist = yield motor.Op(self.application.mongodb.portlists.find_one,
+                               { '_id':portal['plistid'] })
+        if not plist:
+            raise MessageException('No such portlist')
+        if plist['type'] != 'world':
+            raise MessageException('Portlist is not world-level')
+        if not plist.get('external', False):
+            raise MessageException('Portlist is not available for external linking')
+
+        return portal
+    
     def extend_template_namespace(self, map):
         """
         Add session-related entries to the template namespace. This is
@@ -102,7 +125,8 @@ class MyHandlerMixin:
             self.render('404.html')
             return
         if (status_code == 403):
-            error_text = 'Not permitted'
+            if not error_text:
+                error_text = 'Not permitted'
             if (exc_info):
                 error_text = str(exc_info[1])
             self.render('error.html', status_code=403, exctitle=None, exception=error_text)
@@ -516,6 +540,31 @@ class Recover2Handler(MyRequestHandler):
         map['pwchanged'] = False
         return map
 
+class PortLinkHandler(MyRequestHandler):
+    """The page for an external portal URL. This has to do various things,
+    depending on the session state.
+    - If you have a web session and an open socket, the link is added to
+    your personal list and focussed.
+    - If you have a web session but have no socket, the link is added to
+    your personal list and focussed; then the page redirects to the game.
+    - If you are not logged in, tweb sets a (short-term) cookie with the
+    portid; then it redirects to the front page.
+    """
+
+    @tornado.gen.coroutine
+    def get(self, portid):
+        portid = ObjectId(portid)
+        try:
+            portal = yield self.check_external_portal(portid)
+        except MessageException as ex:
+            self.write_error(403, error_text=str(ex))
+            return
+        
+        if self.twsessionstatus != 'auth':
+            raise Exception('### PortLink: unauthenticated, do stuff...')
+
+        # Add the link to the player's personal list, if it's not already.
+    
 class AccountHandler(MyRequestHandler):
     """The page for updating your account state. (Currently, this is just
     changing your password.)
