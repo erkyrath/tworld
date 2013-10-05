@@ -535,6 +535,7 @@ class BuildPortListHandler(BuildBaseHandler):
         if plist['type'] != 'world' or 'wid' not in plist:
             raise Exception('Portlist is not in a world')
         plistkey = plist.get('key')
+        plistexternal = plist.get('external', False)
             
         wid = plist['wid']
         (world, locations) = yield self.find_build_world(wid)
@@ -585,6 +586,7 @@ class BuildPortListHandler(BuildBaseHandler):
                     wid=str(wid), worldname=worldname,
                     locarray=json.dumps(locarray), locations=locations,
                     plistid=str(plistid), plistkey=json.dumps(plistkey),
+                    plistexternal=json.dumps(plistexternal),
                     portarray=portarray, selfportarray=selfportarray,
                     selfscopes=selfscopes,
                     withblurb=(len(portals) == 0))
@@ -1228,6 +1230,21 @@ class BuildSetDataHandler(BuildBaseHandler):
                 yield motor.Op(self.application.mongodb.portlists.update,
                                { '_id':plistid, 'wid':wid },
                                { '$set':{'key':value} })
+                self.write( { 'val':value } )
+                return
+
+            if name == 'plistexternal':
+                value = value.lower()
+                if value not in ("true", "false"):
+                    raise Exception('External must be "true" or "false"')
+                value = (value == "true")
+                plistid = self.get_argument('plist', None)
+                if not plistid:
+                    raise Exception('No portlist declared')
+                plistid = ObjectId(plistid)
+                yield motor.Op(self.application.mongodb.portlists.update,
+                               { '_id':plistid, 'wid':wid },
+                               { '$set':{'external':value} })
                 self.write( { 'val':value } )
                 return
 

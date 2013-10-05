@@ -19,6 +19,7 @@ var pageid = 'portlist';
 var pageworldid = "{{wid}}";
 var pageplistid = "{{plistid}}";
 var pageplistkey = {% raw plistkey %};
+var pageplistexternal = {% raw plistexternal %};
 /* List of locations in this world. */
 var db_locations = {% raw locarray %};
 /* List of portals in the portlist. */
@@ -66,6 +67,10 @@ links to it.
  <tr valign="top">
   <td><em>key</em></td>
   <td id="build_plist_key_cell">XXX</td>
+ </tr>
+ <tr valign="top">
+  <td><em>external</em></td>
+  <td id="build_plist_external_cell">XXX</td>
  </tr>
  <tr>
   <td colspan="2">

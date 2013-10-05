@@ -471,6 +471,9 @@ function build_portlist_fields() {
     var cellel = $('#build_plist_key_cell');
     build_geninput_cell(cellel, pageplistkey, 'plistkey');
 
+    var cellel = $('#build_plist_external_cell');
+    build_geninput_cell(cellel, pageplistexternal, 'plistexternal');
+
     $('#button_delete_portlist').on('click', function() {
             $('#button_delete_confirm').filter(":hidden").slideDown(200);
         });
