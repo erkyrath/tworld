@@ -90,17 +90,17 @@ class MyHandlerMixin:
         portal = yield motor.Op(self.application.mongodb.portals.find_one,
                                 { '_id':portid })
         if not portal:
-            raise MessageException('No such portal')
+            raise tornado.web.HTTPError(403, 'No such portal')
         if portal['iid'] is not None:
-            raise MessageException('Portal is not world-level')
+            raise tornado.web.HTTPError(403, 'Portal is not world-level')
         plist = yield motor.Op(self.application.mongodb.portlists.find_one,
                                { '_id':portal['plistid'] })
         if not plist:
-            raise MessageException('No such portlist')
+            raise tornado.web.HTTPError(403, 'No such portlist')
         if plist['type'] != 'world':
-            raise MessageException('Portlist is not world-level')
+            raise tornado.web.HTTPError(403, 'Portlist is not world-level')
         if not plist.get('external', False):
-            raise MessageException('Portlist is not available for external linking')
+            raise tornado.web.HTTPError(403, 'Portlist is not available for external linking')
 
         return portal
     
@@ -554,11 +554,7 @@ class PortLinkHandler(MyRequestHandler):
     @tornado.gen.coroutine
     def get(self, portid):
         portid = ObjectId(portid)
-        try:
-            portal = yield self.check_external_portal(portid)
-        except MessageException as ex:
-            self.write_error(403, error_text=str(ex))
-            return
+        portal = yield self.check_external_portal(portid)
         
         if self.twsessionstatus != 'auth':
             raise Exception('### PortLink: unauthenticated, do stuff...')
