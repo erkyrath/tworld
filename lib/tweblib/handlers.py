@@ -568,7 +568,16 @@ class PortLinkHandler(MyRequestHandler):
         msg = { 'cmd':'externalcopyportal', 'uid':str(uid),
                 'portid':str(portid), 'focus':True }
         self.application.twservermgr.tworld_write(0, msg)
-        
+
+        # Check whether the player has an active web session.
+        ls = self.application.twconntable.for_uid(uid)
+        if not ls:
+            # Redirect to the play page.
+            self.redirect('/play')
+            return
+
+        # Display a success message (with a play link, in case the player
+        # wants that).
         self.render('portlink.html')
     
 class AccountHandler(MyRequestHandler):
