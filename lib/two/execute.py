@@ -708,10 +708,12 @@ def portal_description(app, portal, uid, uidiid=None, location=False, short=Fals
         return None
 
 @tornado.gen.coroutine
-def create_portal_for_player(app, uid, plistid, newwid, newscid, newlocid):
+def create_portal_for_player(app, uid, plistid, newwid, newscid, newlocid, silent=False):
     """Create a new portal in the player's portal list. This does not check
     legality or access; the caller must do that.
-    Raises a MessageException if the player already has this portal.
+    If the player already has this portal, raises a MessageException (if
+    the silent argument is false), or just returns the portid (if silent
+    is true).
     """
     newportal = { 'plistid':plistid, 'iid':None,
                   'wid':newwid, 'scid':newscid, 'locid':newlocid,
@@ -719,6 +721,8 @@ def create_portal_for_player(app, uid, plistid, newwid, newscid, newlocid):
     res = yield motor.Op(app.mongodb.portals.find_one,
                          newportal)
     if res:
+        if silent:
+            return res['_id']
         raise MessageException(app.localize('message.copy_already_have')) # 'This portal is already in your collection.'
 
     # Look through the player's list and find the entry with the

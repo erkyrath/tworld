@@ -476,6 +476,34 @@ def define_commands():
         portid = yield two.execute.create_portal_for_player(app, uid, plistid, wid, scid, locid)
         app.log.info('Build portal created: %s', portid)
         
+    @command('externalcopyportal', isserver=True, doeswrite=True)
+    def cmd_externalcopyportal(app, task, cmd, stream):
+        uid = ObjectId(cmd.uid)
+        wid = ObjectId(cmd.wid)
+        locid = ObjectId(cmd.locid)
+        scid = ObjectId(cmd.scid) ### handle the specials
+        
+        world = yield motor.Op(app.mongodb.worlds.find_one,
+                                {'_id':wid})
+        if not world:
+            raise ErrorMessageException('buildcopyportal: no such world: %s' % (wid,))
+
+        loc = yield motor.Op(app.mongodb.locations.find_one,
+                             {'_id':locid})
+        if not loc:
+            raise ErrorMessageException('buildcopyportal: no such location: %s' % (locid,))
+
+        player = yield motor.Op(app.mongodb.players.find_one,
+                                {'_id':uid},
+                                {'scid':1, 'plistid':1})
+        plistid = player['plistid']
+
+        portid = yield two.execute.create_portal_for_player(app, uid, plistid, wid, scid, locid, silent=True)
+        app.log.info('URL-based portal created: %s', portid)
+
+        if cmd.focus:
+            pass ###?
+        
     @command('notifydatachange', isserver=True, doeswrite=True)
     def cmd_notifydatachange(app, task, cmd, stream):
         ls = cmd.change
