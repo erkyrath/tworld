@@ -526,15 +526,16 @@ def portal_alt_scope_accessible(app, scid, uid, world):
     raise ErrorMessageException('Scope type not recognized.')
     
 @tornado.gen.coroutine
-def portal_resolve_scope(app, portal, uid, scid, world):
+def portal_resolve_scope(app, portal, uid, curscid, world):
     """Figure out what scope we are porting to. The portal scid
     value may be a special value such as 'personal', 'global',
     'same'. We also obey the (higher priority) world-instancing
     definition.
 
-    The scid argument must be where the player is now; the world must be
+    The curscid argument must be where the player is now; the world must be
     the destination world object from the database. (Yes, that's all
-    clumsy and uneven.)
+    clumsy and uneven.) For an external URL portal, pass curscid==None;
+    in this case 'same' will throw an exception.
     """
     reqscid = portal['scid']
     if world['instancing'] == 'solo':
@@ -556,7 +557,9 @@ def portal_resolve_scope(app, portal, uid, scid, world):
             raise ErrorMessageException('There is no global scope!')
         newscid = config['val']
     elif reqscid == 'same':
-        newscid = scid
+        if curscid is None:
+            raise ErrorMessageException('There is no current scope!')
+        newscid = curscid
     else:
         newscid = reqscid
     assert isinstance(newscid, ObjectId), 'newscid is not ObjectId'

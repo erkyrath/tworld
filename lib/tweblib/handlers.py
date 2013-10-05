@@ -93,6 +93,9 @@ class MyHandlerMixin:
             raise tornado.web.HTTPError(403, 'No such portal')
         if portal['iid'] is not None:
             raise tornado.web.HTTPError(403, 'Portal is not world-level')
+        if portal['scid'] == 'same':
+            raise tornado.web.HTTPError(403, 'Portal is current-scope')
+        
         plist = yield motor.Op(self.application.mongodb.portlists.find_one,
                                { '_id':portal['plistid'] })
         if not plist:
@@ -560,11 +563,10 @@ class PortLinkHandler(MyRequestHandler):
             raise Exception('### PortLink: unauthenticated, do stuff...')
 
         # Add the link to the player's personal list, if it's not already.
+        # This also sets the focus.
         uid = self.twsession['uid']
-        # The server will have to figure out scope.
         msg = { 'cmd':'externalcopyportal', 'uid':str(uid),
-                'locid':str(portal['locid']), 'scid':str(portal['scid']), 'wid':str(portal['wid']),
-                'focus':True }
+                'portid':str(portid), 'focus':True }
         self.application.twservermgr.tworld_write(0, msg)
         
         self.render('portlink.html')
