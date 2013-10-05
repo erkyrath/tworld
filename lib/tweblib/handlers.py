@@ -560,6 +560,14 @@ class PortLinkHandler(MyRequestHandler):
             raise Exception('### PortLink: unauthenticated, do stuff...')
 
         # Add the link to the player's personal list, if it's not already.
+        uid = self.twsession['uid']
+        # The server will have to figure out scope.
+        msg = { 'cmd':'buildcopyportal', 'uid':str(uid),
+                'locid':str(portal['locid']), 'scid':str(portal['scid']), 'wid':str(portal['wid']),
+                'focus':True }
+        self.application.twservermgr.tworld_write(0, msg)
+        
+        self.render('portlink.html')
     
 class AccountHandler(MyRequestHandler):
     """The page for updating your account state. (Currently, this is just
