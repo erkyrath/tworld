@@ -675,11 +675,21 @@ def define_commands():
                     task.log.warning('Caught exception (awakening instance): %s', ex, exc_info=app.debugstacktraces)
                 ctx = None
 
+        # Focus special case: if we were focussed on a personal portal
+        # in the void, retain that. This supports the use of an external
+        # portal while you're not logged in.
+        newfocus = None
+        oldfocus = playstate.get('focus', None)
+        if isinstance(oldfocus, list) and len(oldfocus) >= 6 and oldfocus[0] == 'portlist':
+            if oldfocus[1] == player['plistid']:
+                task.log.info('Retaining personal portal focus from void')
+                newfocus = oldfocus
+
         yield motor.Op(app.mongodb.playstate.update,
                        {'_id':cmd.uid},
                        {'$set':{'iid':newiid,
                                 'locid':newlocid,
-                                'focus':None,
+                                'focus':newfocus,
                                 'lastmoved': task.starttime,
                                 'lastlocid': None,
                                 'portto':None }})
