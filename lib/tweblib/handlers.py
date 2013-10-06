@@ -59,7 +59,6 @@ class MyHandlerMixin:
                 try:
                     portid = ObjectId(portid)
                     self.twportlink = yield self.external_portal_description(portid)
-                    self.application.twlog.debug('### portlink: %s', self.twportlink)
                 except Exception as ex:
                     self.application.twlog.info('Unable to load portlink info for template: %s', ex)
     
