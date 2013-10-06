@@ -157,14 +157,18 @@ class MyHandlerMixin:
                                           'key': 'portaldesc' })
         if not portaldesc:
             portaldesc = {
-                'val': self.application.localize('message.no_portaldesc') # 'The destination is hazy.'
+                'val': self.application.twlocalize('message.no_portaldesc') # 'The destination is hazy.'
                 }
+
+        portaldesc = portaldesc['val']
+        if isinstance(portaldesc, dict) and portaldesc.get('type', None) == 'text':
+            portaldesc = portaldesc.get('text', '???')
             
         return types.SimpleNamespace(
             world=world['name'],
             location=location['name'],
             creator=creator['name'],
-            portaldesc=portaldesc['val'],
+            portaldesc=portaldesc,
             done=done)
 
     def render_portal(self, portal):
