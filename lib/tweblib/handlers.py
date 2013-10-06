@@ -2,12 +2,13 @@
 The main URI request handlers used by Tweb.
 """
 
+import types
+import re
 import datetime
 import traceback
 import unicodedata
 import random
 import json
-import re
 
 from bson.objectid import ObjectId
 import tornado.web
@@ -30,18 +31,37 @@ class MyHandlerMixin:
     - Custom error page
     - Utility method to figure out the current session
     - Set up default values for the base template
+    - Load in information for the portlink cookie, if one is set
     """
-    
+
+    # Set this True for classes that will care about displaying a portlink.
+    tw_load_portlink = False
+
+    # Class defaults. The prepare method will fill in values for handler
+    # objects as they're being set up.
     twsessionstatus = None
     twsession = None
+    twportlink = None
 
     @tornado.gen.coroutine
     def prepare(self):
         """
         Called before every get/post invocation for this handler. We use
-        the opportunity to look up the session status.
+        the opportunity to look up the session status, and also portlink
+        information.
         """
         yield self.find_current_session()
+        if self.tw_load_portlink:
+            portid = self.get_cookie('tworld_portlink', None)
+            if portid:
+                # Load up the portlink data, if possible. (If it's not 
+                # possible, don't worry too much.)
+                try:
+                    portid = ObjectId(portid)
+                    self.twportlink = yield self.render_external_portal(portid)
+                    self.application.twlog.debug('### portlink: %s', self.twportlink)
+                except Exception as ex:
+                    self.application.twlog.info('Unable to load portlink info for template: %s', ex)
     
     @tornado.gen.coroutine
     def find_current_session(self):
@@ -106,6 +126,27 @@ class MyHandlerMixin:
             raise tornado.web.HTTPError(403, 'Portlist is not available for external linking')
 
         return portal
+
+    @tornado.gen.coroutine
+    def render_external_portal(self, portid):
+        """Load up enough information about an external portal
+        to display it. Returns an object with world, location, creator,
+        and portaldesc fields. Raises an exception if anything goes wrong.
+        """
+        portal = yield self.check_external_portal(portid)
+        world = yield motor.Op(self.application.mongodb.worlds.find_one,
+                               { '_id': portal['wid'] },
+                               { 'name':1, 'creator':1 })
+        location = yield motor.Op(self.application.mongodb.locations.find_one,
+                                  { '_id': portal['locid'] },
+                                  { 'name':1 })
+        creator = yield motor.Op(self.application.mongodb.players.find_one,
+                                 { '_id': world['creator'] },
+                                 { 'name':1 })
+        return types.SimpleNamespace(
+            world=world['name'],
+            location=location['name'],
+            creator=creator['name'])
     
     def extend_template_namespace(self, map):
         """
@@ -182,7 +223,8 @@ class MyRequestHandler(MyHandlerMixin, tornado.web.RequestHandler):
         return map
     
     def head(self):
-        # Always permit HEAD requests.
+        # Always permit HEAD requests. Although we don't generate
+        # any data, which means the Content-Length comes as zero.
         pass
     
     def get_current_user(self):
@@ -194,6 +236,8 @@ class MyRequestHandler(MyHandlerMixin, tornado.web.RequestHandler):
 class MainHandler(MyRequestHandler):
     """Top page: the login form.
     """
+    tw_load_portlink = True
+    
     @tornado.gen.coroutine
     def get(self):
         if not self.twsession:
@@ -277,6 +321,8 @@ class MainHandler(MyRequestHandler):
 class RegisterHandler(MyRequestHandler):
     """The page for registering a new account.
     """
+    tw_load_portlink = True
+    
     @tornado.gen.coroutine
     def get(self):
         if self.twsession:
@@ -583,6 +629,7 @@ class PortLinkHandler(MyRequestHandler):
 
         # Display a success message (with a play link, in case the player
         # wants that).
+        ### Also display the portal info!
         self.render('portlink.html')
     
 class AccountHandler(MyRequestHandler):
