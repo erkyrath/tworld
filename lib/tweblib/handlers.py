@@ -143,10 +143,25 @@ class MyHandlerMixin:
         creator = yield motor.Op(self.application.mongodb.players.find_one,
                                  { '_id': world['creator'] },
                                  { 'name':1 })
+        portaldesc = yield motor.Op(self.application.mongodb.worldprop.find_one,
+                                    { 'wid': portal['wid'],
+                                      'locid': portal['locid'],
+                                      'key': 'portaldesc' })
+        if not portaldesc:
+            portaldesc = yield motor.Op(self.application.mongodb.worldprop.find_one,
+                                        { 'wid': portal['wid'],
+                                          'locid': None,
+                                          'key': 'portaldesc' })
+        if not portaldesc:
+            portaldesc = {
+                'val': self.application.localize('message.no_portaldesc') # 'The destination is hazy.'
+                }
+            
         return types.SimpleNamespace(
             world=world['name'],
             location=location['name'],
-            creator=creator['name'])
+            creator=creator['name'],
+            portaldesc=portaldesc['val'])
     
     def extend_template_namespace(self, map):
         """
