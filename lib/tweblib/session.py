@@ -382,7 +382,7 @@ class SessionMgr(object):
         try:
             self.app.twlog.info('Performing pwrecover cleanup')
             res = yield motor.Op(self.app.mongodb.pwrecover.remove,
-                                 {'changed': {'$lt': yesterday}})
+                                 {'createtime': {'$lt': yesterday}})
         except Exception as ex:
             self.app.twlog.error('Error expiring old pwrecover: %s', ex)
 
