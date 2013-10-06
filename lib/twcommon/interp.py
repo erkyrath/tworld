@@ -85,10 +85,16 @@ class Link(InterpNode):
     def __eq__(self, obj):
         return (isinstance(obj, Link) and self.target == obj.target and self.external == obj.external)
 
+    # Regex used in looks_url_like
+    re_url_like = re.compile('https?:')
+    
     @staticmethod
     def looks_url_like(val):
+        """Check whether a string looks like a valid URL. The link syntax
+        strips whitespace off the ends, so this test does also.
+        """
         val = val.strip()
-        if val.startswith('http:'):
+        if Link.re_url_like.match(val):
             return True
         return False
         
