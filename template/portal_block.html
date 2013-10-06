@@ -1,9 +1,15 @@
 <div class="PortalBlock">
 
+{% if not portal.done %}
 <p>
 You have found a portal.
 (This will be available once you sign in.)
 </p>
+{% else %}
+<p>
+A link has been added to your personal list.
+</p>
+{% end %}
 
 <p>
 <em>{{ portal.portaldesc }}</em>
