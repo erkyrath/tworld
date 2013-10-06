@@ -794,6 +794,26 @@ class PlayHandler(MyRequestHandler):
         if not self.twsession:
             self.redirect('/')
             return
+
+        portid = self.get_cookie('tworld_portlink', None)
+        if portid:
+            # This is a one-use deal. (If it fails, it's more likely
+            # to be an invalid portal than a temporary failure. Anyhow,
+            # the player can probably find the URL again.)
+            self.clear_cookie('tworld_portlink')
+            
+            # This should be okay even if the externalcopyportal arrives
+            # after the player's browser loads the game.
+            try:
+                portid = ObjectId(portid)
+                portal = yield self.check_external_portal(portid)
+                uid = self.twsession['uid']
+                msg = { 'cmd':'externalcopyportal', 'uid':str(uid),
+                        'portid':str(portid), 'focus':True }
+                self.application.twservermgr.tworld_write(0, msg)
+            except Exception as ex:
+                self.application.twlog.info('Unable to load portlink info for play: %s', ex)
+        
         uiprefs = {}
         if self.application.mongodb is not None:
             cursor = self.application.mongodb.playprefs.find({'uid':self.twsession['uid']})
