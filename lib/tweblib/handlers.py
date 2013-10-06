@@ -127,10 +127,14 @@ class MyHandlerMixin:
         return portal
 
     @tornado.gen.coroutine
-    def external_portal_description(self, portid):
+    def external_portal_description(self, portid, done=False):
         """Load up enough information about an external portal
-        to display it. Returns an object with world, location, creator,
-        and portaldesc fields. Raises an exception if anything goes wrong.
+        to display it.
+        Returns an object with world, location, creator, portaldesc,
+        and done fields. (The done argument is just passed along.
+        This indicates whether the "put into your list" action is complete
+        or not.)
+        Raises an exception if anything goes wrong.
         """
         portal = yield self.check_external_portal(portid)
         world = yield motor.Op(self.application.mongodb.worlds.find_one,
@@ -160,7 +164,8 @@ class MyHandlerMixin:
             world=world['name'],
             location=location['name'],
             creator=creator['name'],
-            portaldesc=portaldesc['val'])
+            portaldesc=portaldesc['val'],
+            done=done)
 
     def render_portal(self, portal):
         """
@@ -653,8 +658,9 @@ class PortLinkHandler(MyRequestHandler):
             return
 
         # Display a success message (with a play link, in case the player
-        # wants that).
-        ### Also display the portal info!
+        # wants that). Also the portal info, which we belatedly stuff
+        # into self.twportlink.
+        self.twportlink = yield self.external_portal_description(portid, done=True)
         self.render('portlink.html')
     
 class AccountHandler(MyRequestHandler):

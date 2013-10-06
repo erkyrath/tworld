@@ -152,3 +152,7 @@ body {
   padding-bottom: 5px;
   background: #EED;
 }
+
+#localepane .PortalBlock p {
+  text-indent: 0px;
+}
