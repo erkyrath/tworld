@@ -407,6 +407,7 @@ application = TwebApplication(
         'tworld_app_banner': lambda handler:opts.app_banner,
         'tworld_connected_count': lambda handler:handler.application.tworld_players_connected_count(),
         'tworld_connected_count_active': lambda handler:handler.application.tworld_players_connected_count_active(),
+        'tworld_portlink': lambda handler:handler.render_portal(handler.twportlink),
         },
     **appoptions)
 

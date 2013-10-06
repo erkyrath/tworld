@@ -58,7 +58,7 @@ class MyHandlerMixin:
                 # possible, don't worry too much.)
                 try:
                     portid = ObjectId(portid)
-                    self.twportlink = yield self.render_external_portal(portid)
+                    self.twportlink = yield self.external_portal_description(portid)
                     self.application.twlog.debug('### portlink: %s', self.twportlink)
                 except Exception as ex:
                     self.application.twlog.info('Unable to load portlink info for template: %s', ex)
@@ -128,7 +128,7 @@ class MyHandlerMixin:
         return portal
 
     @tornado.gen.coroutine
-    def render_external_portal(self, portid):
+    def external_portal_description(self, portid):
         """Load up enough information about an external portal
         to display it. Returns an object with world, location, creator,
         and portaldesc fields. Raises an exception if anything goes wrong.
@@ -162,6 +162,17 @@ class MyHandlerMixin:
             location=location['name'],
             creator=creator['name'],
             portaldesc=portaldesc['val'])
+
+    def render_portal(self, portal):
+        """
+        Render a portal object (as from external_portal_description)
+        into a block of text, which can be used in page output. This
+        is non-yieldy; the portal data must all be already loaded.
+        If portal is None, returns nothing.
+        """
+        if not portal:
+            return ''
+        return self.render_string('portal_block.html', portal=portal)
     
     def extend_template_namespace(self, map):
         """
