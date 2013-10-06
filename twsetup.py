@@ -316,7 +316,7 @@ if not world:
 
 default_localize_entries = """
 # Here we define the default localization entries.
-# + marks entries that the Javascript client needs to know about.
+# + marks entries that the Javascript client (or tweb) needs to know about.
 
 +misc.world: world
 +misc.location: location
@@ -369,7 +369,7 @@ action.oarrive: %s arrives.
 message.desc_own_portlist: You consult your portal collection.
 message.instance_no_access: You do not have access to this instance.
 message.panic_portal_set: Panic portal set to %s, %s.
-message.no_portaldesc: The destination is hazy.
++message.no_portaldesc: The destination is hazy.
 message.copy_already_have: This portal is already in your collection.
 message.copy_ok: You copy the portal to your collection.
 message.delete_own_portal_ok: You remove the portal from your collection.
