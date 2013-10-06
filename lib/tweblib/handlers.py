@@ -560,7 +560,12 @@ class PortLinkHandler(MyRequestHandler):
         portal = yield self.check_external_portal(portid)
         
         if self.twsessionstatus != 'auth':
-            raise Exception('### PortLink: unauthenticated, do stuff...')
+            # Set a one-hour cookie. We presume that the player can
+            # register or log in within an hour.
+            self.set_cookie('tworld_portlink', str(portid),
+                            expires_days=0.05)
+            self.redirect('/')
+            return
 
         # Add the link to the player's personal list, if it's not already.
         # This also sets the focus.
