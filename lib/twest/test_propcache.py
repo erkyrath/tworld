@@ -138,6 +138,16 @@ class TestPropcache(twest.mock.MockAppTestCase):
         res = yield self.get_db_prop(instq('z'))
         self.assertEqual(res, 3)
 
+        yield cache.set(instq('listtuple'), (1,2,3))
+        res = yield cache.get(instq('listtuple'), dependencies=deps)
+        self.assertEqual(res.val, (1,2,3))
+        
+        yield cache.write_all_dirty()
+        self.assertEqual(cache.dirty_entries(), [])
+
+        res = yield self.get_db_prop(instq('listtuple'))
+        self.assertEqual(res, [1,2,3])
+        
         # Delete some values.
 
         yield cache.delete(instq('x'))
