@@ -295,24 +295,10 @@ def define_commands():
     @command('tovoid', isserver=True, doeswrite=True)
     def cmd_tovoid(app, task, cmd, stream):
         oldloctx = yield task.get_loctx(cmd.uid)
-        # If the location has an on_leave property, run it.
-        try:
-            leavehook = yield two.symbols.find_symbol(app, oldloctx, 'on_leave')
-        except:
-            leavehook = None
-        if leavehook and twcommon.misc.is_typed_dict(leavehook, 'code'):
-            ctx = two.evalctx.EvalPropContext(task, loctx=oldloctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
-            try:
-                if oldloctx.locid:
-                    args = { '_from':two.execute.LocationProxy(oldloctx.locid),
-                             '_to':None }
-                else:
-                    args = { '_from':None,
-                             '_to':None }
-                yield ctx.eval(leavehook, evaltype=EVALTYPE_RAW, locals=args)
-            except Exception as ex:
-                task.log.warning('Caught exception (leaving loc, linkout): %s', ex, exc_info=app.debugstacktraces)
-            ctx = None
+        yield two.execute.try_hook(task, 'on_leave', oldloctx, 'leaving loc, tovoid',
+                                   lambda:{
+                '_from':two.execute.LocationProxy(oldloctx.locid) if oldloctx.locid else None,
+                '_to':None })
                 
         # If portto is None, we'll wind up porting to the player's panic
         # location.

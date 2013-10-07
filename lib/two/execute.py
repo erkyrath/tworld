@@ -1147,7 +1147,31 @@ def generate_update(task, conn, dirty):
         msg['insttool'] = tooldesc
         
     conn.write(msg)
-    
+
+@tornado.gen.coroutine
+def try_hook(task, hookname, loctx, label, argfunc=None):
+    """Execute a hook function, if one exists. This catches and logs all
+    errors.
+    The argfunc argument, if present, should be a function that returns a
+    map of (underscorey) local variables. (We handle this as a function
+    so that we can avoid doing it unless necessary. Probably a trivial
+    savings, I know.)
+    """
+    try:
+        hook = yield two.symbols.find_symbol(task.app, loctx, hookname)
+    except:
+        hook = None
+        
+    if hook and twcommon.misc.is_typed_dict(hook, 'code'):
+        ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
+        try:
+            if argfunc:
+                args = argfunc()
+            else:
+                args = None
+            yield ctx.eval(hook, evaltype=EVALTYPE_RAW, locals=args)
+        except Exception as ex:
+            task.log.warning('Caught exception (%s): %s', label, ex, exc_info=task.app.debugstacktraces)
 
 @tornado.gen.coroutine
 def perform_action(task, cmd, conn, target):
@@ -1358,24 +1382,11 @@ def perform_action(task, cmd, conn, target):
                                  {'_id':uid},
                                  {'name':1})
             playername = res['name']
-        
-            # If the location has an on_leave property, run it.
-            try:
-                leavehook = yield two.symbols.find_symbol(app, loctx, 'on_leave')
-            except:
-                leavehook = None
-            if leavehook and twcommon.misc.is_typed_dict(leavehook, 'code'):
-                ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
-                try:
-                    if loctx.locid:
-                        args = { '_from':two.execute.LocationProxy(loctx.locid),
-                                 '_to':None }
-                    else:
-                        args = { '_from':None, '_to':None }
-                    yield ctx.eval(leavehook, evaltype=EVALTYPE_RAW, locals=args)
-                except Exception as ex:
-                    task.log.warning('Caught exception (leaving loc, linkout): %s', ex, exc_info=app.debugstacktraces)
-                ctx = None
+
+            yield try_hook(task, 'on_leave', loctx, 'leaving loc, linkout',
+                           lambda:{
+                    '_from':two.execute.LocationProxy(loctx.locid) if loctx.locid else None,
+                    '_to':None })
                 
             others = yield task.find_locale_players(notself=True)
             if others:

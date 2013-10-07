@@ -1478,20 +1478,10 @@ class EvalPropContext(object):
                 playeruid, wid=self.loctx.wid, scid=self.loctx.scid,
                 iid=playstate['iid'], locid=playstate['locid'])
             
-        # If the location has an on_leave property, run it.
-        try:
-            leavehook = yield two.symbols.find_symbol(self.app, loctx, 'on_leave')
-        except:
-            leavehook = None
-        if leavehook and twcommon.misc.is_typed_dict(leavehook, 'code'):
-            ctx = EvalPropContext(self.task, loctx=loctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
-            try:
-                args = { '_from':two.execute.LocationProxy(loctx.locid),
-                         '_to':two.execute.LocationProxy(locid) }
-                yield ctx.eval(leavehook, evaltype=EVALTYPE_RAW, locals=args)
-            except Exception as ex:
-                self.task.log.warning('Caught exception (leaving loc, move): %s', ex, exc_info=self.app.debugstacktraces)
-            ctx = None
+        yield two.execute.try_hook(self.task, 'on_leave', loctx, 'leaving loc, move',
+                                   lambda:{
+                '_from':two.execute.LocationProxy(loctx.locid),
+                '_to':two.execute.LocationProxy(locid) })
             
         msg = oleave
         if msg is None:
