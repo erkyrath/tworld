@@ -4,6 +4,7 @@ To run:   python3 -m tornado.testing twest.test_eval
 """
 
 import logging
+import datetime
 import unittest
 import ast
 
@@ -457,6 +458,13 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         self.assertEqual(res, {'one':'ONE', 'two':2, 'three':3})
         res = yield ctx.eval('z1=z2=_z3=9\nz1,z2,_z3', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, (9,9,9))
+
+        with self.assertRaises(TypeError):
+            yield ctx.eval('notvalid = set()', evaltype=EVALTYPE_CODE)
+        with self.assertRaises(TypeError):
+            yield ctx.eval('notvalid = {"$x":123}', evaltype=EVALTYPE_CODE)
+        with self.assertRaises(TypeError):
+            yield ctx.eval('notvalid = {"x.y":123}', evaltype=EVALTYPE_CODE)
         
     @tornado.testing.gen_test
     def test_statements(self):

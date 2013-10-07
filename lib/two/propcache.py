@@ -19,7 +19,10 @@ task. A future version may hang around longer.
 ### id sharing any more.
 """
 
+import datetime
+
 import tornado.gen
+import bson
 from bson.objectid import ObjectId
 import motor
 
@@ -143,6 +146,9 @@ class PropCache:
         """Set a new (dirty) object in the cache. If we had an object cached
         at this tuple, it's discarded. (No database write occurs here.)
         """
+        # Make sure the value is DB-writable.
+        checkwritable(val)
+        
         ent = self.propmap.get(tup, None)
         if ent:
             if ent.found and ent.val is val:
@@ -231,6 +237,12 @@ class PropCache:
 
         if ent.found:
             # Resolve update.
+            try:
+                checkwritable(ent.val)
+            except TypeError as ex:
+                self.log.warning('Unable to update %s entry: %s', ent.key, ex)
+                ### drop entry entirely?
+                return
             newval = dict(ent.query)
             newval['val'] = ent.val
             yield motor.Op(self.app.mongodb[dbname].update,
@@ -303,3 +315,32 @@ def deepcopy(val):
         return dict([ (key, deepcopy(subval)) for (key, subval) in val.items() ])
     return val
 
+def checkwritable(val):
+    """Check whether a value is valid for writing to the database.
+    If it is, returns nothing. If not, raises TypeError.
+    
+    This should embody the same logic as BSON.encode(val, check_keys=True).
+    Why not just use that? Because the BSON class displays this weird
+    runtime warning:
+        couldn't encode - reloading python modules and trying again
+    I don't know what that means, but it can't be good for me.
+    """
+    
+    if val is None:
+        return
+    if isinstance(val, (bool, int, float, str, bytes, ObjectId, datetime.datetime)):
+        return
+    if isinstance(val, list):
+        for subval in val:
+            checkwritable(subval)
+        return
+    if isinstance(val, dict):
+        for (key, subval) in val.items():
+            if not isinstance(key, str):
+                raise TypeError('Database dicts must have string keys: %s' % (key,))
+            if '.' in key:
+                raise TypeError('Database dict keys must not contain period: %s' % (key,))
+            if key.startswith('$'):
+                raise TypeError('Database dict keys must not start with dollar: %s' % (key,))
+            checkwritable(subval)
+    raise TypeError('Not a database type: %s' % (val,))
