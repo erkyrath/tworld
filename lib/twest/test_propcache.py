@@ -350,10 +350,12 @@ class TestCheckWritable(unittest.TestCase):
         checkwritable(b'x')
         checkwritable(ObjectId())
         checkwritable(twcommon.misc.now())
+        checkwritable(())
+        checkwritable((1, 2, 3))
         checkwritable([])
         checkwritable([None, True, 5, "x", ObjectId()])
         checkwritable({})
-        checkwritable({'none':None, 'int':1, 'list':[]})
+        checkwritable({'none':None, 'int':1, 'list':[], 'tuple':()})
         checkwritable({'x$y':'$x'})
 
         with self.assertRaises(TypeError):

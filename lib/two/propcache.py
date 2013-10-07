@@ -330,7 +330,7 @@ def checkwritable(val):
         return
     if isinstance(val, (bool, int, float, str, bytes, ObjectId, datetime.datetime)):
         return
-    if isinstance(val, list):
+    if isinstance(val, (list, tuple)):
         for subval in val:
             checkwritable(subval)
         return

@@ -463,6 +463,8 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         self.assertEqual(res, [None,True,2,3.5,"x",[],{},task.starttime,ObjectId("5251ff29689e9dc10a0a7018")])
         res = yield ctx.eval('z = {"x":2,"y":{},"z":[],"w":datetime.now}\nz', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, {"x":2,"y":{},"z":[],"w":task.starttime})
+        res = yield ctx.eval('z = (1,"z",True)\nz', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, (1,"z",True))
         
         with self.assertRaises(TypeError):
             yield ctx.eval('notvalid = set()', evaltype=EVALTYPE_CODE)
