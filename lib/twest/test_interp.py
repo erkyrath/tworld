@@ -56,6 +56,9 @@ class TestInterpModule(unittest.TestCase):
         ls = parse('[foo|http://eblong.com/]')
         self.assertEqual(ls, [Link('http://eblong.com/', True), 'foo', EndLink(True)])
 
+        ls = parse('[foo|https://eblong.com/]')
+        self.assertEqual(ls, [Link('https://eblong.com/', True), 'foo', EndLink(True)])
+
         ls = parse('One [foo| http://eblong.com/ ] two.')
         self.assertEqual(ls, ['One ', Link('http://eblong.com/', True), 'foo', EndLink(True), ' two.'])
 
