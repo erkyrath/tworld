@@ -3,6 +3,7 @@ To run:   python3 -m tornado.testing twest.test_propcache
 (The twest, two, twcommon modules must be in your PYTHON_PATH.)
 """
 
+import datetime
 import logging
 import unittest
 import ast
@@ -334,6 +335,44 @@ class TestPropcache(twest.mock.MockAppTestCase):
         self.assertEqual(res.val, {'one':1})
         
         
+class TestCheckWritable(unittest.TestCase):
+    def test_checkwritable(self):
+        checkwritable = two.propcache.checkwritable
+
+        checkwritable(None)
+        checkwritable(True)
+        checkwritable(False)
+        checkwritable(1)
+        checkwritable(-1)
+        checkwritable(1.5)
+        checkwritable('x')
+        checkwritable("xyzzy")
+        checkwritable(b'x')
+        checkwritable(ObjectId())
+        checkwritable(twcommon.misc.now())
+        checkwritable([])
+        checkwritable([None, True, 5, "x", ObjectId()])
+        checkwritable({})
+        checkwritable({'none':None, 'int':1, 'list':[]})
+        checkwritable({'x$y':'$x'})
+
+        with self.assertRaises(TypeError):
+            checkwritable(object())
+        with self.assertRaises(TypeError):
+            checkwritable(set())
+        with self.assertRaises(TypeError):
+            checkwritable(datetime.timedelta())
+        with self.assertRaises(TypeError):
+            checkwritable([[[object()]]])
+        with self.assertRaises(TypeError):
+            checkwritable([1, 2, 3, self])
+        with self.assertRaises(TypeError):
+            checkwritable({1:2})
+        with self.assertRaises(TypeError):
+            checkwritable({'x.y':1})
+        with self.assertRaises(TypeError):
+            checkwritable({'$x':1})
+            
 class TestDeepCopy(unittest.TestCase):
     def test_deepcopy(self):
         deepcopy = two.propcache.deepcopy
