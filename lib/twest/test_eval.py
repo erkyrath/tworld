@@ -459,12 +459,21 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         res = yield ctx.eval('z1=z2=_z3=9\nz1,z2,_z3', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, (9,9,9))
 
+        res = yield ctx.eval('z = [None,True,2,3.5,"x",[],{},datetime.now,ObjectId("5251ff29689e9dc10a0a7018")]\nz', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [None,True,2,3.5,"x",[],{},task.starttime,ObjectId("5251ff29689e9dc10a0a7018")])
+        res = yield ctx.eval('z = {"x":2,"y":{},"z":[],"w":datetime.now}\nz', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, {"x":2,"y":{},"z":[],"w":task.starttime})
+        
         with self.assertRaises(TypeError):
             yield ctx.eval('notvalid = set()', evaltype=EVALTYPE_CODE)
         with self.assertRaises(TypeError):
             yield ctx.eval('notvalid = {"$x":123}', evaltype=EVALTYPE_CODE)
         with self.assertRaises(TypeError):
             yield ctx.eval('notvalid = {"x.y":123}', evaltype=EVALTYPE_CODE)
+        with self.assertRaises(TypeError):
+            yield ctx.eval('notvalid = {"x":set()}', evaltype=EVALTYPE_CODE)
+        with self.assertRaises(TypeError):
+            yield ctx.eval('notvalid = [player]', evaltype=EVALTYPE_CODE)
         
     @tornado.testing.gen_test
     def test_statements(self):

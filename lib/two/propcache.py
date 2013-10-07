@@ -343,4 +343,5 @@ def checkwritable(val):
             if key.startswith('$'):
                 raise TypeError('Database dict keys must not start with dollar: %s' % (key,))
             checkwritable(subval)
+        return
     raise TypeError('Not a database type: %s' % (val,))
