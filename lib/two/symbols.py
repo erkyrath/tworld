@@ -1059,6 +1059,17 @@ def define_globals():
     def global_pronoun_themself(player=None):
         res = yield global_pronoun_resolve.yieldfunc('ourself', player)
         return res
+    
+    @scriptfunc('realm', group='worlds', yieldy=True)
+    def global_worlds_realm(key, index=0):
+        ctx = EvalPropContext.get_current_context()
+        plist = yield motor.Op(ctx.app.mongodb.portlists.find_one,
+                               {'wid':ctx.loctx.wid, 'key':key, 'type':'world'},
+                               {'_id':1})
+        if not plist:
+            raise Exception('worlds.realm: No such plist')
+        plistid = plist['_id']
+        raise Exception('### not implemented')
         
     @scriptfunc('choice', group='random')
     def global_random_choice(seq):
