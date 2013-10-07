@@ -690,20 +690,11 @@ def define_commands():
             task.write_event(others, app.localize('action.oportin') % (playername,)) # '%s appears.'
         task.write_event(cmd.uid, app.localize('action.portin')) # 'You are somewhere new.'
 
-        # If the location has an on_enter property, run it.
-        try:
-            newloctx = yield task.get_loctx(cmd.uid)
-            enterhook = yield two.symbols.find_symbol(app, newloctx, 'on_enter')
-        except:
-            enterhook = None
-        if enterhook and twcommon.misc.is_typed_dict(enterhook, 'code'):
-            ctx = two.evalctx.EvalPropContext(task, loctx=newloctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
-            try:
-                args = { '_from':None,
-                         '_to':two.execute.LocationProxy(newlocid) }
-                yield ctx.eval(enterhook, evaltype=EVALTYPE_RAW, locals=args)
-            except Exception as ex:
-                task.log.warning('Caught exception (entering loc, linkin): %s', ex, exc_info=app.debugstacktraces)
+        newloctx = yield task.get_loctx(cmd.uid)
+        yield two.execute.try_hook(task, 'on_enter', newloctx, 'entering loc, linkin',
+                                   lambda:{
+                '_from':None,
+                '_to':two.execute.LocationProxy(newlocid)})
         
     @command('uiprefs')
     def cmd_uiprefs(app, task, cmd, conn):

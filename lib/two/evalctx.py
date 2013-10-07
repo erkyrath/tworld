@@ -1527,24 +1527,11 @@ class EvalPropContext(object):
                 msg = yield ctx.eval(msg, evaltype=EVALTYPE_TEXT)
             self.task.write_event(playeruid, msg)
 
-        # If the location has an on_enter property, run it.
-        try:
-            newloctx = yield self.task.get_loctx(playeruid)
-            enterhook = yield two.symbols.find_symbol(self.app, newloctx, 'on_enter')
-        except:
-            enterhook = None
-        if enterhook and twcommon.misc.is_typed_dict(enterhook, 'code'):
-            ctx = EvalPropContext(self.task, loctx=newloctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
-            try:
-                if lastlocid:
-                    args = { '_from':two.execute.LocationProxy(lastlocid),
-                             '_to':two.execute.LocationProxy(locid)}
-                else:
-                    args = { '_from':None,
-                             '_to':two.execute.LocationProxy(locid) }
-                yield ctx.eval(enterhook, evaltype=EVALTYPE_RAW, locals=args)
-            except Exception as ex:
-                self.task.log.warning('Caught exception (entering loc, move): %s', ex, exc_info=self.app.debugstacktraces)
+        newloctx = yield self.task.get_loctx(playeruid)
+        yield two.execute.try_hook(self.task, 'on_enter', newloctx, 'entering loc, move',
+                                   lambda:{
+                '_from':two.execute.LocationProxy(lastlocid) if lastlocid else None,
+                '_to':two.execute.LocationProxy(locid) })
 
     def set_cooked(self, val):
         """Flip the raw/cooked flag in the text generation state. When
