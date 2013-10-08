@@ -1067,9 +1067,29 @@ def define_globals():
                                {'wid':ctx.loctx.wid, 'key':key, 'type':'world'},
                                {'_id':1})
         if not plist:
-            raise Exception('worlds.realm: No such plist')
+            raise Exception('worlds.realm: No such plist: %s' % (key,))
         plistid = plist['_id']
-        raise Exception('### not implemented')
+
+        # Take the Nth (world-level) portal in this list.
+        portal = yield motor.Op(ctx.app.mongodb.portals.find_one,
+                                {'plistid':plistid, 'iid':None},
+                                sort=[('listpos', 1)],
+                                skip=index)
+        if not portal:
+            raise Exception('worlds.realm: Plist %s does not have %d portals' % (key, index))
+
+        world = yield motor.Op(ctx.app.mongodb.worlds.find_one,
+                               {'_id':portal['wid']})
+        if not world:
+            raise Exception('worlds.realm: No such world')
+
+        newscid = yield two.execute.portal_resolve_scope(ctx.app, portal, ctx.uid, ctx.loctx.scid, world)
+        
+        instance = yield motor.Op(ctx.app.mongodb.instances.find_one,
+                                  {'wid':portal['wid'], 'scid':newscid},
+                                  {'_id':1})
+
+        ctx.app.log.debug('### found instance %s (%s)', instance, world['name'])        
         
     @scriptfunc('choice', group='random')
     def global_random_choice(seq):
@@ -1142,6 +1162,9 @@ def define_globals():
     # Add in all the access level names (as uppercase symbols)
     map.update(twcommon.access.map)
     globmap['access'] = ScriptNamespace(map)
+
+    map = dict(ScriptFunc.funcgroups['worlds'])
+    globmap['worlds'] = ScriptNamespace(map)
 
     map = dict(ScriptFunc.funcgroups['gentext'])
     globmap['gentext'] = ScriptNamespace(map)
