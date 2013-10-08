@@ -587,8 +587,8 @@ def define_commands():
             return
 
         # This is the one and only spot in the server code where a player
-        # *enters* a new instance. It's also the place where instances
-        # are created.
+        # *enters* a new instance. It's also one of the two places where
+        # instances are created.
         
         if instance:
             newiid = instance['_id']

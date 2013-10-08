@@ -264,6 +264,21 @@ class RealmProxy(PropertyProxyMixin, object):
         yield app.propcache.set(tup, val)
         ctx.task.changeset.add(tup)
 
+class RemoteRealmProxy(PropertyProxyMixin, object):
+    """Represents the realm-level properties of some other world and instance
+    (not the current location of the executing code). This looks a lot like
+    RealmProxy, but it's much more limited -- there are several functions
+    in symbol.py which accept RealmProxy, but RemoteRealmProxy is only
+    good for property access.
+    """
+    def __init__(self, wid, scid, iid, worldname='???'):
+        self.wid = wid
+        self.scid = scid
+        self.iid = iid
+        self.worldname = worldname   # for debugging output only
+        
+    def __repr__(self):
+        return '<RemoteRealmProxy "%s" %s>' % (self.worldname, self.iid)
 
 class BoundPropertyProxy(object):
     """Wrapper to convert a PropertyProxyMixin to a load/delete/store
@@ -1163,6 +1178,7 @@ def try_hook(task, hookname, loctx, label, argfunc=None):
         hook = None
         
     if hook and twcommon.misc.is_typed_dict(hook, 'code'):
+        task.log.debug('### invoking hook %s, instance %s', hookname, loctx.iid)
         ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
         try:
             if argfunc:

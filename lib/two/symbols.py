@@ -1063,6 +1063,12 @@ def define_globals():
     @scriptfunc('realm', group='worlds', yieldy=True)
     def global_worlds_realm(key, index=0):
         ctx = EvalPropContext.get_current_context()
+        
+        origworld = yield motor.Op(ctx.app.mongodb.worlds.find_one,
+                                   {'_id':ctx.loctx.wid})
+        if not origworld:
+            raise Exception('worlds.realm: Cannot find current world')
+        
         plist = yield motor.Op(ctx.app.mongodb.portlists.find_one,
                                {'wid':ctx.loctx.wid, 'key':key, 'type':'world'},
                                {'_id':1})
@@ -1078,18 +1084,35 @@ def define_globals():
         if not portal:
             raise Exception('worlds.realm: Plist %s does not have %d portals' % (key, index))
 
+        newwid = portal['wid']
         world = yield motor.Op(ctx.app.mongodb.worlds.find_one,
                                {'_id':portal['wid']})
         if not world:
             raise Exception('worlds.realm: No such world')
 
+        if world['creator'] != origworld['creator']:
+            ### Check for cross-creator access permission!
+            raise Exception('worlds.realm: Cannot access another creator\'s world')
+
         newscid = yield two.execute.portal_resolve_scope(ctx.app, portal, ctx.uid, ctx.loctx.scid, world)
         
         instance = yield motor.Op(ctx.app.mongodb.instances.find_one,
-                                  {'wid':portal['wid'], 'scid':newscid},
+                                  {'wid':newwid, 'scid':newscid},
                                   {'_id':1})
+        
+        if instance:
+            newiid = instance['_id']
+        else:
+            # Create the instance, although we will not awaken it.
+            # Note that we do not reset the tick count; the on_init
+            # hook counts against the caller's tick quota.
+            newiid = yield motor.Op(ctx.app.mongodb.instances.insert,
+                                    {'wid':newwid, 'scid':newscid})
+            ctx.app.log.info('Created instance (for prop-access) %s (world %s, scope %s)', newiid, newwid, newscid)
+            newloctx = two.task.LocContext(None, wid=newwid, scid=newscid, iid=newiid)
+            yield two.execute.try_hook(ctx.task, 'on_init', newloctx, 'initing instance (prop-access)')
 
-        ctx.app.log.debug('### found instance %s (%s)', instance, world['name'])        
+        return two.execute.RemoteRealmProxy(newwid, newscid, newiid, worldname=world.get('name', '???'))
         
     @scriptfunc('choice', group='random')
     def global_random_choice(seq):
