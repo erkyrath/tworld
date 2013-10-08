@@ -270,15 +270,71 @@ class RemoteRealmProxy(PropertyProxyMixin, object):
     RealmProxy, but it's much more limited -- there are several functions
     in symbol.py which accept RealmProxy, but RemoteRealmProxy is only
     good for property access.
+
+    The worldname argument is only for debugging output; it doesn't affect
+    functionality.
     """
     def __init__(self, wid, scid, iid, worldname='???'):
         self.wid = wid
         self.scid = scid
         self.iid = iid
-        self.worldname = worldname   # for debugging output only
+        self.worldname = worldname
         
     def __repr__(self):
-        return '<RemoteRealmProxy "%s" %s>' % (self.worldname, self.iid)
+        return '<RemoteRealmProxy %s "%s">' % (self.iid, self.worldname)
+
+    @tornado.gen.coroutine
+    def getprop(self, ctx, loctx, key):
+        """Get a realm-level property. This checks both the instance
+        and world tables.
+
+        Note that we ignore loctx completely. The RemoteRealmProxy refers
+        to a fixed world/instance.
+        """
+        wid = self.wid
+        iid = self.iid
+        app = ctx.app
+        dependencies = ctx.dependencies
+        
+        if iid is not None:
+            res = yield app.propcache.get(('instanceprop', iid, None, key),
+                                          dependencies=dependencies)
+            if res:
+                return res.val
+    
+        if True:
+            res = yield app.propcache.get(('worldprop', wid, None, key),
+                                          dependencies=dependencies)
+            if res:
+                return res.val
+
+        raise AttributeError('Realm property "%s" is not found' % (key,))
+        
+    @tornado.gen.coroutine
+    def delprop(self, ctx, loctx, key):
+        """Delete a realm-level instance property, if present.
+        """
+        if ctx.level != LEVEL_EXECUTE:
+            raise Exception('Properties may only be deleted in action code (realm prop "%s")' % (key,))
+        iid = self.iid
+        app = ctx.app
+        
+        tup = ('instanceprop', iid, None, key)
+        yield app.propcache.delete(tup)
+        ctx.task.changeset.add(tup)
+
+    @tornado.gen.coroutine
+    def setprop(self, ctx, loctx, key, val):
+        """Set a realm-level instance property.
+        """
+        if ctx.level != LEVEL_EXECUTE:
+            raise Exception('Properties may only be set in action code (realm prop "%s")' % (key,))
+        iid = self.iid
+        app = ctx.app
+        
+        tup = ('instanceprop', iid, None, key)
+        yield app.propcache.set(tup, val)
+        ctx.task.changeset.add(tup)
 
 class BoundPropertyProxy(object):
     """Wrapper to convert a PropertyProxyMixin to a load/delete/store
