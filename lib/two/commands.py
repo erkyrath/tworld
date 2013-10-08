@@ -599,17 +599,7 @@ def define_commands():
             # If the new instance has an on_init property, run it.
             loctx = two.task.LocContext(None, wid=newwid, scid=newscid, iid=newiid)
             task.resetticks()
-            try:
-                inithook = yield two.symbols.find_symbol(app, loctx, 'on_init')
-            except:
-                inithook = None
-            if inithook and twcommon.misc.is_typed_dict(inithook, 'code'):
-                ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
-                try:
-                    yield ctx.eval(inithook, evaltype=EVALTYPE_RAW)
-                except Exception as ex:
-                    task.log.warning('Caught exception (initing instance): %s', ex, exc_info=app.debugstacktraces)
-                ctx = None
+            yield two.execute.try_hook(task, 'on_init', loctx, 'initing instance')
 
         awakening = app.ipool.notify_instance(newiid)
         if awakening:
