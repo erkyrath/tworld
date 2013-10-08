@@ -156,18 +156,8 @@ def define_commands():
                                           {'_id':iid})
                 loctx = two.task.LocContext(None, wid=instance['wid'], scid=instance['scid'], iid=iid)
                 task.resetticks()
-                # If the instance/world has an on_wake property, run it.
-                try:
-                    awakenhook = yield two.symbols.find_symbol(app, loctx, 'on_wake')
-                except:
-                    awakenhook = None
-                if awakenhook and twcommon.misc.is_typed_dict(awakenhook, 'code'):
-                    ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
-                    try:
-                        args = { '_slept':lastactive }
-                        yield ctx.eval(awakenhook, evaltype=EVALTYPE_RAW, locals=args)
-                    except Exception as ex:
-                        task.log.warning('Caught exception (awakening instance): %s', ex, exc_info=app.debugstacktraces)
+                yield two.execute.try_hook(task, 'on_wake', loctx, 'awakening instance',
+                                           lambda:{ '_slept':lastactive })
 
     @command('checkuninhabited', isserver=True, doeswrite=True)
     def cmd_checkuninhabited(app, task, cmd, stream):
@@ -207,17 +197,7 @@ def define_commands():
                                           {'_id':iid})
                 loctx = two.task.LocContext(None, wid=instance['wid'], scid=instance['scid'], iid=iid)
                 task.resetticks()
-                # If the instance/world has an on_sleep property, run it.
-                try:
-                    sleephook = yield two.symbols.find_symbol(app, loctx, 'on_sleep')
-                except:
-                    sleephook = None
-                if sleephook and twcommon.misc.is_typed_dict(sleephook, 'code'):
-                    ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
-                    try:
-                        yield ctx.eval(sleephook, evaltype=EVALTYPE_RAW)
-                    except Exception as ex:
-                        task.log.warning('Caught exception (sleeping instance): %s', ex, exc_info=app.debugstacktraces)
+                yield two.execute.try_hook(task, 'on_sleep', loctx, 'sleeping instance')
                 app.ipool.remove_instance(iid)
     
     @command('sleepinstance', isserver=True)
@@ -647,19 +627,8 @@ def define_commands():
                            {'$set':{'lastawake':True}})
             loctx = two.task.LocContext(None, wid=newwid, scid=newscid, iid=newiid)
             task.resetticks()
-            # If the instance/world has an on_wake property, run it.
-            try:
-                awakenhook = yield two.symbols.find_symbol(app, loctx, 'on_wake')
-            except:
-                awakenhook = None
-            if awakenhook and twcommon.misc.is_typed_dict(awakenhook, 'code'):
-                ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
-                try:
-                    args = { '_slept':lastawake }
-                    yield ctx.eval(awakenhook, evaltype=EVALTYPE_RAW, locals=args)
-                except Exception as ex:
-                    task.log.warning('Caught exception (awakening instance): %s', ex, exc_info=app.debugstacktraces)
-                ctx = None
+            yield two.execute.try_hook(task, 'on_wake', loctx, 'awakening instance',
+                                       lambda:{ '_slept':lastawake })
 
         # Focus special case: if we were focussed on a personal portal
         # in the void, retain that. This supports the use of an external
