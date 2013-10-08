@@ -1178,7 +1178,6 @@ def try_hook(task, hookname, loctx, label, argfunc=None):
         hook = None
         
     if hook and twcommon.misc.is_typed_dict(hook, 'code'):
-        task.log.debug('### invoking hook %s, instance %s', hookname, loctx.iid)
         ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE, forbid=two.evalctx.EVALCAP_MOVE)
         try:
             if argfunc:
