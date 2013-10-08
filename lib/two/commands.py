@@ -596,7 +596,6 @@ def define_commands():
             newiid = yield motor.Op(app.mongodb.instances.insert,
                                     {'wid':newwid, 'scid':newscid})
             app.log.info('Created instance %s (world %s, scope %s)', newiid, newwid, newscid)
-            # If the new instance has an on_init property, run it.
             loctx = two.task.LocContext(None, wid=newwid, scid=newscid, iid=newiid)
             task.resetticks()
             yield two.execute.try_hook(task, 'on_init', loctx, 'initing instance')
