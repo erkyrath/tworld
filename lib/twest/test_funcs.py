@@ -168,7 +168,36 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         self.assertIn(res, [4,5])
 
     @tornado.testing.gen_test
-    def test_type_methods(self):
+    def test_type_methods_list(self):
+        yield self.resetTables()
+        
+        task = two.task.Task(self.app, None, 1, 2, twcommon.misc.now())
+        ctx = EvalPropContext(task, loctx=self.loctx, level=LEVEL_EXECUTE)
+
+        res = yield ctx.eval('_ls=[1,2,3]\n_ls.append(4);_ls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [1,2,3,4])
+        res = yield ctx.eval('_ls=[1,2,3]\n_ls.clear();_ls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [])
+        res = yield ctx.eval('_ls=[1,2,3]\n_ls2=_ls.copy();_ls[0]=0;_ls2', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [1,2,3])
+        res = yield ctx.eval('[1,2,3,2].count(2)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 2)
+        res = yield ctx.eval('_ls=[1,2,3]\n_ls.extend([4,5]);_ls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [1,2,3,4,5])
+        res = yield ctx.eval('[5,4,3].index(4)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 1)
+        res = yield ctx.eval('_ls=[1,2,3]\n_ls.insert(0,4);_ls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [4,1,2,3])
+        res = yield ctx.eval('_ls=[1,2,3]\n_ls.pop();_ls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [1,2])
+        res = yield ctx.eval('_ls=[1,2,3]\n_ls.remove(2);_ls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [1,3])
+        res = yield ctx.eval('_ls=[3,2,1]\n_ls.reverse();_ls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [1,2,3])
+        
+        
+    @tornado.testing.gen_test
+    def test_type_methods_string(self):
         yield self.resetTables()
         
         task = two.task.Task(self.app, None, 1, 2, twcommon.misc.now())
