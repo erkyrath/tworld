@@ -19,6 +19,8 @@ testlist = [
     'twest.test_eval',
     'twest.test_funcs',
     'twest.test_propcache',
+    'twcommon.misc',
+    'two.grammar',
     ]
 
 if __name__ == '__main__':
