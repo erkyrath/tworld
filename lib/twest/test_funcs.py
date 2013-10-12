@@ -195,6 +195,37 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         res = yield ctx.eval('_ls=[3,2,1]\n_ls.reverse();_ls', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, [1,2,3])
         
+    @tornado.testing.gen_test
+    def test_type_methods_dict(self):
+        yield self.resetTables()
+        
+        task = two.task.Task(self.app, None, 1, 2, twcommon.misc.now())
+        ctx = EvalPropContext(task, loctx=self.loctx, level=LEVEL_EXECUTE)
+
+        res = yield ctx.eval('_map={1:11,2:22}\n_map.clear();_map', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, {})
+        res = yield ctx.eval('_map={1:11,2:22}\n_map2=_map.copy();_map[3]=0;_map2', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, {1:11,2:22})
+        res = yield ctx.eval('dict.fromkeys([1,2,3],4)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, {1:4,2:4,3:4})
+        res = yield ctx.eval('{1:11,2:22,3:33}.get(2)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 22)
+        res = yield ctx.eval('list({1:11}.items())', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [(1, 11)])
+        res = yield ctx.eval('list({1:11}.keys())', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [1])
+        res = yield ctx.eval('{1:11,2:22,3:33}.pop(2)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 22)
+        res = yield ctx.eval('_map={1:11,2:22,3:33};_map.pop(2);_map', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, {1:11,3:33})
+        res = yield ctx.eval('{1:11}.popitem()', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, (1,11))
+        res = yield ctx.eval('_map={1:11,2:22};_map.setdefault(3,33)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 33)
+        res = yield ctx.eval('_map={1:11,2:22};_map.update({3:33});_map', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, {1:11,2:22,3:33})
+        res = yield ctx.eval('list({1:11}.values())', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [11])
         
     @tornado.testing.gen_test
     def test_type_methods_string(self):
