@@ -195,6 +195,11 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         res = yield ctx.eval('_ls=[3,2,1]\n_ls.reverse();_ls', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, [1,2,3])
         
+        with self.assertRaises(twcommon.excepts.ExecSandboxException):
+            res = yield ctx.eval('list.sort', evaltype=EVALTYPE_CODE)
+        with self.assertRaises(twcommon.excepts.ExecSandboxException):
+            res = yield ctx.eval('[].sort', evaltype=EVALTYPE_CODE)
+        
     @tornado.testing.gen_test
     def test_type_methods_dict(self):
         yield self.resetTables()
@@ -310,6 +315,23 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         self.assertEqual(res, 'FOO BAR')
         res = yield ctx.eval('"foo bar".zfill(9)', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, '00foo bar')
+
+        # Miscellaneous cases
+        res = yield ctx.eval('str.upper("foo bar")', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 'FOO BAR')
+        
+        with self.assertRaises(twcommon.excepts.ExecSandboxException):
+            res = yield ctx.eval('"x".__class__', evaltype=EVALTYPE_CODE)
+        with self.assertRaises(twcommon.excepts.ExecSandboxException):
+            res = yield ctx.eval('str.__class__', evaltype=EVALTYPE_CODE)
+        with self.assertRaises(twcommon.excepts.ExecSandboxException):
+            res = yield ctx.eval('"x".nosuchattr', evaltype=EVALTYPE_CODE)
+        with self.assertRaises(twcommon.excepts.ExecSandboxException):
+            res = yield ctx.eval('str.nosuchattr', evaltype=EVALTYPE_CODE)
+        with self.assertRaises(twcommon.excepts.ExecSandboxException):
+            res = yield ctx.eval('"x".format', evaltype=EVALTYPE_CODE)
+        with self.assertRaises(twcommon.excepts.ExecSandboxException):
+            res = yield ctx.eval('str.format', evaltype=EVALTYPE_CODE)
 
     @tornado.testing.gen_test
     def test_datetime(self):
