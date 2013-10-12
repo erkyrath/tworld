@@ -646,5 +646,13 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         res = yield ctx.eval('func(2,q=3)', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, ((2,), {'q':3}))
         
+        with self.assertRaises(TypeError):
+            res = yield ctx.eval('_x=1\n_x()', evaltype=EVALTYPE_CODE)
+        with self.assertRaises(TypeError):
+            res = yield ctx.eval('_()', evaltype=EVALTYPE_CODE)
+        with self.assertRaises(TypeError):
+            res = yield ctx.eval('player()', evaltype=EVALTYPE_CODE)
+
+        
 from two.evalctx import LEVEL_EXECUTE, LEVEL_DISPSPECIAL, LEVEL_DISPLAY, LEVEL_MESSAGE, LEVEL_FLAT, LEVEL_RAW
 from two.evalctx import EVALTYPE_SYMBOL, EVALTYPE_RAW, EVALTYPE_CODE, EVALTYPE_TEXT
