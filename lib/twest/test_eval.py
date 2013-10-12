@@ -550,5 +550,59 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         res = yield ctx.eval('_sum = 0\nfor _x in ls:\n if _x == 2:\n  continue\n _sum = _sum + _x\n_sum', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, 4)
         
+    @tornado.testing.gen_test
+    def test_callables(self):
+        yield self.resetTables()
+        
+        task = two.task.Task(self.app, None, 1, 2, twcommon.misc.now())
+        task.set_writable()
+        ctx = EvalPropContext(task, loctx=self.loctx, level=LEVEL_EXECUTE)
+
+        @tornado.gen.coroutine
+        def deffunc(key, code, args=None):
+            prop = { 'type':'code', 'text':code }
+            if args is not None:
+                prop['args'] = args
+            res = yield ctx.eval('%s = %s' % (key, repr(prop)),
+                                 evaltype=EVALTYPE_CODE)
+
+        yield deffunc('func', 'return 3')
+        res = yield ctx.eval('func()', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 3)
+        res = yield ctx.eval('func', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 3)
+        res = yield ctx.eval('[func]', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [{'type':'code', 'text':'return 3'}])
+        with self.assertRaises(TypeError):
+            res = yield ctx.eval('func+1', evaltype=EVALTYPE_CODE)
+        
+        yield deffunc('func', '4')
+        res = yield ctx.eval('func()', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 4)
+        
+        yield deffunc('func2', 'func')
+        res = yield ctx.eval('func2()', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 4)
+        
+        yield deffunc('func', 'return 5\nreturn 6')
+        res = yield ctx.eval('func()', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 5)
+        res = yield ctx.eval('func2()', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 5)
+        
+        yield deffunc('func', 'if 3>2:\n  return 6\nreturn 7')
+        res = yield ctx.eval('func()', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 6)
+        
+        yield deffunc('func', 'if 3<2:\n  return 6\nreturn 7')
+        res = yield ctx.eval('func2()', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 7)
+        
+        yield deffunc('func', 'nosuch')
+        with self.assertRaises(twcommon.excepts.SymbolError):
+            res = yield ctx.eval('func()', evaltype=EVALTYPE_CODE)
+        with self.assertRaises(twcommon.excepts.SymbolError):
+            res = yield ctx.eval('func2()', evaltype=EVALTYPE_CODE)
+        
 from two.evalctx import LEVEL_EXECUTE, LEVEL_DISPSPECIAL, LEVEL_DISPLAY, LEVEL_MESSAGE, LEVEL_FLAT, LEVEL_RAW
 from two.evalctx import EVALTYPE_SYMBOL, EVALTYPE_RAW, EVALTYPE_CODE, EVALTYPE_TEXT
