@@ -439,6 +439,27 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         self.assertEqual(res, {(2,7): 9, (1,5): 6, (2,6): 8, (1,6): 7, (1,7): 8, (2,5): 7})
         
     @tornado.testing.gen_test
+    def test_slices(self):
+        yield self.resetTables()
+        
+        task = two.task.Task(self.app, None, 1, 2, twcommon.misc.now())
+        ctx = EvalPropContext(task, loctx=self.loctx, level=LEVEL_EXECUTE)
+
+        res = yield ctx.eval('ls[1]', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 2)
+        res = yield ctx.eval('ls[0:2]', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [1,2])
+        res = yield ctx.eval('ls[-1]', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 3)
+        res = yield ctx.eval('ls[-2:]', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [2,3])
+        res = yield ctx.eval('ls[:]', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [1,2,3])
+        
+        res = yield ctx.eval('map["one"]', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 1)
+        
+    @tornado.testing.gen_test
     def test_assignments(self):
         yield self.resetTables()
         
@@ -458,6 +479,11 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         self.assertEqual(res, {'one':'ONE', 'two':2, 'three':3})
         res = yield ctx.eval('z1=z2=_z3=9\nz1,z2,_z3', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, (9,9,9))
+        
+        res = yield ctx.eval('ls[:] = (8,7,6,5)\nls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [8,7,6,5])
+        res = yield ctx.eval('ls[-2:] = (9,10)\nls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [8,7,9,10])
 
         res = yield ctx.eval('z = [None,True,2,3.5,"x",[],{},datetime.now,ObjectId("5251ff29689e9dc10a0a7018")]\nz', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, [None,True,2,3.5,"x",[],{},task.starttime,ObjectId("5251ff29689e9dc10a0a7018")])
