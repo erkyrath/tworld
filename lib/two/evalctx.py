@@ -839,10 +839,9 @@ class EvalPropContext(object):
         if isinstance(argument, two.execute.PropertyProxyMixin):
             res = yield argument.getprop(self, self.loctx, key)
             return res
-        typarg = type(argument)
-        if two.symbols.type_getattr_allowed(typarg, key):
+        if two.symbols.type_getattr_allowed(argument, key):
             return getattr(argument, key)
-        raise ExecSandboxException('%s.%s: getattr not allowed' % (typarg.__name__, key))
+        raise ExecSandboxException('%s.%s: getattr not allowed' % (type(argument).__name__, key))
 
     @tornado.gen.coroutine
     def execcode_subscript(self, nod):

@@ -1226,11 +1226,18 @@ type_getattr_table = {
     dict: set(['clear', 'copy', 'fromkeys', 'get', 'items', 'keys', 'pop', 'popitem', 'setdefault', 'update', 'values']),
     }
 
-def type_getattr_allowed(typ, key):
+# Condensing the above for fast access: the list of id()s of valid types.
+type_getattr_idlist = { id(key) for key in type_getattr_table.keys() }
+
+def type_getattr_allowed(val, key):
     """Given a type, what attributes do we permit script code to read?
     This is important because unfettered access to foo.__dict__, for
     example, would be catastrophic.
     """
+    if id(val) in type_getattr_idlist:
+        typ = val
+    else:
+        typ = type(val)
     res = type_getattr_table.get(typ, None)
     if not res:
         return False
