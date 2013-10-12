@@ -93,6 +93,8 @@ class TestEval(unittest.TestCase):
         self.assertSpecIs(spec, ['x'])
         spec = parse_argument_spec('x=1')
         self.assertSpecIs(spec, ['x'], defaults=[1])
+        spec = parse_argument_spec('*,x=1')
+        self.assertSpecIs(spec, kwonlyargs=['x'], kw_defaults=[1])
         spec = parse_argument_spec('x, y=1, z="foo"')
         self.assertSpecIs(spec, ['x', 'y', 'z'], defaults=[1, 'foo'])
         spec = parse_argument_spec('*ls')
@@ -603,6 +605,46 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
             res = yield ctx.eval('func()', evaltype=EVALTYPE_CODE)
         with self.assertRaises(twcommon.excepts.SymbolError):
             res = yield ctx.eval('func2()', evaltype=EVALTYPE_CODE)
+            
+        yield deffunc('func', 'q+1', 'q')
+        res = yield ctx.eval('func(4)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 5)
+        res = yield ctx.eval('func(q=5)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 6)
+        with self.assertRaises(TypeError):
+            res = yield ctx.eval('func()', evaltype=EVALTYPE_CODE)
+        with self.assertRaises(TypeError):
+            res = yield ctx.eval('func(qq=1)', evaltype=EVALTYPE_CODE)
+        
+        yield deffunc('func', 'q+2', 'q=1')
+        res = yield ctx.eval('func(4)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 6)
+        res = yield ctx.eval('func()', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 3)
+        
+        yield deffunc('func', 'w+q', 'w, q=1')
+        res = yield ctx.eval('func(4)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 5)
+        res = yield ctx.eval('func(4,3)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 7)
+        res = yield ctx.eval('func(q=2,w=3)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 5)
+        with self.assertRaises(TypeError):
+            res = yield ctx.eval('func(q=1)', evaltype=EVALTYPE_CODE)
+        res = yield ctx.eval('func(*[4,5])', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 9)
+        res = yield ctx.eval('func(*[6], **{"q":7})', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 13)
+
+        yield deffunc('func', '(ls, map)', '*ls, **map')
+        res = yield ctx.eval('func()', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, ((), {}))
+        res = yield ctx.eval('func(1,2)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, ((1,2), {}))
+        res = yield ctx.eval('func(q=3)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, ((), {'q':3}))
+        res = yield ctx.eval('func(2,q=3)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, ((2,), {'q':3}))
         
 from two.evalctx import LEVEL_EXECUTE, LEVEL_DISPSPECIAL, LEVEL_DISPLAY, LEVEL_MESSAGE, LEVEL_FLAT, LEVEL_RAW
 from two.evalctx import EVALTYPE_SYMBOL, EVALTYPE_RAW, EVALTYPE_CODE, EVALTYPE_TEXT
