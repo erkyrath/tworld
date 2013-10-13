@@ -911,8 +911,8 @@ class EvalPropContext(object):
                 return None
             newval = yield self.evalobj(val, evaltype=EVALTYPE_CODE, locals=locals)
             return newval
-        ### Validate that funcval is a safe thing to call!
-        # This will raise TypeError if funcval is not callable.
+        if not two.symbols.type_callable(funcval):
+            raise TypeError('%s is not callable' % (type(funcval).__name__))
         return funcval(*args, **kwargs)
         
     @tornado.gen.coroutine

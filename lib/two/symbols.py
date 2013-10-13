@@ -1206,6 +1206,21 @@ def define_globals():
     # And that's our global namespace.
     return ScriptNamespace(globmap, propmap)
 
+# Set of native callables which script code can call.
+callable_ok_set = frozenset([
+        # Simple top-level builtins
+        int, str, bool, list, dict, set, len, max, min,
+        # Other native types
+        datetime.timedelta, ObjectId,
+        # Class methods which are never called as instance methods
+        dict.fromkeys,
+        ])
+
+# Condensing the above for fast access: the set of id()s of valid callables.
+callable_ok_idset = frozenset({ id(val) for val in callable_ok_set })
+
+MethodDescriptorType = type(str.lower)
+
 # Table of what attributes can be read from what types. Used by
 # type_getattr_allowed().
 #
@@ -1219,22 +1234,52 @@ def define_globals():
 # list.sort.)
 #
 type_getattr_table = {
-    datetime.timedelta: set(['days', 'max', 'microseconds', 'min', 'resolution', 'seconds', 'total_seconds']),
-    datetime.datetime: set(['min', 'max', 'resolution', 'year', 'month', 'day', 'hour', 'minute', 'second', 'microsecond']),
-    str: set(['capitalize', 'casefold', 'center', 'count', 'endswith', 'find', 'index', 'isalnum', 'isalpha', 'isdecimal', 'isdigit', 'isidentifier', 'islower', 'isnumeric', 'isprintable', 'isspace', 'istitle', 'isupper', 'join', 'ljust', 'lower', 'lstrip', 'partition', 'replace', 'rfind', 'rindex', 'rjust', 'rpartition', 'rsplit', 'rstrip', 'split', 'splitlines', 'startswith', 'strip', 'swapcase', 'title', 'upper', 'zfill']),  # omitted for callness: 'format', 'format_map'
-    list: set(['append', 'clear', 'copy', 'count', 'extend', 'index', 'insert', 'pop', 'remove', 'reverse']),  # omitted for callness: 'sort'
-    dict: set(['clear', 'copy', 'fromkeys', 'get', 'items', 'keys', 'pop', 'popitem', 'setdefault', 'update', 'values']),
+    datetime.timedelta: frozenset(['days', 'max', 'microseconds', 'min', 'resolution', 'seconds', 'total_seconds']),
+    datetime.datetime: frozenset(['min', 'max', 'resolution', 'year', 'month', 'day', 'hour', 'minute', 'second', 'microsecond']),
+    str: frozenset(['capitalize', 'casefold', 'center', 'count', 'endswith', 'find', 'index', 'isalnum', 'isalpha', 'isdecimal', 'isdigit', 'isidentifier', 'islower', 'isnumeric', 'isprintable', 'isspace', 'istitle', 'isupper', 'join', 'ljust', 'lower', 'lstrip', 'partition', 'replace', 'rfind', 'rindex', 'rjust', 'rpartition', 'rsplit', 'rstrip', 'split', 'splitlines', 'startswith', 'strip', 'swapcase', 'title', 'upper', 'zfill']),  # omitted for callness: 'format', 'format_map'
+    list: frozenset(['append', 'clear', 'copy', 'count', 'extend', 'index', 'insert', 'pop', 'remove', 'reverse']),  # omitted for callness: 'sort'
+    dict: frozenset(['clear', 'copy', 'fromkeys', 'get', 'items', 'keys', 'pop', 'popitem', 'setdefault', 'update', 'values']),
     }
 
-# Condensing the above for fast access: the list of id()s of valid types.
-type_getattr_idlist = { id(key) for key in type_getattr_table.keys() }
+# Condensing the above for fast access: the set of id()s of valid types.
+type_getattr_idset = frozenset({ id(key) for key in type_getattr_table.keys() })
+
+def type_callable(val):
+    """Given an object, is it legitimate to call it? We don't want to
+    rely on Python's callable() here; we want to exclude file() and other
+    dangerous objects. In fact we want to have a list of *safe* objects
+    and exclude everything else.
+    """
+    if id(val) in callable_ok_idset:
+        return True
+    typ = type(val)
+    if typ is types.BuiltinMethodType:
+        baseval = val.__self__
+        if id(baseval) in type_getattr_idset:
+            basetyp = baseval
+        else:
+            basetyp = type(baseval)
+        res = type_getattr_table.get(basetyp, None)
+        if not res:
+            return False
+        if val.__name__ not in res:
+            return False
+        return True
+    if typ is MethodDescriptorType:
+        res = type_getattr_table.get(val.__objclass__, None)
+        if not res:
+            return False
+        if val.__name__ not in res:
+            return False
+        return True
+    return False
 
 def type_getattr_allowed(val, key):
-    """Given a type, what attributes do we permit script code to read?
+    """Given an object, what attributes do we permit script code to read?
     This is important because unfettered access to foo.__dict__, for
     example, would be catastrophic.
     """
-    if id(val) in type_getattr_idlist:
+    if id(val) in type_getattr_idset:
         typ = val
     else:
         typ = type(val)
