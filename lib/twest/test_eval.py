@@ -652,6 +652,16 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
             res = yield ctx.eval('_()', evaltype=EVALTYPE_CODE)
         with self.assertRaises(TypeError):
             res = yield ctx.eval('player()', evaltype=EVALTYPE_CODE)
+        with self.assertRaises(TypeError):
+            res = yield ctx.eval('foo()', locals={'foo':object()}, evaltype=EVALTYPE_CODE)
+        with self.assertRaises(TypeError):
+            res = yield ctx.eval('foo()', locals={'foo':object}, evaltype=EVALTYPE_CODE)
+        with self.assertRaises(TypeError):
+            res = yield ctx.eval('foo("bar")', locals={'foo':open}, evaltype=EVALTYPE_CODE)
+        with self.assertRaises(TypeError):
+            res = yield ctx.eval('foo()', locals={'foo':input}, evaltype=EVALTYPE_CODE)
+        res = yield ctx.eval('foo()', locals={'foo':str}, evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, '')
 
         
 from two.evalctx import LEVEL_EXECUTE, LEVEL_DISPSPECIAL, LEVEL_DISPLAY, LEVEL_MESSAGE, LEVEL_FLAT, LEVEL_RAW
