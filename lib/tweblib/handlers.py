@@ -124,6 +124,14 @@ class MyHandlerMixin:
         if not plist.get('external', False):
             raise tornado.web.HTTPError(403, 'Portlist is not available for external linking')
 
+        world = yield motor.Op(self.application.mongodb.worlds.find_one,
+                               { '_id':portal['wid'] },
+                               { 'copyable':1 })
+        if not world:
+            raise tornado.web.HTTPError(403, 'No such world')
+        if not world.get('copyable', False):
+            raise tornado.web.HTTPError(403, 'World is not copyable')
+        
         return portal
 
     @tornado.gen.coroutine
