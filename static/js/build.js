@@ -802,6 +802,9 @@ function update_propaccess(tableref, propac, nocopy) {
         var buttonel = $('<input>', { type:'submit', value:'World' });
         /*###buttonel.on('click', { tablekey:tableref.tablekey, id:propac.id }, evhan_button_propaccess_set_world);*/
         buttonsel.append(buttonel);
+        var buttonel = $('<input>', { type:'submit', value:'Duplicate' });
+        /*###buttonel.on('click', { tablekey:tableref.tablekey, id:propac.id }, evhan_button_propaccess_duplicate);*/
+        buttonsel.append(buttonel);
         var buttonel = $('<input>', { type:'submit', value:'Delete' });
         /*###buttonel.on('click', { tablekey:tableref.tablekey, id:propac.id }, evhan_button_propaccess_set_delete);*/
         buttonsel.append(buttonel);
