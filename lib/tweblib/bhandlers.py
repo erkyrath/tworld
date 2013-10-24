@@ -485,6 +485,22 @@ class BuildWorldHandler(BuildBaseHandler):
                     portlists=portlists,
                     worldproparray=worldproparray, playerproparray=playerproparray)
 
+class BuildPropAccessWorldHandler(BuildBaseHandler):
+    @tornado.gen.coroutine
+    def get(self, wid):
+        wid = ObjectId(wid)
+        (world, locations) = yield self.find_build_world(wid)
+        
+        worldname = world.get('name', '???')
+        # This array must be handed to the client to construct the pop-up
+        # location menu.
+        locarray = [ {'id':str(loc['_id']), 'name':loc['name']} for loc in locations ]
+
+        self.render('build_propaccess.html',
+                    wid=str(wid), worldname=worldname,
+                    locarray=json.dumps(locarray),
+                    withblurb=True)
+
 class BuildTrashWorldHandler(BuildBaseHandler):
     @tornado.gen.coroutine
     def get(self, wid):

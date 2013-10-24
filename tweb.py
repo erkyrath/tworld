@@ -148,6 +148,7 @@ handlers = [
     (r'/build', tweblib.bhandlers.BuildMainHandler),
     (r'/build/world/([0-9a-f]+)', tweblib.bhandlers.BuildWorldHandler),
     (r'/build/portlist/([0-9a-f]+)', tweblib.bhandlers.BuildPortListHandler),
+    (r'/build/propaccess/([0-9a-f]+)', tweblib.bhandlers.BuildPropAccessWorldHandler),
     (r'/build/trash/([0-9a-f]+)', tweblib.bhandlers.BuildTrashWorldHandler),
     (r'/build/loc/([0-9a-f]+)', tweblib.bhandlers.BuildLocHandler),
     (r'/build/export/([0-9a-f]+)', tweblib.bhandlers.BuildExportWorldHandler),
