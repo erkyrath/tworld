@@ -50,6 +50,10 @@
         menuItem.attr("class", itemOptions.klass);
       }
 
+      if (itemOptions.data) {
+        menuItem.data('data', itemOptions.data);
+      }
+
       if (itemOptions.enableHook) {
         menuItem.data('enableHook', itemOptions.enableHook);
       }

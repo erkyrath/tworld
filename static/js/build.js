@@ -49,7 +49,11 @@ function setup_event_handlers() {
 
     if (el.length) {
         var ls = jQuery.map(db_locations, function(loc, index) {
-                return { text:loc.name, click:function() { window.location = '/build/loc/' + loc.id; } };
+                return { 
+                    text:loc.name, 
+                    data:loc.id,
+                    click:function() { window.location = '/build/loc/' + loc.id; } 
+                };
             });
         if (ls.length == 0) {
             ls.push({ text:'(no locations)', enableHook: function(){}, click:function(){} });
@@ -443,8 +447,12 @@ function build_main_fields() {
 function build_location_fields() {
     var cellel = $('#build_loc_name_cell');
     build_geninput_cell(cellel, pagelocname, 'locname', function (val) {
-            /* ### Should update the pop-up location menu, too */
             $('#build_location_name').text(val);
+            $('#popup_menu li').each(function (ix) {
+                    if ($(this).data('data') == pagelocid) {
+                        $(this).find('a').text(val);
+                    }
+                });
         });
    
     var cellel = $('#build_loc_key_cell');
