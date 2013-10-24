@@ -12,7 +12,7 @@
   jQuery.fn.contextMenu = function ( name, actions, options ) {
     var me = this,
     win = $(window),
-    menu = $('<ul id="'+name+'" class="context-menu"></ul>').hide().appendTo('body'),
+    menu = $('<ul>', {'id':name, 'class':'context-menu'}).hide().appendTo('body'),
     activeElement = null, // last clicked element that responds with contextMenu
     hideMenu = function() {
       $('.context-menu:visible').each(function() {
