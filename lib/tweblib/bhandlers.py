@@ -429,7 +429,24 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
         res = []
         for propac in ls:
             try:
+                world = yield motor.Op(self.application.mongodb.worlds.find_one,
+                                       {'_id':propac['fromwid']})
+                worldname = world.get('name', '???')
+                creator = yield motor.Op(self.application.mongodb.players.find_one,
+                                         {'_id':world['creator']}, {'name':1})
+                if creator:
+                    creatorname = creator.get('name', '???')
+                else:
+                    creatorname = '???'
+                
+                typelist = []
+                if propac.get('types', None):
+                    typelist = [ str(val) for val in propac['types'] ]
                 newprop = { 'id':str(propac['_id']),
+                            'key':propac['key'],
+                            'worldname':worldname,
+                            'creatorname':creatorname,
+                            'types':(', '.join(typelist)),
                             }
                 res.append(newprop)
             except Exception as ex:
@@ -511,7 +528,11 @@ class BuildPropAccessWorldHandler(BuildBaseHandler):
         locarray = [ {'id':str(loc['_id']), 'name':loc['name']} for loc in locations ]
 
         propacls = []
-        ####
+        cursor = self.application.mongodb.propaccess.find({'wid':wid})
+        while (yield cursor.fetch_next):
+            propac = cursor.next_object()
+            propacls.append(propac)
+        # cursor autoclose
         propacls.sort(key=lambda propac:propac['_id']) ### or other criterion?
 
         encoder = JSONEncoderExtra()
