@@ -778,6 +778,88 @@ function update_propaccess(tableref, propac, nocopy) {
 
     var tableel = tableref.rootel;
 
+    var desc = [];
+    desc.push($('<span>').text(propac.worldname));
+    desc.push($('<em>').text(NBSP + ' (by ' + propac.creatorname + ')'));
+
+    var propref = tableref.propacmap[propac.id];
+    if (propref !== undefined) {
+        /* Propac is already present in table. */
+        if (!nocopy)
+            propref.val = propac;
+        propref.textel.empty();
+        for (var ix=0; ix<desc.length; ix++) {
+            propref.textel.append(desc[ix]);
+        }
+    }
+    else {
+        /* Prop is not in table. Add a row. */
+        var rowel = $('<tr>', { valign:'top' });
+        var cellctel = $('<td>');
+        var cellvalel = $('<td>');
+
+        var buttonsel = $('<div>', { });
+        var buttonel = $('<input>', { type:'submit', value:'World' });
+        /*###buttonel.on('click', { tablekey:tableref.tablekey, id:propac.id }, evhan_button_propaccess_set_world);*/
+        buttonsel.append(buttonel);
+        var buttonel = $('<input>', { type:'submit', value:'Delete' });
+        /*###buttonel.on('click', { tablekey:tableref.tablekey, id:propac.id }, evhan_button_propaccess_set_delete);*/
+        buttonsel.append(buttonel);
+        cellctel.append(buttonsel);
+
+        var buildres = build_propaccess_cell(cellvalel, tableref.tablekey, propac);
+
+        for (var ix=0; ix<desc.length; ix++) {
+            buildres.textel.append(desc[ix]);
+        }
+
+        rowel.append(cellctel);
+        rowel.append(cellvalel);
+        tableel.find('tr').filter(':last').before(rowel);
+
+        var propref = {
+            id: propac.id, val: propac,
+            tablekey: tableref.tablekey,
+            rowel: rowel, cellvalel: cellvalel, buttonsel: buildres.buttonsel,
+            controlel: buildres.controlel,
+            warningel: buildres.warningel, textel: buildres.textel
+        };
+
+        tableref.propaclist.push(propac.id);
+        tableref.propacmap[propac.id] = propref;
+    }
+}
+
+/* Construct the contents of a propaccess value cell (the second column
+   of the table). The cell must be initially empty.
+
+   Returns an object containing references to some of the constructed
+   DOM elements: the row of buttons, the warning line, the div where the
+   description goes.
+*/
+function build_propaccess_cell(cellvalel, tablekey, propac) {
+    var textel = $('<div>');
+    cellvalel.append(textel);
+
+    var warningel = $('<div>', { 'class':'BuildPropWarning', style:'display: none;' });
+    cellvalel.append(warningel);
+    
+    var buttonsel = $('<div>', { style:'display: none;' });
+    var subbuttonsel = $('<div>', { 'class':'BuildPropButtonsFloat' });
+    buttonsel.append(subbuttonsel);
+    var controlel = $('<div>');
+    buttonsel.append(controlel);
+
+    var buttonel = $('<input>', { type:'submit', value:'Revert' });
+    /*###buttonel.on('click', { tablekey:tablekey, id:propac.id }, evhan_button_propaccess_revert);*/
+    subbuttonsel.append(buttonel);
+    var buttonel = $('<input>', { type:'submit', value:'Save' });
+    /*###buttonel.on('click', { tablekey:tablekey, id:propac.id }, evhan_button_propaccess_save);*/
+    subbuttonsel.append(buttonel);
+    cellvalel.append(buttonsel);
+    
+    return { textel:textel, controlel:controlel, 
+            buttonsel:buttonsel, warningel:warningel };
 }
 
 /* Callback invoked whenever the user edits the contents of a textarea.
