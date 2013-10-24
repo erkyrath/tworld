@@ -728,6 +728,58 @@ function build_portal_cell(cellvalel, tablekey, port) {
             buttonsel:buttonsel, warningel:warningel };
 }
 
+/* Construct the contents of a property table. This is called at page-load
+   time.
+*/
+function build_propaccesstable(tableel, propaclist, tablekey) {
+    var tableref = tables[tablekey];
+    if (tableref === undefined) {
+        tableref = { tablekey:tablekey, rootel:tableel,
+                     propacmap:{}, propaclist:[] };
+        tables[tablekey] = tableref;
+    }
+
+    /* Empty out the table. */
+    tableel.empty();
+
+    /* Add a colgroup, defining the column widths. */
+    tableel.append($('<colgroup><col width="25%"></col><col width="70%"></col></colgroup>'));
+
+    var rowel = $('<tr>');
+    var cellel = $('<th>', { colspan:2 });
+    cellel.text('Property access entries');
+    rowel.append(cellel);
+    tableel.append(rowel);
+
+    /* Add a "add new" row (which will stick at the bottom) */
+    var rowel = $('<tr>');
+    var cellel = $('<td>', { colspan:3 });
+    rowel.append(cellel);
+    tableel.append(rowel);
+    if (true) {
+        var buttonsel = $('<div>', { 'class':'BuildPropButtons' });
+        var buttonel = $('<input>', { 'class':'BuildPropButtonLarge', type:'submit', value:'New Entry' });
+        cellel.append(buttonsel);
+        buttonsel.append(buttonel);
+        
+        buttonel.on('click', { tablekey:tablekey }, evhan_button_addpropaccess);
+    }
+
+    for (var ix=0; ix<propaclist.length; ix++) {
+        update_propaccess(tableref, propaclist[ix]);
+    }
+}
+
+function update_propaccess(tableref, propac, nocopy) {
+    if (tableref === undefined) {
+        console.log('No table for this propaccess group!');
+        return;
+    }
+
+    var tableel = tableref.rootel;
+
+}
+
 /* Callback invoked whenever the user edits the contents of a textarea.
 */
 function evhan_input_textarea(ev) {
@@ -1104,6 +1156,41 @@ function evhan_button_addportal(ev) {
         });
 }
 
+function evhan_button_addpropaccess(ev) {
+    ev.preventDefault();
+    var tablekey = ev.data.tablekey;
+
+    var tableref = tables[tablekey];
+    if (!tableref)
+        return;
+
+    /* No parameters here -- use defaults. */
+    msg = { world:pageworldid,
+            _xsrf: xsrf_token };
+
+    jQuery.ajax({
+            url: '/build/addpropaccess',
+            type: 'POST',
+            data: msg,
+            success: function(data, status, jqhxr) {
+                if (data.error) {
+                    console.log('### error: ' + data.error);
+                    return;
+                }
+                var tableref = tables['$propaclist'];
+                if (!tableref) {
+                    console.log('No such table: ' + '$propaclist' + '!');
+                    return;
+                }
+                update_propaccess(tableref, data.propac);
+            },
+            error: function(jqxhr, status, error) {
+                console.log('### ajax failure: ' + status + '; ' + error);
+            },
+            dataType: 'json'
+        });
+}
+
 function evhan_button_addlocation(ev) {
     ev.preventDefault();
 
@@ -1395,6 +1482,9 @@ $(document).ready(function() {
     if (pageid == 'portlist') {
         build_portaltable($('#build_portals'), db_portals, '$portlist');
         build_portlist_fields();
+    }
+    if (pageid == 'propaccess') {
+        build_propaccesstable($('#build_propaccess'), db_propaccess, '$propaclist');
     }
     if (pageid == 'world') {
         build_proptable($('#build_world_properties'), db_world_props, '$realm', 'Realm properties');

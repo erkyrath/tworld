@@ -423,6 +423,20 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
                 self.application.twlog.warning('Unable to convert portal: %s', ex)
             
         return res
+    
+    @tornado.gen.coroutine
+    def export_propaccess_array(self, ls):
+        res = []
+        for propac in ls:
+            try:
+                newprop = { 'id':str(propac['_id']),
+                            }
+                res.append(newprop)
+            except Exception as ex:
+                self.application.twlog.warning('Unable to convert propaccess: %s', ex)
+            
+        return res
+            
 
 class BuildMainHandler(BuildBaseHandler):
     @tornado.gen.coroutine
@@ -496,10 +510,19 @@ class BuildPropAccessWorldHandler(BuildBaseHandler):
         # location menu.
         locarray = [ {'id':str(loc['_id']), 'name':loc['name']} for loc in locations ]
 
+        propacls = []
+        ####
+        propacls.sort(key=lambda propac:propac['_id']) ### or other criterion?
+
+        encoder = JSONEncoderExtra()
+        clientls = yield self.export_propaccess_array(propacls)
+        propacarray = encoder.encode(clientls)
+        
         self.render('build_propaccess.html',
                     wid=str(wid), worldname=worldname,
                     locarray=json.dumps(locarray),
-                    withblurb=True)
+                    propacarray=propacarray,
+                    withblurb=(len(propacls)==0))
 
 class BuildTrashWorldHandler(BuildBaseHandler):
     @tornado.gen.coroutine
