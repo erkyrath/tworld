@@ -401,7 +401,7 @@ function build_value_cell(cellvalel, tablekey, propkey, propid, editls) {
 /* Make the revert/save buttons appear or disappear on a table row.
    Special case: if dirty is the string 'delete', change the 'save' button
    to say that.
-   This is also used for portal tables (despite the name).
+   This is also used for portal and propaccess tables (despite the name).
 */
 function prop_set_dirty(tableref, propref, dirty) {
     if (dirty) {
@@ -791,6 +791,8 @@ function update_propaccess(tableref, propac, nocopy) {
         for (var ix=0; ix<desc.length; ix++) {
             propref.textel.append(desc[ix]);
         }
+        propref.keyinputel.prop('value', propac.key);
+        propref.typeinputel.prop('value', propac.types);
     }
     else {
         /* Prop is not in table. Add a row. */
@@ -825,6 +827,8 @@ function update_propaccess(tableref, propac, nocopy) {
             tablekey: tableref.tablekey,
             rowel: rowel, cellvalel: cellvalel, buttonsel: buildres.buttonsel,
             controlel: buildres.controlel,
+            keyinputel: buildres.keyinputel,
+            typeinputel: buildres.typeinputel,
             warningel: buildres.warningel, textel: buildres.textel
         };
 
@@ -844,6 +848,16 @@ function build_propaccess_cell(cellvalel, tablekey, propac) {
     var textel = $('<div>');
     cellvalel.append(textel);
 
+    var keyinputel = $('<input>', { 'class':'BuildPropKey', autocapitalize:'off', placeholder:'Key' });
+    keyinputel.prop('value', propac.key);
+    keyinputel.on('input', { tablekey:tablekey, id:propac.id }, evhan_input_propaccess);
+    cellvalel.append(keyinputel);
+    
+    var typeinputel = $('<input>', { 'class':'BuildPropKey', autocapitalize:'off', placeholder:'Types' });
+    typeinputel.prop('value', propac.types);
+    typeinputel.on('input', { tablekey:tablekey, id:propac.id }, evhan_input_propaccess);
+    cellvalel.append(typeinputel);
+    
     var warningel = $('<div>', { 'class':'BuildPropWarning', style:'display: none;' });
     cellvalel.append(warningel);
     
@@ -854,24 +868,15 @@ function build_propaccess_cell(cellvalel, tablekey, propac) {
     buttonsel.append(controlel);
 
     var buttonel = $('<input>', { type:'submit', value:'Revert' });
-    /*###buttonel.on('click', { tablekey:tablekey, id:propac.id }, evhan_button_propaccess_revert);*/
+    buttonel.on('click', { tablekey:tablekey, id:propac.id }, evhan_button_propaccess_revert);
     subbuttonsel.append(buttonel);
     var buttonel = $('<input>', { type:'submit', value:'Save' });
     /*###buttonel.on('click', { tablekey:tablekey, id:propac.id }, evhan_button_propaccess_save);*/
     subbuttonsel.append(buttonel);
     cellvalel.append(buttonsel);
 
-    var inputel = $('<input>', { 'class':'BuildPropKey', autocapitalize:'off' });
-    inputel.prop('value', propac.key);
-    /*###inputel.on('input', evhan_input_propaccess_key);*/
-    cellvalel.append(inputel);
-    
-    var inputel = $('<input>', { 'class':'BuildPropKey', autocapitalize:'off' });
-    inputel.prop('value', propac.types);
-    /*###inputel.on('input', evhan_input_propaccess_types);*/
-    cellvalel.append(inputel);
-    
     return { textel:textel, controlel:controlel, 
+            keyinputel:keyinputel, typeinputel:typeinputel,
             buttonsel:buttonsel, warningel:warningel };
 }
 
@@ -1286,6 +1291,25 @@ function evhan_button_addpropaccess(ev) {
         });
 }
 
+function evhan_button_propaccess_revert(ev) {
+    ev.preventDefault();
+    var tablekey = ev.data.tablekey;
+    var id = ev.data.id;
+
+    var tableref = tables[tablekey];
+    if (!tableref)
+        return;
+    var propref = tableref.propacmap[id];
+    if (!propref) {
+        console.log('No such propaccess entry: ' + tablekey + ':' + id);
+    }
+
+    propref.action = null;
+    update_propaccess(tableref, propref.val);
+    prop_set_dirty(tableref, propref, false);
+    prop_set_warning(tableref, propref, null);
+}
+
 function evhan_button_addlocation(ev) {
     ev.preventDefault();
 
@@ -1438,6 +1462,24 @@ function evhan_prop_type_change(ev) {
 
     update_prop(tableref, newprop, true);
     prop_set_dirty(tableref, propref, (valtype == 'delete' ? 'delete' : true));
+}
+
+/* Callback for editing an input line of a propaccess cell.
+*/
+function evhan_input_propaccess(ev) {
+    var tablekey = ev.data.tablekey;
+    var id = ev.data.id;
+    var tableref = tables[tablekey];
+    if (!tableref)
+        return;
+
+    var propref = tableref.propacmap[id];
+    if (!propref) {
+        console.log('No such propac entry: ' + tablekey + ':' + id);
+    }
+    if (!propref.dirty) {
+        prop_set_dirty(tableref, propref, true);
+    }
 }
 
 /* Callback for editing a generic field input line. 
