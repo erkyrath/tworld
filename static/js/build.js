@@ -860,6 +860,16 @@ function build_propaccess_cell(cellvalel, tablekey, propac) {
     /*###buttonel.on('click', { tablekey:tablekey, id:propac.id }, evhan_button_propaccess_save);*/
     subbuttonsel.append(buttonel);
     cellvalel.append(buttonsel);
+
+    var inputel = $('<input>', { 'class':'BuildPropKey', autocapitalize:'off' });
+    inputel.prop('value', propac.key);
+    /*###inputel.on('input', evhan_input_propaccess_key);*/
+    cellvalel.append(inputel);
+    
+    var inputel = $('<input>', { 'class':'BuildPropKey', autocapitalize:'off' });
+    inputel.prop('value', propac.types);
+    /*###inputel.on('input', evhan_input_propaccess_types);*/
+    cellvalel.append(inputel);
     
     return { textel:textel, controlel:controlel, 
             buttonsel:buttonsel, warningel:warningel };
