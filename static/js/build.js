@@ -58,7 +58,7 @@ function setup_event_handlers() {
             ls,
             { 
                 leftClick: true,
-                    position: { my:'left top', at:'left bottom', of:el }
+                position: { my:'left top', at:'left bottom', of:el }
             } );
     }
 

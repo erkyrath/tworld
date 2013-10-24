@@ -37,13 +37,14 @@
 
     $.each(actions, function(index, itemOptions) {
       if (itemOptions.link) {
+        /* a jquery DOM element */
         var link = itemOptions.link;
       } else {
         var text = itemOptions.text; /* --ZARF */
-        var link = '<a href="#">'+text+'</a>';
+        var link = $('<a>', {'href':'#'}).text(text);
       }
 
-      var menuItem = $('<li>' + link + '</li>');
+      var menuItem = $('<li>').append(link);
 
       if (itemOptions.klass) {
         menuItem.attr("class", itemOptions.klass);
