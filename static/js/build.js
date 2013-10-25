@@ -770,6 +770,28 @@ function build_propaccesstable(tableel, propaclist, tablekey) {
     }
 }
 
+/* Delete a row of the table, if it exists.
+*/
+function delete_propaccess(tableref, propac, nocopy) {
+    if (tableref === undefined) {
+        console.log('No table for propaccess!');
+        return;
+    }
+
+    var tableel = tableref.rootel;
+    var propref = tableref.propacmap[propac.id];
+    if (propref !== undefined) {
+        delete tableref.propacmap[propac.id];
+        /* Is this really the best way to delete one entry from a JS array? */
+        var ix = tableref.propaclist.indexOf(propac.id);
+        if (ix >= 0)
+            tableref.propaclist.splice(ix, 1);
+        propref.rowel.slideUp(200, function() {
+                propref.rowel.remove();
+            });
+    }
+}
+
 function update_propaccess(tableref, propac, nocopy) {
     if (tableref === undefined) {
         console.log('No table for this propaccess group!');
@@ -808,7 +830,7 @@ function update_propaccess(tableref, propac, nocopy) {
         /*###buttonel.on('click', { tablekey:tableref.tablekey, id:propac.id }, evhan_button_propaccess_duplicate);*/
         buttonsel.append(buttonel);
         var buttonel = $('<input>', { type:'submit', value:'Delete' });
-        /*###buttonel.on('click', { tablekey:tableref.tablekey, id:propac.id }, evhan_button_propaccess_set_delete);*/
+        buttonel.on('click', { tablekey:tableref.tablekey, id:propac.id }, evhan_button_propaccess_set_delete);
         buttonsel.append(buttonel);
         cellctel.append(buttonsel);
 
@@ -1290,6 +1312,27 @@ function evhan_button_addpropaccess(ev) {
             },
             dataType: 'json'
         });
+}
+
+function evhan_button_propaccess_set_delete(ev) {
+    ev.preventDefault();
+    var tablekey = ev.data.tablekey;
+    var id = ev.data.id;
+
+    var tableref = tables[tablekey];
+    if (!tableref)
+        return;
+    var propref = tableref.propacmap[id];
+    if (!propref) {
+        console.log('No such propaccess entry: ' + tablekey + ':' + id);
+    }
+
+    propref.action = 'delete';
+    propref.controlel.empty();
+    var el = $('<span>', { 'class':'BuildPropWarning' }).text('Delete this entry?');
+    propref.controlel.append(el);
+
+    prop_set_dirty(tableref, propref, 'delete');
 }
 
 function evhan_button_propaccess_revert(ev) {
