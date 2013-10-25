@@ -885,29 +885,16 @@ class BuildAddPropHandler(BuildBaseHandler):
     
             (world, loc) = yield self.check_world_arguments(wid, locid, playerok=True)
 
-            # Now we have to invent a fresh new prop key. This is kind
-            # of a nuisance.
-            counter = 0
-            while True:
-                key = 'key_%d' % (counter,)
-                if loc == '$player':
-                    kprop = yield motor.Op(self.application.mongodb.wplayerprop.find_one,
-                                       { 'wid':wid, 'uid':None, 'key':key })
-                else:
-                    kprop = yield motor.Op(self.application.mongodb.worldprop.find_one,
-                                       { 'wid':wid, 'locid':locid, 'key':key })
-                if not kprop:
-                    break
-                counter = counter+1
-                if counter >= 5:
-                    # Getting trapped in a linear loop is dumb.
-                    counter = counter + random.randrange(50)
-
             # Construct the new property, with a boring default value
             if loc == '$player':
+                key = yield self.invent_key('key', 'wplayerprop',
+                                            {'wid':wid, 'uid':None})
                 prop = { 'key':key, 'wid':wid, 'uid':None }
             else:
+                key = yield self.invent_key('key', 'worldprop',
+                                            {'wid':wid, 'locid':locid})
                 prop = { 'key':key, 'wid':wid, 'locid':locid }
+
             prop['val'] = { 'type':'text' }
             
             # And now we write it.
