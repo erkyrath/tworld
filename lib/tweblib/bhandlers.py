@@ -1196,8 +1196,22 @@ class BuildSetPropAccessHandler(BuildBaseHandler):
 
             (world, dummy) = yield self.check_world_arguments(wid, None)
             if action == 'create':
-                # The create action doesn't require an 'id' argument
-                raise Exception('### create')
+                # The create action doesn't require an 'id' argument.
+                # Set it up for the start world, because it's easy.
+                res = yield motor.Op(self.application.mongodb.config.find_one,
+                                     {'key':'startworldid'})
+                fromwid = res['val']
+                key = yield self.invent_key('prop', 'propaccess',
+                                            {'wid':wid, 'fromwid':fromwid})
+                propac = { 'wid':wid, 'fromwid':fromwid, 'key':key,
+                           'types':['int'] }
+                propacid = yield motor.Op(self.application.mongodb.propaccess.insert,
+                                          propac)
+                propac['_id'] = propacid
+                returnpropac = yield self.export_propaccess_array([propac])
+                returnpropac = returnpropac[0]
+                self.write( { 'propac':returnpropac } )
+                return
             
             if not propacid:
                 raise Exception('No propaccess declared')
