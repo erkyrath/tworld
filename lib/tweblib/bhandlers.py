@@ -963,20 +963,8 @@ class BuildAddPortListHandler(BuildBaseHandler):
     
             (world, dummy) = yield self.check_world_arguments(wid, None)
 
-            # Now we have to invent a fresh new plist key. This is kind
-            # of a nuisance.
-            counter = 0
-            while True:
-                key = 'portlist_%d' % (counter,)
-                oplist = yield motor.Op(self.application.mongodb.portlists.find_one,
-                                        { 'wid':wid, 'key':key, 'type':'world' })
-                if not oplist:
-                    break
-                counter = counter+1
-                if counter >= 5:
-                    # Getting trapped in a linear loop is dumb.
-                    counter = counter + random.randrange(50)
-
+            key = yield self.invent_key('portlist', 'portlists',
+                                        {'wid':wid, 'type':'world'})
             plist = { 'key':key, 'wid':wid, 'type':'world' }
             plistid = yield motor.Op(self.application.mongodb.portlists.insert,
                                    plist)
