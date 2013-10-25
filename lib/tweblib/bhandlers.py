@@ -1252,6 +1252,11 @@ class BuildSetPropAccessHandler(BuildBaseHandler):
                                            { '_id':fromwid })
                 if not fromworld:
                     raise Exception('No such world')
+
+                oprop = yield motor.Op(self.application.mongodb.propaccess.find_one,
+                                       {'wid':wid, 'fromwid':fromwid, 'key':key})
+                if oprop and oprop['_id'] != propacid:
+                    raise Exception('An entry for this key and world already exists.')
                 
                 yield motor.Op(self.application.mongodb.propaccess.update,
                                { '_id':propacid },
