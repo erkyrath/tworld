@@ -646,7 +646,7 @@ function update_portal(tableref, port, nocopy) {
         ibuttonel = buttonel;
         ibuttonel.prop('disabled', port.instancing != 'standard');
         var buttonel = $('<input>', { type:'submit', value:'Delete' });
-        buttonel.on('click', { tablekey:tableref.tablekey, id:port.id }, evhan_button_portal_set_delete);
+        buttonel.on('click', { tablekey:tableref.tablekey, id:port.id }, evhan_button_portal_delete);
         buttonsel.append(buttonel);
         cellctel.append(buttonsel);
 
@@ -827,10 +827,10 @@ function update_propaccess(tableref, propac, nocopy) {
         /*###buttonel.on('click', { tablekey:tableref.tablekey, id:propac.id }, evhan_button_propaccess_set_world);*/
         buttonsel.append(buttonel);
         var buttonel = $('<input>', { type:'submit', value:'Duplicate' });
-        /*###buttonel.on('click', { tablekey:tableref.tablekey, id:propac.id }, evhan_button_propaccess_duplicate);*/
+        buttonel.on('click', { tablekey:tableref.tablekey, id:propac.id }, evhan_button_propaccess_duplicate);
         buttonsel.append(buttonel);
         var buttonel = $('<input>', { type:'submit', value:'Delete' });
-        buttonel.on('click', { tablekey:tableref.tablekey, id:propac.id }, evhan_button_propaccess_set_delete);
+        buttonel.on('click', { tablekey:tableref.tablekey, id:propac.id }, evhan_button_propaccess_delete);
         buttonsel.append(buttonel);
         cellctel.append(buttonsel);
 
@@ -1093,7 +1093,7 @@ function evhan_button_portal_set_instance(ev) {
     prop_set_dirty(tableref, portref, true);
 }
 
-function evhan_button_portal_set_delete(ev) {
+function evhan_button_portal_delete(ev) {
     ev.preventDefault();
     var tablekey = ev.data.tablekey;
     var id = ev.data.id;
@@ -1314,7 +1314,7 @@ function evhan_button_addpropaccess(ev) {
         });
 }
 
-function evhan_button_propaccess_set_delete(ev) {
+function evhan_button_propaccess_delete(ev) {
     ev.preventDefault();
     var tablekey = ev.data.tablekey;
     var id = ev.data.id;
@@ -1333,6 +1333,13 @@ function evhan_button_propaccess_set_delete(ev) {
     propref.controlel.append(el);
 
     prop_set_dirty(tableref, propref, 'delete');
+}
+
+function evhan_button_propaccess_duplicate(ev) {
+    ev.preventDefault();
+    var tablekey = ev.data.tablekey;
+    var id = ev.data.id;
+
 }
 
 function evhan_button_propaccess_revert(ev) {
