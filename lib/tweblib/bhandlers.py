@@ -184,6 +184,32 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
 
         return (world, loc)
 
+    @tornado.gen.coroutine
+    def invent_key(self, prefix, dbname, query, querykey='key'):
+        """Invent an unused key string. We do this by systematically
+        checking 'prefix_%d' for increasing integers, and seeing if
+        the query returns anything. (The query must be a dict, and we
+        mutate it while checking.)
+
+        If 0 through 4 are collisions, we start increasing unsystematically,
+        because the user is being a dork and spamming the "new" button.
+        """
+        counter = 0
+        while True:
+            key = '%s_%d' % (prefix, counter,)
+            query[querykey] = key
+            obj = yield motor.Op(self.application.mongodb[dbname].find_one,
+                                 query)
+            if not obj:
+                return key
+            # Collision; try another value.
+            counter = counter+1
+            if counter >= 5:
+                counter = counter + random.randrange(50)
+            if counter >= 1000:
+                # We've gone around about fifty times. Give up.
+                raise Exception('No free key available!')
+
     def export_prop_array(self, ls):
         """Given an array of property values (from the db), return an array
         suitable for handing over to the client for editing. This means
@@ -924,20 +950,7 @@ class BuildAddLocHandler(BuildBaseHandler):
     
             (world, dummy) = yield self.check_world_arguments(wid, None)
 
-            # Now we have to invent a fresh new loc key. This is kind
-            # of a nuisance.
-            counter = 0
-            while True:
-                key = 'loc_%d' % (counter,)
-                oloc = yield motor.Op(self.application.mongodb.locations.find_one,
-                                      { 'wid':wid, 'key':key })
-                if not oloc:
-                    break
-                counter = counter+1
-                if counter >= 5:
-                    # Getting trapped in a linear loop is dumb.
-                    counter = counter + random.randrange(50)
-
+            key = yield self.invent_key('loc', 'locations', {'wid':wid})
             loc = { 'key':key, 'wid':wid, 'name':'New Location' }
             locid = yield motor.Op(self.application.mongodb.locations.insert,
                                    loc)
