@@ -161,6 +161,7 @@ handlers = [
     (r'/build/delportlist', tweblib.bhandlers.BuildDelPortListHandler),
     (r'/build/addport', tweblib.bhandlers.BuildAddPortHandler),
     (r'/build/setport', tweblib.bhandlers.BuildSetPortHandler),
+    (r'/build/setpropaccess', tweblib.bhandlers.BuildSetPropAccessHandler),
     (r'/build/setdata', tweblib.bhandlers.BuildSetDataHandler),
     (r'/admin', tweblib.admhandlers.AdminMainHandler),
     (r'/admin/sessions', tweblib.admhandlers.AdminSessionsHandler),

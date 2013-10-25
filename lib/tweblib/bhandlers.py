@@ -444,6 +444,7 @@ class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
                     typelist = [ str(val) for val in propac['types'] ]
                 newprop = { 'id':str(propac['_id']),
                             'key':propac['key'],
+                            'fromwid':str(propac['fromwid']),
                             'worldname':worldname,
                             'creatorname':creatorname,
                             'types':(', '.join(typelist)),
@@ -1193,6 +1194,77 @@ class BuildSetPortHandler(BuildBaseHandler):
         except Exception as ex:
             # Any exception that occurs, return as an error message.
             self.application.twlog.warning('Caught exception (setting portal): %s', ex)
+            self.write( { 'error': str(ex) } )
+
+            
+class BuildSetPropAccessHandler(BuildBaseHandler):
+    @tornado.gen.coroutine
+    def post(self):
+        try:
+            wid = ObjectId(self.get_argument('world'))
+
+            action = self.get_argument('action', None)
+            propacid = self.get_argument('id', None)
+            if not propacid:
+                raise Exception('No propaccess declared')
+            propacid = ObjectId(propacid)
+
+            (world, dummy) = yield self.check_world_arguments(wid, None)
+
+            propac = yield motor.Op(self.application.mongodb.propaccess.find_one,
+                                    { '_id':propacid })
+            if not propac:
+                raise Exception('No such propaccess')
+            if propac['wid'] != wid:
+                raise Exception('Propaccess is not in this world')
+
+            if action == 'delete':
+                yield motor.Op(self.application.mongodb.propaccess.remove,
+                               { '_id':propacid })
+                # We have to return enough of the propac information that
+                # the client knows what row to delete.
+                returnprop = { 'id':str(propacid) }
+                self.write( { 'delete':True, 'propac':returnprop } )
+                return
+
+            if action == 'set':
+                key = self.get_argument('key')
+                key = sluggify(key)
+                if not re_valididentifier.match(key):
+                    raise Exception('Invalid key name')
+
+                types = self.get_argument('types')
+                types = [ val.strip() for val in types.split(',') ]
+                types = [ val for val in types if val ]
+                ### validate
+                
+                fromwid = self.get_argument('fromwid', None)
+                if not fromwid:
+                    raise Exception('No world selected')
+                fromwid = ObjectId(fromwid)
+                fromworld = yield motor.Op(self.application.mongodb.worlds.find_one,
+                                           { '_id':fromwid })
+                if not fromworld:
+                    raise Exception('No such world')
+                
+                yield motor.Op(self.application.mongodb.propaccess.update,
+                               { '_id':propacid },
+                               { '$set':{'key':key, 'types':types, 'fromwid':fromwid} })
+
+                # Converting the value for the javascript client goes through
+                # this array-based call, because I am sloppy like that.
+                propac['key'] = key
+                propac['types'] = types
+                propac['fromwid'] = fromwid
+                returnpropac = yield self.export_propaccess_array([propac])
+                returnpropac = returnpropac[0]
+                self.write( { 'propac':returnpropac } )
+                return
+            
+            raise Exception('Action not understood.')
+        except Exception as ex:
+            # Any exception that occurs, return as an error message.
+            self.application.twlog.warning('Caught exception (setting propaccess): %s', ex)
             self.write( { 'error': str(ex) } )
 
             

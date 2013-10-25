@@ -420,7 +420,7 @@ function prop_set_dirty(tableref, propref, dirty) {
 
 /* Make the red "you screwed up" warning line appear or disappear on
    a table row.
-   This is also used for portal tables (despite the name).
+   This is also used for portal and propaccess tables (despite the name).
 */
 function prop_set_warning(tableref, propref, message) {
     if (message) {
@@ -871,7 +871,7 @@ function build_propaccess_cell(cellvalel, tablekey, propac) {
     buttonel.on('click', { tablekey:tablekey, id:propac.id }, evhan_button_propaccess_revert);
     subbuttonsel.append(buttonel);
     var buttonel = $('<input>', { type:'submit', value:'Save' });
-    /*###buttonel.on('click', { tablekey:tablekey, id:propac.id }, evhan_button_propaccess_save);*/
+    buttonel.on('click', { tablekey:tablekey, id:propac.id }, evhan_button_propaccess_save);
     subbuttonsel.append(buttonel);
     cellvalel.append(buttonsel);
 
@@ -1308,6 +1308,66 @@ function evhan_button_propaccess_revert(ev) {
     update_propaccess(tableref, propref.val);
     prop_set_dirty(tableref, propref, false);
     prop_set_warning(tableref, propref, null);
+}
+
+function evhan_button_propaccess_save(ev) {
+    ev.preventDefault();
+    var tablekey = ev.data.tablekey;
+    var id = ev.data.id;
+
+    var tableref = tables[tablekey];
+    if (!tableref)
+        return;
+    var propref = tableref.propacmap[id];
+    if (!propref) {
+        console.log('No such propaccess entry: ' + tablekey + ':' + id);
+    }
+
+    msg = { id:propref.id,
+            world:pageworldid,
+            _xsrf: xsrf_token };
+
+    if (propref.action == 'delete') {
+        msg.action = 'delete';
+    }
+    else {
+        msg.action = 'set';
+        msg.fromwid = propref.val.fromwid;
+        msg.key = jQuery.trim(propref.keyinputel.prop('value'));
+        msg.types = jQuery.trim(propref.typeinputel.prop('value'));
+    }
+
+    jQuery.ajax({
+            url: '/build/setpropaccess',
+            type: 'POST',
+            data: msg,
+            success: function(data, status, jqhxr) {
+                if (data.error) {
+                    prop_set_warning(tableref, propref, data.error);
+                    prop_set_dirty(tableref, propref, true);
+                    return;
+                }
+                var tableref = tables['$propaclist'];
+                if (!tableref) {
+                    console.log('No such table: ' + '$propaclist' + '!');
+                    return;
+                }
+                if (data.delete) {
+                    delete_propaccess(tableref, data.propac);
+                }
+                else {
+                    propref.action = null;
+                    update_propaccess(tableref, data.propac);
+                    prop_set_warning(tableref, propref, null);
+                    prop_set_dirty(tableref, propref, false);
+                }
+            },
+            error: function(jqxhr, status, error) {
+                prop_set_warning(tableref, propref, error);
+                prop_set_dirty(tableref, propref, true);
+            },
+            dataType: 'json'
+        });
 }
 
 function evhan_button_addlocation(ev) {
