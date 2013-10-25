@@ -824,7 +824,7 @@ function update_propaccess(tableref, propac, nocopy) {
 
         var buttonsel = $('<div>', { });
         var buttonel = $('<input>', { type:'submit', value:'World' });
-        /*###buttonel.on('click', { tablekey:tableref.tablekey, id:propac.id }, evhan_button_propaccess_set_world);*/
+        buttonel.on('click', { tablekey:tableref.tablekey, id:propac.id }, evhan_button_propaccess_set_world);
         buttonsel.append(buttonel);
         var buttonel = $('<input>', { type:'submit', value:'Duplicate' });
         buttonel.on('click', { tablekey:tableref.tablekey, id:propac.id }, evhan_button_propaccess_duplicate);
@@ -1312,6 +1312,33 @@ function evhan_button_addpropaccess(ev) {
             },
             dataType: 'json'
         });
+}
+
+function evhan_button_propaccess_set_world(ev) {
+    ev.preventDefault();
+    var tablekey = ev.data.tablekey;
+    var id = ev.data.id;
+
+    var tableref = tables[tablekey];
+    if (!tableref)
+        return;
+    var propref = tableref.propacmap[id];
+    if (!propref) {
+        console.log('No such portaccess entry: ' + tablekey + ':' + id);
+    }
+
+    propref.action = 'world';
+    propref.controlel.empty();
+    var selectel = $('<select>', { 'class':'BuildPropListSelect' });
+    selectel.append($('<option>', { value:'' }).text('(select from your collection)'));
+    for (var ix=0; ix<db_selfportals.length; ix++) {
+        var port = db_selfportals[ix];
+        var name = port.worldname+' (by '+port.creatorname+')';
+        selectel.append($('<option>', { value:port.id }).text(name));
+    }
+    propref.controlel.append(selectel);
+
+    prop_set_dirty(tableref, propref, true);
 }
 
 function evhan_button_propaccess_delete(ev) {

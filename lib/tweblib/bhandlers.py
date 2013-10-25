@@ -562,14 +562,31 @@ class BuildPropAccessWorldHandler(BuildBaseHandler):
         # cursor autoclose
         propacls.sort(key=lambda propac:propac['_id']) ### or other criterion?
 
+        
+        # Fetch the player's personal list (for available options in the
+        # build screen).
+        selfportals = []
+        player = yield motor.Op(self.application.mongodb.players.find_one,
+                                {'_id':self.twsession['uid']},
+                                {'plistid':1, 'scid':1})
+        if player and 'plistid' in player:
+            cursor = self.application.mongodb.portals.find({'plistid':player['plistid'], 'iid':None})
+            while (yield cursor.fetch_next):
+                port = cursor.next_object()
+                selfportals.append(port)
+            # cursor autoclose
+        selfportals.sort(key=lambda port:port.get('listpos', 0.0))
+
         encoder = JSONEncoderExtra()
         clientls = yield self.export_propaccess_array(propacls)
         propacarray = encoder.encode(clientls)
+        clientls = yield self.export_portal_array(selfportals)
+        selfportarray = encoder.encode(clientls)
         
         self.render('build_propaccess.html',
                     wid=str(wid), worldname=worldname,
                     locarray=json.dumps(locarray),
-                    propacarray=propacarray,
+                    propacarray=propacarray, selfportarray=selfportarray,
                     withblurb=(len(propacls)==0))
 
 class BuildTrashWorldHandler(BuildBaseHandler):
