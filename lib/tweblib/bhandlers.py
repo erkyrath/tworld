@@ -1240,8 +1240,12 @@ class BuildSetPropAccessHandler(BuildBaseHandler):
                     raise Exception('Invalid key name')
 
                 types = self.get_argument('types')
-                types = [ val.strip() for val in types.split(',') ]
+                # We let the user split by either whitespace or comma.
+                types = types.replace(',', ' ')
+                types = [ val.strip() for val in types.split() ]
                 types = [ val for val in types if val ]
+                if not types:
+                    raise Exception('You must list at least one type.')
                 ### validate
                 
                 fromwid = self.get_argument('fromwid', None)

@@ -1349,6 +1349,7 @@ function evhan_button_propaccess_revert(ev) {
     }
 
     propref.action = null;
+    propref.controlel.empty();
     update_propaccess(tableref, propref.val);
     prop_set_dirty(tableref, propref, false);
     prop_set_warning(tableref, propref, null);
@@ -1401,6 +1402,7 @@ function evhan_button_propaccess_save(ev) {
                 }
                 else {
                     propref.action = null;
+                    propref.controlel.empty();
                     update_propaccess(tableref, data.propac);
                     prop_set_warning(tableref, propref, null);
                     prop_set_dirty(tableref, propref, false);
