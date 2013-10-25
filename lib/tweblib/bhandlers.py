@@ -1205,11 +1205,15 @@ class BuildSetPropAccessHandler(BuildBaseHandler):
 
             action = self.get_argument('action', None)
             propacid = self.get_argument('id', None)
+
+            (world, dummy) = yield self.check_world_arguments(wid, None)
+            if action == 'create':
+                # The create action doesn't require an 'id' argument
+                raise Exception('### create')
+            
             if not propacid:
                 raise Exception('No propaccess declared')
             propacid = ObjectId(propacid)
-
-            (world, dummy) = yield self.check_world_arguments(wid, None)
 
             propac = yield motor.Op(self.application.mongodb.propaccess.find_one,
                                     { '_id':propacid })

@@ -1266,10 +1266,11 @@ function evhan_button_addpropaccess(ev) {
 
     /* No parameters here -- use defaults. */
     msg = { world:pageworldid,
+            action: 'create',
             _xsrf: xsrf_token };
 
     jQuery.ajax({
-            url: '/build/addpropaccess',
+            url: '/build/setpropaccess',
             type: 'POST',
             data: msg,
             success: function(data, status, jqhxr) {
