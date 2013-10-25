@@ -1224,6 +1224,20 @@ class BuildSetPropAccessHandler(BuildBaseHandler):
             if propac['wid'] != wid:
                 raise Exception('Propaccess is not in this world')
 
+            if action == 'duplicate':
+                key = yield self.invent_key('prop', 'propaccess',
+                                            {'wid':wid, 'fromwid':propac['fromwid']})
+                # Invent a new propac, copying details from the given one.
+                propac = { 'wid':wid, 'fromwid':propac['fromwid'],
+                           'key':key, 'types':propac['types'] }
+                propacid = yield motor.Op(self.application.mongodb.propaccess.insert,
+                                          propac)
+                propac['_id'] = propacid
+                returnpropac = yield self.export_propaccess_array([propac])
+                returnpropac = returnpropac[0]
+                self.write( { 'propac':returnpropac } )
+                return
+                
             if action == 'delete':
                 yield motor.Op(self.application.mongodb.propaccess.remove,
                                { '_id':propacid })

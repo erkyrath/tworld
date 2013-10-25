@@ -1340,6 +1340,40 @@ function evhan_button_propaccess_duplicate(ev) {
     var tablekey = ev.data.tablekey;
     var id = ev.data.id;
 
+    var tableref = tables[tablekey];
+    if (!tableref)
+        return;
+    var propref = tableref.propacmap[id];
+    if (!propref) {
+        console.log('No such propaccess entry: ' + tablekey + ':' + id);
+    }
+
+    msg = { world:pageworldid,
+            action: 'duplicate',
+            id: id,
+            _xsrf: xsrf_token };
+
+    jQuery.ajax({
+            url: '/build/setpropaccess',
+            type: 'POST',
+            data: msg,
+            success: function(data, status, jqhxr) {
+                if (data.error) {
+                    console.log('### error: ' + data.error);
+                    return;
+                }
+                var tableref = tables['$propaclist'];
+                if (!tableref) {
+                    console.log('No such table: ' + '$propaclist' + '!');
+                    return;
+                }
+                update_propaccess(tableref, data.propac);
+            },
+            error: function(jqxhr, status, error) {
+                console.log('### ajax failure: ' + status + '; ' + error);
+            },
+            dataType: 'json'
+        });
 }
 
 function evhan_button_propaccess_revert(ev) {
