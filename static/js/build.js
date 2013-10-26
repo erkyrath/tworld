@@ -1333,7 +1333,7 @@ function evhan_button_propaccess_set_world(ev) {
     selectel.append($('<option>', { value:'' }).text('(select from your collection)'));
     for (var ix=0; ix<db_selfportals.length; ix++) {
         var port = db_selfportals[ix];
-        var name = port.worldname+' (by '+port.creatorname+')';
+        var name = port.worldname+' '+NBSP+' (by '+port.creatorname+')';
         selectel.append($('<option>', { value:port.id }).text(name));
     }
     propref.controlel.append(selectel);
@@ -1448,6 +1448,11 @@ function evhan_button_propaccess_save(ev) {
         msg.fromwid = propref.val.fromwid;
         msg.key = jQuery.trim(propref.keyinputel.prop('value'));
         msg.types = jQuery.trim(propref.typeinputel.prop('value'));
+        /* The selected world value. (Actually a selected portal.) */
+        var selel = propref.controlel.find('select');
+        if (selel.length && selel.prop('value')) {
+            msg.fromportal = selel.prop('value');
+        }
     }
 
     jQuery.ajax({

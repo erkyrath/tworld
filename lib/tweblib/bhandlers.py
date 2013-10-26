@@ -1278,11 +1278,22 @@ class BuildSetPropAccessHandler(BuildBaseHandler):
                 if not types:
                     raise Exception('You must list at least one type.')
                 ### validate
-                
-                fromwid = self.get_argument('fromwid', None)
-                if not fromwid:
-                    raise Exception('No world selected')
-                fromwid = ObjectId(fromwid)
+
+                fromportal = self.get_argument('fromportal', None)
+                if fromportal:
+                    # User specified fromwid as a portal.
+                    fromportal = ObjectId(fromportal)
+                    port = yield motor.Op(self.application.mongodb.portals.find_one,
+                                          {'_id':fromportal}, {'wid':1})
+                    if not port:
+                        raise Exception('No such portal')
+                    fromwid = port['wid']
+                else:
+                    # User specified fromwid as an objectid
+                    fromwid = self.get_argument('fromwid', None)
+                    if not fromwid:
+                        raise Exception('No world selected')
+                    fromwid = ObjectId(fromwid)
                 fromworld = yield motor.Op(self.application.mongodb.worlds.find_one,
                                            { '_id':fromwid })
                 if not fromworld:
