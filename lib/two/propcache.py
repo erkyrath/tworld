@@ -312,7 +312,7 @@ def deepcopy(val):
     if isinstance(val, list):
         return [ deepcopy(subval) for subval in val ]
     if isinstance(val, dict):
-        return dict([ (key, deepcopy(subval)) for (key, subval) in val.items() ])
+        return { key:deepcopy(subval) for (key, subval) in val.items() }
     return val
 
 def checkwritable(val):
