@@ -281,7 +281,7 @@ class RemoteRealmProxy(PropertyProxyMixin, object):
         self.scid = scid
         self.iid = iid
         self.perms = perms
-        assert perms.wid == self.wid
+        assert (perms.wid == self.wid)
         self.worldname = worldname
         
     def __repr__(self):

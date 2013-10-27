@@ -1,3 +1,5 @@
+import datetime
+from bson.objectid import ObjectId
 import tornado.gen
 
 ACC_BANNED  = 0
@@ -46,6 +48,24 @@ class RemoteAccessMap:
     in the propaccess table; see the loadentries method.)
     """
 
+    # Maps type(val) references to their standard names. This skips
+    # dict and dict types; those are handled separately.
+    typenamemap = {
+        type(None): 'none',
+        int: 'int',
+        bool: 'bool',
+        float: 'float',
+        list: 'list',
+        str: 'str',
+        ObjectId: 'ObjectId',
+        datetime.datetime: 'datetime',
+        }
+    # All the dict sub-types that we recognize (for the purpose of
+    # remote access).
+    subtypenames = set([ 'text', 'code', 'gentext' ])
+    # All the strings which are valid in a propaccess types list.
+    alltypenameset = subtypenames.union(typenamemap.values()).union(['read'])
+
     def __init__(self, world, fromworld):
         self.wid = world['_id']
         self.fromwid = fromworld['_id']
@@ -55,7 +75,7 @@ class RemoteAccessMap:
             self.keymap = None
         else:
             self.allaccess = False
-            self.keymap = {}
+            self.keymap = {}   # maps key names to permission sets
 
     def __repr__(self):
         return '<RemoteAccessMap for %s from %s>' % (self.wid, self.fromwid)
@@ -75,9 +95,43 @@ class RemoteAccessMap:
                                              {'key':1, 'types':1})
         while (yield cursor.fetch_next):
             ent = cursor.next_object()
-            self.keymap[ent['key']] = ent['types']
+            self.keymap[ent['key']] = set(ent['types'])
         # cursor autoclose
         
         if not self.keymap:
             raise Exception('Cannot access another creator\'s world without permission')
         return
+
+    def canread(self, key):
+        if self.allaccess:
+            return True
+        if 'read' in self.keymap:
+            return True
+        return False
+
+    def canwrite(self, key, val):
+        if self.allaccess:
+            return True
+        typ = type(val)
+        if typ is dict:
+            subtyp = val.get('type', None)
+            if type(subtyp) is str and subtyp in RemoteAccessMap.subtypenames:
+                typname = subtyp
+            else:
+                typname = 'dict'
+        else:
+            typname = RemoteAccessMap.typenamemap.get(typ)
+        if typname in self.keymap:
+            return True
+        return False
+
+    def candelete(self, key):
+        if self.allaccess:
+            return True
+        # We permit delete if there's any write permission at all; that is,
+        # any permission other than 'read'.
+        if len(self.keymap) > 1:
+            return True
+        if len(self.keymap) == 1 and ('read' not in self.keymap):
+            return True
+        return False

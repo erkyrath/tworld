@@ -1277,7 +1277,9 @@ class BuildSetPropAccessHandler(BuildBaseHandler):
                 types = [ val for val in types if val ]
                 if not types:
                     raise Exception('You must list at least one type.')
-                ### validate
+                for val in types:
+                    if val not in twcommon.access.RemoteAccessMap.alltypenameset:
+                        raise Exception('Types must be "read" or a known type (not "%s")' % (val,))
 
                 fromportal = self.get_argument('fromportal', None)
                 if fromportal:
