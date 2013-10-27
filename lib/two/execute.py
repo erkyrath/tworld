@@ -299,6 +299,9 @@ class RemoteRealmProxy(PropertyProxyMixin, object):
         iid = self.iid
         app = ctx.app
         dependencies = ctx.dependencies
+
+        if not self.perms.canread(key):
+            raise Exception('Cannot read this key from foreign world: %s' % (key,))
         
         if iid is not None:
             res = yield app.propcache.get(('instanceprop', iid, None, key),
@@ -323,6 +326,9 @@ class RemoteRealmProxy(PropertyProxyMixin, object):
         iid = self.iid
         app = ctx.app
         
+        if not self.perms.candelete(key):
+            raise Exception('Cannot delete this key from foreign world: %s' % (key,))
+        
         tup = ('instanceprop', iid, None, key)
         yield app.propcache.delete(tup)
         ctx.task.changeset.add(tup)
@@ -335,6 +341,9 @@ class RemoteRealmProxy(PropertyProxyMixin, object):
             raise Exception('Properties may only be set in action code (realm prop "%s")' % (key,))
         iid = self.iid
         app = ctx.app
+        
+        if not self.perms.canwrite(key, val):
+            raise Exception('Cannot write this key value to foreign world: %s %s' % (key, val))
         
         tup = ('instanceprop', iid, None, key)
         yield app.propcache.set(tup, val)
