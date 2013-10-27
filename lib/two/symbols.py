@@ -1065,7 +1065,8 @@ def define_globals():
         ctx = EvalPropContext.get_current_context()
         
         origworld = yield motor.Op(ctx.app.mongodb.worlds.find_one,
-                                   {'_id':ctx.loctx.wid})
+                                   {'_id':ctx.loctx.wid},
+                                   {'creator':1})
         if not origworld:
             raise Exception('worlds.realm: Cannot find current world')
         
@@ -1090,9 +1091,11 @@ def define_globals():
         if not world:
             raise Exception('worlds.realm: No such world')
 
-        if world['creator'] != origworld['creator']:
-            ### Check for cross-creator access permission!
-            raise Exception('worlds.realm: Cannot access another creator\'s world')
+        perms = twcommon.access.RemoteAccessMap(world, origworld)
+        if not perms.allaccess:
+            # This may raise an immediate exception, if we have no access
+            # entries for the given world at all.
+            yield perms.loadentries(ctx.app)
 
         newscid = yield two.execute.portal_resolve_scope(ctx.app, portal, ctx.uid, ctx.loctx.scid, world)
         

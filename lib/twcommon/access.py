@@ -1,3 +1,4 @@
+import tornado.gen
 
 ACC_BANNED  = 0
 ACC_VISITOR = 1
@@ -34,3 +35,49 @@ def level_name_list():
     """
     ls = [ '"'+val.lower()+'"' for (val, dummy) in defs ]
     return ', '.join(ls)
+
+class RemoteAccessMap:
+    """This represents the set of permissions that one world's code
+    ("fromworld") has to another world's data ("world"). The two arguments
+    must be world objects from the DB.
+
+    (Between worlds of the same creator, we allow any access. Between
+    worlds of different creators, the permissions are defined by entries
+    in the propaccess table; see the loadentries method.)
+    """
+
+    def __init__(self, world, fromworld):
+        self.wid = world['_id']
+        self.fromwid = fromworld['_id']
+        
+        if world['creator'] == fromworld['creator']:
+            self.allaccess = True
+            self.keymap = None
+        else:
+            self.allaccess = False
+            self.keymap = {}
+
+    def __repr__(self):
+        return '<RemoteAccessMap for %s from %s>' % (self.wid, self.fromwid)
+
+    @tornado.gen.coroutine
+    def loadentries(self, app):
+        """Load the propaccess entries that are relevant to this map.
+        (Yieldy, since we access the database.) If there are no entries,
+        this immediately raises an exception.
+
+        Only call this if self.allaccess is false.
+        """
+        if self.allaccess:
+            raise Exception('You should not call the loadentries method when the creator matches!')
+        
+        cursor = app.mongodb.propaccess.find({'wid':self.wid, 'fromwid':self.fromwid},
+                                             {'key':1, 'types':1})
+        while (yield cursor.fetch_next):
+            ent = cursor.next_object()
+            self.keymap[ent['key']] = ent['types']
+        # cursor autoclose
+        
+        if not self.keymap:
+            raise Exception('Cannot access another creator\'s world without permission')
+        return
