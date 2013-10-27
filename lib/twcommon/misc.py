@@ -138,7 +138,7 @@ def sluggify(text):
 
 import unittest
 
-class TestInterpModule(unittest.TestCase):
+class TestMiscModule(unittest.TestCase):
 
     def test_genboolparse(self):
         self.assertEqual(gen_bool_parse(''), False)
