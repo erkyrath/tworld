@@ -271,13 +271,17 @@ class RemoteRealmProxy(PropertyProxyMixin, object):
     in symbol.py which accept RealmProxy, but RemoteRealmProxy is only
     good for property access.
 
+    The perms argument should be a RemoteAccessMap which has been loaded
+    up for the given world (and the appropriate access-from world).
     The worldname argument is only for debugging output; it doesn't affect
     functionality.
     """
-    def __init__(self, wid, scid, iid, worldname='???'):
+    def __init__(self, wid, scid, iid, perms, worldname='???'):
         self.wid = wid
         self.scid = scid
         self.iid = iid
+        self.perms = perms
+        assert perms.wid == self.wid
         self.worldname = worldname
         
     def __repr__(self):

@@ -1091,11 +1091,14 @@ def define_globals():
         if not world:
             raise Exception('worlds.realm: No such world')
 
+        # Create an object which represents what we can do to the remote
+        # world.
         perms = twcommon.access.RemoteAccessMap(world, origworld)
         if not perms.allaccess:
             # This may raise an immediate exception, if we have no access
             # entries for the given world at all.
             yield perms.loadentries(ctx.app)
+            ctx.app.log.debug('### perms map: %s', perms.keymap)
 
         newscid = yield two.execute.portal_resolve_scope(ctx.app, portal, ctx.uid, ctx.loctx.scid, world)
         
@@ -1115,7 +1118,7 @@ def define_globals():
             newloctx = two.task.LocContext(None, wid=newwid, scid=newscid, iid=newiid)
             yield two.execute.try_hook(ctx.task, 'on_init', newloctx, 'initing instance (prop-access)')
 
-        return two.execute.RemoteRealmProxy(newwid, newscid, newiid, worldname=world.get('name', '???'))
+        return two.execute.RemoteRealmProxy(newwid, newscid, newiid, perms=perms, worldname=world.get('name', '???'))
         
     @scriptfunc('choice', group='random')
     def global_random_choice(seq):
