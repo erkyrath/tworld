@@ -222,13 +222,16 @@ class PropCache:
 
     def note_changed_entries(self):
         """Check for (mutable) entries whose values have changed.
-        Mark them dirty. Then return the list.
+        Mark them dirty. Then return the list of dep keys.
         (We ignore entries that are already marked dirty, because nothing
         needs to be done there.)
         """
         ls = [ ent for ent in self.propmap.values() if (not ent.dirty) and ent.haschanged() ]
-        for ent in ls:
-            ent.dirty = True
+        if ls:
+            # Yes, this is awkward. Saves us a list-allocate, though.
+            for (ix, ent) in enumerate(ls):
+                ent.dirty = True
+                ls[ix] = ent.tup
         return ls
 
     @tornado.gen.coroutine
