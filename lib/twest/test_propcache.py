@@ -62,7 +62,7 @@ class TestPropcache(twest.mock.MockAppTestCase):
         self.assertEqual(res.val, 1)
         self.assertTrue(res.found)
         self.assertFalse(res.dirty)
-        self.assertFalse(res.isdirty())
+        self.assertFalse(res.haschanged())
         self.assertEqual(res.key, 'x')
         self.assertFalse(res.mutable)
         self.assertTrue(instq('x') in deps)
@@ -77,14 +77,14 @@ class TestPropcache(twest.mock.MockAppTestCase):
         res = cache.propmap[instq('qqq')]
         self.assertFalse(res.found)
         self.assertFalse(res.dirty)
-        self.assertFalse(res.isdirty())
+        self.assertFalse(res.haschanged())
         self.assertEqual(res.key, 'qqq')
         
         res = yield cache.get(instq('ls'), dependencies=deps)
         self.assertEqual(res.val, [1,2,3])
         self.assertTrue(res.found)
         self.assertFalse(res.dirty)
-        self.assertFalse(res.isdirty())
+        self.assertFalse(res.haschanged())
         self.assertEqual(res.key, 'ls')
         self.assertTrue(res.mutable)
         self.assertTrue(instq('ls') in deps)
@@ -97,12 +97,13 @@ class TestPropcache(twest.mock.MockAppTestCase):
         self.assertEqual(res.val, {'one':1, 'two':2, 'three':3})
         self.assertTrue(res.found)
         self.assertFalse(res.dirty)
-        self.assertFalse(res.isdirty())
+        self.assertFalse(res.haschanged())
         self.assertEqual(res.key, 'map')
         self.assertTrue(res.mutable)
         self.assertTrue(instq('map') in deps)
         self.assertTrue(cache.get_by_object(res.val) is res)
 
+        self.assertEqual(cache.note_changed_entries(), [])
         self.assertEqual(cache.dirty_entries(), [])
 
         # Set some values.
@@ -110,7 +111,8 @@ class TestPropcache(twest.mock.MockAppTestCase):
         yield cache.set(instq('y'), 7)
         res = yield cache.get(instq('y'), dependencies=deps)
         self.assertEqual(res.val, 7)
-        self.assertTrue(res.isdirty())
+        self.assertTrue(res.dirty)
+        self.assertFalse(res.haschanged())
         
         res = yield self.get_db_prop(instq('y'))
         self.assertEqual(res, 2)
@@ -118,13 +120,16 @@ class TestPropcache(twest.mock.MockAppTestCase):
         yield cache.set(instq('z'), 3)
         res = yield cache.get(instq('z'), dependencies=deps)
         self.assertEqual(res.val, 3)
-        self.assertTrue(res.isdirty())
+        self.assertTrue(res.dirty)
+        self.assertFalse(res.haschanged())
         
         res = yield self.get_db_prop(instq('z'))
         self.assertEqual(res, NotFound)
 
+        self.assertEqual(cache.note_changed_entries(), [])
         self.assertEqual(len(cache.dirty_entries()), 2)
 
+        self.assertEqual(cache.note_changed_entries(), [])
         yield cache.write_all_dirty()
         self.assertEqual(cache.dirty_entries(), [])
         
@@ -142,6 +147,7 @@ class TestPropcache(twest.mock.MockAppTestCase):
         res = yield cache.get(instq('listtuple'), dependencies=deps)
         self.assertEqual(res.val, (1,2,3))
         
+        self.assertEqual(cache.note_changed_entries(), [])
         yield cache.write_all_dirty()
         self.assertEqual(cache.dirty_entries(), [])
 
@@ -168,8 +174,10 @@ class TestPropcache(twest.mock.MockAppTestCase):
         res = yield self.get_db_prop(instq('map'))
         self.assertEqual(res, {'one':1, 'two':2, 'three':3})
         
+        self.assertEqual(cache.note_changed_entries(), [])
         self.assertEqual(len(cache.dirty_entries()), 3)
 
+        self.assertEqual(cache.note_changed_entries(), [])
         yield cache.write_all_dirty()
         self.assertEqual(cache.dirty_entries(), [])
         
@@ -194,13 +202,13 @@ class TestPropcache(twest.mock.MockAppTestCase):
         instq = lambda key: ('instanceprop', self.exiid, self.exlocid, key)
 
         res = yield cache.get(instq('ls'))
-        self.assertFalse(res.isdirty())
+        self.assertFalse(res.haschanged())
 
         ls = res.val
         ls.append(4)
         
         self.assertFalse(res.dirty)
-        self.assertTrue(res.isdirty())
+        self.assertTrue(res.haschanged())
         
         res2 = yield cache.get(instq('ls'))
         self.assertEqual(res2.val, [1,2,3,4])
@@ -208,8 +216,10 @@ class TestPropcache(twest.mock.MockAppTestCase):
         res = yield self.get_db_prop(instq('ls'))
         self.assertEqual(res, [1,2,3])
 
+        self.assertEqual(len(cache.note_changed_entries()), 1)
         self.assertEqual(len(cache.dirty_entries()), 1)
 
+        self.assertEqual(cache.note_changed_entries(), [])
         yield cache.write_all_dirty()
         self.assertEqual(cache.dirty_entries(), [])
         
@@ -227,8 +237,10 @@ class TestPropcache(twest.mock.MockAppTestCase):
         map['zero'] = 'ZERO'
 
         self.assertTrue(cache.get_by_object(map) is res)
+        self.assertEqual(len(cache.note_changed_entries()), 2)
         self.assertEqual(len(cache.dirty_entries()), 2)
 
+        self.assertEqual(cache.note_changed_entries(), [])
         yield cache.write_all_dirty()
         self.assertEqual(cache.dirty_entries(), [])
         
@@ -246,8 +258,10 @@ class TestPropcache(twest.mock.MockAppTestCase):
         yield cache.set(instq('map'), {'tt':33})
         map['tt'] = 55
 
+        self.assertEqual(cache.note_changed_entries(), []) ####
         self.assertEqual(len(cache.dirty_entries()), 1)
 
+        self.assertEqual(cache.note_changed_entries(), [])
         yield cache.write_all_dirty()
         self.assertEqual(cache.dirty_entries(), [])
         
@@ -281,6 +295,7 @@ class TestPropcache(twest.mock.MockAppTestCase):
         
         self.assertTrue(cache.get_by_object(True) is None)
 
+        self.assertEqual(cache.note_changed_entries(), [])
         yield cache.write_all_dirty()
         self.assertEqual(cache.dirty_entries(), [])
 
@@ -297,6 +312,7 @@ class TestPropcache(twest.mock.MockAppTestCase):
         yield cache.delete(instq('xxx'))
         yield cache.delete(instq('yyy'))
         
+        self.assertEqual(cache.note_changed_entries(), [])
         yield cache.write_all_dirty()
         self.assertEqual(cache.dirty_entries(), [])
 
@@ -320,6 +336,7 @@ class TestPropcache(twest.mock.MockAppTestCase):
         
         ls.insert(0, -1)
         
+        self.assertEqual(cache.note_changed_entries(), [])
         yield cache.write_all_dirty()
         self.assertEqual(cache.dirty_entries(), [])
 
@@ -336,6 +353,7 @@ class TestPropcache(twest.mock.MockAppTestCase):
 
         map['one'] = 1
         
+        self.assertEqual(cache.note_changed_entries(), [])
         yield cache.write_all_dirty()
         self.assertEqual(cache.dirty_entries(), [])
 

@@ -129,6 +129,10 @@ class Task(object):
         assert self.is_writable(), 'set_data_change: Task was never set writable'
         self.changeset.add(key)
         
+    def set_data_changes(self, keylist):
+        assert self.is_writable(), 'set_data_changes: Task was never set writable'
+        self.changeset.update(keylist)
+        
     def set_dirty(self, ls, dirty):
         # ls may be a PlayerConnection, a uid (an ObjectId), or a list
         # of either. Or None.

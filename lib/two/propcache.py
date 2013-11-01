@@ -216,16 +216,34 @@ class PropCache:
         return None
 
     def dirty_entries(self):
-        return [ ent for ent in self.propmap.values() if ent.isdirty() ]
+        """Return a list of entries that are marked dirty.
+        """
+        return [ ent for ent in self.propmap.values() if ent.dirty ]
+
+    def note_changed_entries(self):
+        """Check for (mutable) entries whose values have changed.
+        Mark them dirty. Then return the list.
+        (We ignore entries that are already marked dirty, because nothing
+        needs to be done there.)
+        """
+        ls = [ ent for ent in self.propmap.values() if (not ent.dirty) and ent.haschanged() ]
+        for ent in ls:
+            ent.dirty = True
+        return ls
 
     @tornado.gen.coroutine
     def write_all_dirty(self):
+        """Write back all dirty entries. Be sure to call note_changed_entries()
+        first.
+        """
         ls = self.dirty_entries()
         for ent in ls:
             yield self.resolve_dirty(ent)
 
     @tornado.gen.coroutine
     def resolve_dirty(self, ent):
+        """Write back (or delete) a single dirty entry. Then mark it clean.
+        """
         dbname = ent.tup[0]
         if dbname not in writable_collections:
             # Maybe we should update the equivalent writable entry here,
@@ -286,19 +304,23 @@ class PropEntry:
             val = repr(self.val)
             if len(val) > 32:
                 val = val[:32] + '...'
-        isdirty = 'DIRTY:' if self.isdirty() else ''
+        if self.dirty:
+            isdirty = 'DIRTY:'
+        elif self.haschanged():
+            isdirty = 'CHANGED:'
+        else:
+            isdirty = ''
         return '<PropEntry %s%s: %s>' % (isdirty, self.tup, val)
 
-    def isdirty(self):
+    def haschanged(self):
         """Has this value changed since we cached it?
-        (Always true if we created this entry for a set/delete.)
+        (This catches changes in mutable entries, not entries that
+        are brand-new.)
         
         ### This will fail to detect changes that compare equal. That is,
         ### if an array [1] changes to [1.0], this will not notice the
         ### difference.
         """
-        if self.dirty:
-            return True
         if self.mutable and (self.val != self.origval):
             return True
 

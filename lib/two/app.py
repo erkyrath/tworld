@@ -208,6 +208,10 @@ class Tworld(object):
         # in a separate try block, so that if the command died partway,
         # we still display the partial effects.
         if task.is_writable():
+            mutations = self.propcache.note_changed_entries()
+            if mutations:
+                self.log.debug('### mutations: %s', mutations)
+                task.set_data_changes(mutations)
             try:
                 task.resetticks()
                 yield task.resolve()
