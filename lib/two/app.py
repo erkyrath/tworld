@@ -210,7 +210,6 @@ class Tworld(object):
         if task.is_writable():
             mutations = self.propcache.note_changed_entries()
             if mutations:
-                self.log.debug('### mutations: %s', mutations)
                 task.set_data_changes(mutations)
             try:
                 task.resetticks()
