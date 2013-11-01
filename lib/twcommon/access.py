@@ -64,7 +64,8 @@ class RemoteAccessMap:
     # remote access).
     subtypenames = set([ 'text', 'code', 'gentext' ])
     # All the strings which are valid in a propaccess types list.
-    alltypenameset = subtypenames.union(typenamemap.values()).union(['read'])
+    ### Do we also want an 'exec' permission, to call code in the target world's context?
+    alltypenameset = subtypenames.union(typenamemap.values()).union(['dict', 'read'])
 
     def __init__(self, world, fromworld):
         self.wid = world['_id']
@@ -105,23 +106,30 @@ class RemoteAccessMap:
     def canread(self, key):
         if self.allaccess:
             return True
-        if 'read' in self.keymap:
+        set = self.keymap.get(key, None)
+        if set and 'read' in set:
             return True
         return False
 
     def canwrite(self, key, val):
         if self.allaccess:
             return True
+        set = self.keymap.get(key, None)
+        if not set:
+            return False
         typ = type(val)
         if typ is dict:
             subtyp = val.get('type', None)
-            if type(subtyp) is str and subtyp in RemoteAccessMap.subtypenames:
-                typname = subtyp
+            if type(subtyp) is str:
+                if subtyp in RemoteAccessMap.subtypenames:
+                    typname = subtyp
+                else:
+                    typname = 'otherdict'
             else:
                 typname = 'dict'
         else:
             typname = RemoteAccessMap.typenamemap.get(typ)
-        if typname in self.keymap:
+        if typname in set:
             return True
         return False
 
@@ -130,8 +138,11 @@ class RemoteAccessMap:
             return True
         # We permit delete if there's any write permission at all; that is,
         # any permission other than 'read'.
-        if len(self.keymap) > 1:
+        set = self.keymap.get(key, None)
+        if not set:
+            return False
+        if len(set) > 1:
             return True
-        if len(self.keymap) == 1 and ('read' not in self.keymap):
+        if len(set) == 1 and ('read' not in set):
             return True
         return False

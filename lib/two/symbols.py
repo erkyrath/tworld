@@ -1098,7 +1098,6 @@ def define_globals():
             # This may raise an immediate exception, if we have no access
             # entries for the given world at all.
             yield perms.loadentries(ctx.app)
-            ctx.app.log.debug('### perms map: %s', perms.keymap)
 
         newscid = yield two.execute.portal_resolve_scope(ctx.app, portal, ctx.uid, ctx.loctx.scid, world)
         

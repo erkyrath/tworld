@@ -307,13 +307,21 @@ class RemoteRealmProxy(PropertyProxyMixin, object):
             res = yield app.propcache.get(('instanceprop', iid, None, key),
                                           dependencies=dependencies)
             if res:
-                return res.val
+                val = res.val
+                if isinstance(val, (list, dict)):
+                    if not self.perms.canwrite(key, val):
+                        val = two.propcache.deepcopy(val)
+                return val
     
         if True:
             res = yield app.propcache.get(('worldprop', wid, None, key),
                                           dependencies=dependencies)
             if res:
-                return res.val
+                val = res.val
+                if isinstance(val, (list, dict)):
+                    if not self.perms.canwrite(key, val):
+                        val = two.propcache.deepcopy(val)
+                return val
 
         raise AttributeError('Realm property "%s" is not found' % (key,))
         
@@ -343,7 +351,7 @@ class RemoteRealmProxy(PropertyProxyMixin, object):
         app = ctx.app
         
         if not self.perms.canwrite(key, val):
-            raise Exception('Cannot write this key value to foreign world: %s %s' % (key, val))
+            raise Exception('Cannot write this key value to foreign world: %s=%s' % (key, repr(val)))
         
         tup = ('instanceprop', iid, None, key)
         yield app.propcache.set(tup, val)
@@ -1524,3 +1532,4 @@ from two.evalctx import EVALTYPE_SYMBOL, EVALTYPE_RAW, EVALTYPE_CODE, EVALTYPE_T
 from two.evalctx import LEVEL_EXECUTE, LEVEL_DISPSPECIAL, LEVEL_DISPLAY, LEVEL_MESSAGE, LEVEL_FLAT, LEVEL_RAW
 from twcommon.access import ACC_VISITOR, ACC_FOUNDER
 import two.symbols
+import two.propcache
