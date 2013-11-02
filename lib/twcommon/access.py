@@ -51,7 +51,7 @@ class RemoteAccessMap:
     # Maps type(val) references to their standard names. This skips
     # dict and dict types; those are handled separately.
     typenamemap = {
-        type(None): 'none',
+        type(None): 'NoneType',
         int: 'int',
         bool: 'bool',
         float: 'float',
