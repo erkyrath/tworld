@@ -269,8 +269,29 @@ def define_commands():
 
         app.log.info('checkdisconnected: %d players in world, %d are disconnected', inworld, len(ls))
         ### Keep a two-strikes list, so that players are knocked out after some minimum interval
+        
         for uid in ls:
             app.queue_command({'cmd':'tovoid', 'uid':uid, 'portin':False})
+
+        # Second task: construct a list of guest accounts which are marked
+        # in-use, but are disconnected.
+        ls = []
+        cursor = app.mongodb.players.find({'guest':True, 'guestsession':{'$ne':None}},
+                                          {'name':1, 'guestsession':1})
+        while (yield cursor.fetch_next):
+            player = cursor.next_object()
+            conncount = app.playconns.count_for_uid(player['_id'])
+            if not conncount:
+                ls.append(player)
+        # cursor autoclose
+        ### Keep a two-strikes list here too?
+        for player in ls:
+            app.log.info('checkdisconnected: guest %s will be disconnected from session %s', player['name'], player['guestsession'].decode())
+            yield motor.Op(app.mongodb.sessions.remove,
+                           {'sid':player['guestsession']})
+            yield motor.Op(app.mongodb.players.update,
+                           {'_id':player['_id']},
+                           {'$set':{'guestsession':None}})
 
     @command('tovoid', isserver=True, doeswrite=True)
     def cmd_tovoid(app, task, cmd, stream):
