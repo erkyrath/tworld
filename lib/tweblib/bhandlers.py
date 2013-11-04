@@ -58,6 +58,7 @@ class NoBuildHandler(tweblib.handlers.MyRequestHandler):
         self.twisadmin = res.get('admin', False)
         self.twisbuild = (self.twisadmin or res.get('build', False))
         self.twisaskbuild = res.get('askbuild', False)
+        self.twisguest = res.get('guest', False)
         
     @tornado.gen.coroutine
     def get(self):
@@ -65,7 +66,8 @@ class NoBuildHandler(tweblib.handlers.MyRequestHandler):
         self.render('nobuild.html',
                     formerror=formerror,
                     isbuild=self.twisbuild,
-                    askbuild=self.twisaskbuild)
+                    askbuild=self.twisaskbuild,
+                    isguest=self.twisguest)
         
     @tornado.gen.coroutine
     def post(self):
@@ -85,7 +87,8 @@ class NoBuildHandler(tweblib.handlers.MyRequestHandler):
         self.render('nobuild.html',
                     formerror=formerror,
                     isbuild=self.twisbuild,
-                    askbuild=self.twisaskbuild)
+                    askbuild=self.twisaskbuild,
+                    isguest=self.twisguest)
 
 class BuildBaseHandler(tweblib.handlers.MyRequestHandler):
     """Base class for the handlers for build pages. This has some common
