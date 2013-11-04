@@ -334,13 +334,32 @@ class SessionMgr(object):
         except Exception as ex:
             self.app.twlog.error('Error creating guest\'s first portal: %s', ex)
         
-        
         # Clear out instance properties associated with the start world. This
         # should maybe be in a site-specific hook; it presumes that the
         # start world has tutorial-like features built on instance props.
-        ####
+        res = yield motor.Op(self.app.mongodb.config.find_one,
+                             {'key':'startworldid'})
+        startinstance = yield motor.Op(self.app.mongodb.instances.find_one,
+                                       {'wid':res['val'], 'scid':player['scid']})
+        if startinstance:
+            yield motor.Op(self.app.mongodb.instanceprop.remove,
+                           { 'iid': startinstance['_id'] })
 
-        raise MessageException('### create_session_guest')
+        # Finally, create the session entry.
+        now = twcommon.misc.now()
+        sess = {
+            'sid': sessionid,
+            'uid': uid,
+            'email': player['email'],
+            'name': player['name'],
+            'ipaddr': handler.request.remote_ip,
+            'starttime': now,
+            'refreshtime': now,
+            'guest': True,
+            }
+
+        res = yield motor.Op(self.app.mongodb.sessions.insert, sess)
+        return (sessionid, player['email'])
         
     @tornado.gen.coroutine
     def find_session(self, handler):
