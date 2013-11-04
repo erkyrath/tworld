@@ -201,42 +201,45 @@ class SessionMgr(object):
 
         # Create the first entry for the portlist.
         try:
-            res = yield motor.Op(self.app.mongodb.config.find_one, {'key':'firstportal'})
-            firstportal = None
-            if res:
-                firstportal = res['val']
-            if not firstportal:
-                res = yield motor.Op(self.app.mongodb.config.find_one, {'key':'startworldid'})
-                portwid = res['val']
-                res = yield motor.Op(self.app.mongodb.config.find_one, {'key':'startworldloc'})
-                portlockey = res['val']
-                res = yield motor.Op(self.app.mongodb.locations.find_one, {'wid':portwid, 'key':portlockey})
-                portlocid = res['_id']
-                portscid = scid  # from above
-            else:
-                portwid = firstportal['wid']
-                portlocid = firstportal['locid']
-                portscid = firstportal['scid']
-                if portscid == 'global':
-                    res = yield motor.Op(self.app.mongodb.config.find_one, {'key':'globalscopeid'})
-                    portscid = res['val']
-                elif portscid == 'personal':
-                    portscid = scid  # from above
-            if not (portwid and portscid and portlocid):
-                raise Exception('Unable to define portal')
-
-            portal = {
-                'plistid':plistid, 'iid':None, 'listpos':1.0,
-                'wid':portwid, 'scid':portscid, 'locid':portlocid,
-                }
-            yield motor.Op(self.app.mongodb.portals.insert, portal)
-            
+            yield self.create_starting_portal(plistid, scid)
         except Exception as ex:
             self.app.twlog.error('Error creating player\'s first portal: %s', ex)
         
         # Create a sign-in session too, and we're done.
         sessionid = yield tornado.gen.Task(self.create_session, handler, uid, email, name)
         return sessionid
+
+    @tornado.gen.coroutine
+    def create_starting_portal(self, plistid, scid):
+        res = yield motor.Op(self.app.mongodb.config.find_one, {'key':'firstportal'})
+        firstportal = None
+        if res:
+            firstportal = res['val']
+        if not firstportal:
+            res = yield motor.Op(self.app.mongodb.config.find_one, {'key':'startworldid'})
+            portwid = res['val']
+            res = yield motor.Op(self.app.mongodb.config.find_one, {'key':'startworldloc'})
+            portlockey = res['val']
+            res = yield motor.Op(self.app.mongodb.locations.find_one, {'wid':portwid, 'key':portlockey})
+            portlocid = res['_id']
+            portscid = scid
+        else:
+            portwid = firstportal['wid']
+            portlocid = firstportal['locid']
+            portscid = firstportal['scid']
+            if portscid == 'global':
+                res = yield motor.Op(self.app.mongodb.config.find_one, {'key':'globalscopeid'})
+                portscid = res['val']
+            elif portscid == 'personal':
+                portscid = scid
+        if not (portwid and portscid and portlocid):
+            raise Exception('Unable to define portal')
+
+        portal = {
+            'plistid':plistid, 'iid':None, 'listpos':1.0,
+            'wid':portwid, 'scid':portscid, 'locid':portlocid,
+            }
+        yield motor.Op(self.app.mongodb.portals.insert, portal)
     
     @tornado.gen.coroutine
     def change_password(self, uid, password):
@@ -300,7 +303,38 @@ class SessionMgr(object):
         yield motor.Op(cursor.close)
         if not player:
             raise MessageException('All guest accounts are busy right now! You can still register a permanent account.')
+        uid = player['_id']
         self.app.twlog.debug('### Found guest account: %s', player)
+
+        # Generate a random sessionid.
+        sessionid = self.random_bytes(24)
+        handler.set_secure_cookie('sessionid', sessionid, expires_days=10)
+
+        # Mark the guest account as in-use, and clear out its associated
+        # data. (Including desc and pronoun.)
+        playerfields = yield motor.Op(self.app.mongodb.config.find_one, {'key':'playerfields'})
+        if not playerfields:
+            raise Exception('No playerfields data found for guest!')
+        playerfields = playerfields['val']
+        playerfields['build'] = False
+        playerfields['askbuild'] = False
+        playerfields['guestsession'] = sessionid
+
+        yield motor.Op(self.app.mongodb.players.update,
+                       { '_id': uid },
+                       { '$set': playerfields})
+
+        # Clear out the player's personal portlist, and add back the starting
+        # portal.
+        yield motor.Op(self.app.mongodb.portals.remove,
+                       { 'plistid': player['plistid'] })
+        
+        
+        # Clear out instance properties associated with the start world. This
+        # should maybe be in a site-specific hook; it presumes that the
+        # start world has tutorial-like features built on instance props.
+        ####
+
         raise MessageException('### create_session_guest')
         
     @tornado.gen.coroutine
