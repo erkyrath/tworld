@@ -54,10 +54,18 @@ Javascript, but you will not be able to play.)
  </div>
 <form method="post" action="/">
  {% module xsrf_form_html() %}
+ <input type="hidden" name="guest" value="true">
+ <div class="FormSection">
+  <input class="FormButton" name="guest" type="submit" value="Sign in as a guest">
+  &nbsp; ...if you just want to look around.
+ </div>
+</form>
+<form method="post" action="/">
+ {% module xsrf_form_html() %}
  <input type="hidden" name="register" value="true">
  <div class="FormSection">
   <input class="FormButton" name="register" type="submit" value="Register new account">
-  &nbsp; ...if this is your first visit.
+  &nbsp; ...if you plan to return.
  </div>
 </form>
 </div>
