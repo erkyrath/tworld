@@ -297,9 +297,28 @@ class MainHandler(MyRequestHandler):
     @tornado.gen.coroutine
     def post(self):
 
-        # If the "register" form was submitted, jump to the other page.
+        # If this flag is set, logins are restricted to administrators.
+        locked = yield self.get_config_key('nologin')
+        
+        # If the "register" form was submitted, jump to the player-
+        # registration page.
         if (self.get_argument('register', None)):
             self.redirect('/register')
+            return
+
+        # If the "guest login" form was submitted, create a guest session
+        # and play.
+        if (self.get_argument('guest', None)):
+            try:
+                if locked:
+                    raise MessageException('Sign-ins are not allowed at this time.')
+                (res, email) = yield self.application.twsessionmgr.create_session_guest(self)
+            except MessageException as ex:
+                formerror = str(ex)
+                self.render('main.html', formerror=formerror)
+                return
+            self.application.twlog.info('Player signed in as guest: %s (session %s)', email, res)
+            self.redirect('/play')
             return
 
         # Apply canonicalizations to the name and password.
@@ -309,8 +328,6 @@ class MainHandler(MyRequestHandler):
         password = self.get_argument('password', '')
         password = unicodedata.normalize('NFKC', password)
         password = password.encode()  # to UTF8 bytes
-        
-        locked = yield self.get_config_key('nologin')
         
         formerror = None
         if (not name):

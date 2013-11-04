@@ -177,6 +177,8 @@ db.sessions.create_index('sid', unique=True)
 db.players.create_index('email', unique=True)
 db.players.create_index('name', unique=True)
 db.players.create_index('namekey')
+# Sparse index
+db.players.create_index('guest', sparse=True)
 
 # Compound index
 db.playstate.create_index([('iid', pymongo.ASCENDING), ('locid', pymongo.ASCENDING)])

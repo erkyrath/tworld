@@ -256,8 +256,8 @@ class SessionMgr(object):
     @tornado.gen.coroutine
     def create_session(self, handler, uid, email, name):
         """
-        Create a session from the request parameters. Return it (as
-        a dict, with _id).
+        Create a session from the request parameters. Return the session
+        id.
         """
         if (not self.app.mongodb):
             raise MessageException('Database not available')
@@ -280,6 +280,14 @@ class SessionMgr(object):
         res = yield motor.Op(self.app.mongodb.sessions.insert, sess)
         return sessionid
 
+    @tornado.gen.coroutine
+    def create_session_guest(self, handler):
+        """
+        Create a guest session. Return the session id and email address,
+        or raise an exception.
+        """
+        raise MessageException('### create_session_guest')
+        
     @tornado.gen.coroutine
     def find_session(self, handler):
         """
