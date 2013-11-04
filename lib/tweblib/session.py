@@ -286,6 +286,21 @@ class SessionMgr(object):
         Create a guest session. Return the session id and email address,
         or raise an exception.
         """
+        # Find the first guest account which is not in use.
+        player = None
+        cursor = self.app.mongodb.players.find({'guest':True},
+                                               sort=[('_id', 1)])
+        while (yield cursor.fetch_next):
+            res = cursor.next_object()
+            if res.get('guestsession', None):
+                # This one is busy.
+                continue
+            player = res
+            break
+        yield motor.Op(cursor.close)
+        if not player:
+            raise MessageException('All guest accounts are busy right now! You can still register a permanent account.')
+        self.app.twlog.debug('### Found guest account: %s', player)
         raise MessageException('### create_session_guest')
         
     @tornado.gen.coroutine
