@@ -328,6 +328,11 @@ class SessionMgr(object):
         # portal.
         yield motor.Op(self.app.mongodb.portals.remove,
                        { 'plistid': player['plistid'] })
+        # Create the first entry for the portlist.
+        try:
+            yield self.create_starting_portal(player['plistid'], player['scid'])
+        except Exception as ex:
+            self.app.twlog.error('Error creating guest\'s first portal: %s', ex)
         
         
         # Clear out instance properties associated with the start world. This
