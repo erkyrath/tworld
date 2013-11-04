@@ -933,9 +933,8 @@ def define_commands():
         newval = ' '.join(cmd.args[1:])
         try:
             newval = ast.literal_eval(newval)
-            # We test-encode the new value to bson, so that we can be strict
-            # and catch errors.
-            dummy = bson.BSON.encode({'val':newval}, check_keys=True)
+            # Make sure the new value is a db-writable object.
+            two.propcache.checkwritable(newval)
         except Exception as ex:
             raise ErrorMessageException('Invalid property value: %s (%s)' % (newval, ex))
         playstate = yield motor.Op(app.mongodb.playstate.find_one,
