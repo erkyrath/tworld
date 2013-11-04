@@ -868,6 +868,42 @@ def define_globals():
         # Could set up a pronoun dependency here.
         return res['pronoun']
         
+    @scriptfunc('builder', group='players', yieldy=True)
+    def global_players_builder(player=None):
+        ctx = EvalPropContext.get_current_context()
+        if player is None:
+            if not ctx.uid:
+                raise Exception('No current player')
+            uid = ctx.uid
+        elif isinstance(player, two.execute.PlayerProxy):
+            uid = player.uid
+        else:
+            raise TypeError('players.builder: must be player or None')
+        res = yield motor.Op(ctx.app.mongodb.players.find_one,
+                             {'_id':uid},
+                             {'build':1})
+        if not res:
+            raise Exception('No such player')
+        return res.get('build', False)
+
+    @scriptfunc('isguest', group='players', yieldy=True)
+    def global_players_isguest(player=None):
+        ctx = EvalPropContext.get_current_context()
+        if player is None:
+            if not ctx.uid:
+                raise Exception('No current player')
+            uid = ctx.uid
+        elif isinstance(player, two.execute.PlayerProxy):
+            uid = player.uid
+        else:
+            raise TypeError('players.isguest: must be player or None')
+        res = yield motor.Op(ctx.app.mongodb.players.find_one,
+                             {'_id':uid},
+                             {'guest':1})
+        if not res:
+            raise Exception('No such player')
+        return res.get('guest', False)
+
     @scriptfunc('ishere', group='players', yieldy=True)
     def global_players_ishere(player=None):
         ctx = EvalPropContext.get_current_context()
