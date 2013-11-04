@@ -327,20 +327,29 @@ class PropEntry:
         if self.mutable and (self.val != self.origval):
             return True
 
-def deepcopy(val):
+def deepcopy(val, depth=0):
     """Return a copy of a value. For immutable values, this returns the
     value itself. For mutables, it returns a deep copy.
 
     This presumes that the value is DB-storable. Therefore, the only
     mutable types are list and dict. (And dict keys are always strings.)
+
+    We include a guard against loopy data structures. These raise
+    TypeError.
     """
     if isinstance(val, list):
-        return [ deepcopy(subval) for subval in val ]
+        if depth >= 8:
+            raise TypeError('Database object cannot be recursive')
+        newdepth = depth+1
+        return [ deepcopy(subval, depth=newdepth) for subval in val ]
     if isinstance(val, dict):
-        return { key:deepcopy(subval) for (key, subval) in val.items() }
+        if depth >= 8:
+            raise TypeError('Database object cannot be recursive')
+        newdepth = depth+1
+        return { key:deepcopy(subval, depth=newdepth) for (key, subval) in val.items() }
     return val
 
-def checkwritable(val):
+def checkwritable(val, depth=0):
     """Check whether a value is valid for writing to the database.
     If it is, returns nothing. If not, raises TypeError.
     
@@ -355,9 +364,11 @@ def checkwritable(val):
         return
     if isinstance(val, (bool, int, float, str, bytes, ObjectId, datetime.datetime)):
         return
+    if depth >= 8:
+        raise TypeError('Database object cannot be recursive')
     if isinstance(val, (list, tuple)):
         for subval in val:
-            checkwritable(subval)
+            checkwritable(subval, depth=depth+1)
         return
     if isinstance(val, dict):
         for (key, subval) in val.items():
@@ -367,6 +378,6 @@ def checkwritable(val):
                 raise TypeError('Database dict keys must not contain period: %s' % (key,))
             if key.startswith('$'):
                 raise TypeError('Database dict keys must not start with dollar: %s' % (key,))
-            checkwritable(subval)
+            checkwritable(subval, depth=depth+1)
         return
     raise TypeError('Not a database type: %s' % (val,))

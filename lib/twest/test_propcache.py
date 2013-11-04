@@ -402,6 +402,17 @@ class TestCheckWritable(unittest.TestCase):
             checkwritable({'x.y':1})
         with self.assertRaises(TypeError):
             checkwritable({'$x':1})
+
+        loopobj = []
+        loopobj.append(loopobj)
+        with self.assertRaises(TypeError):
+            checkwritable(loopobj)
+            
+        loopobj = {}
+        loopobj['key'] = loopobj
+        with self.assertRaises(TypeError):
+            checkwritable(loopobj)
+            
             
 class TestDeepCopy(unittest.TestCase):
     def test_deepcopy(self):
@@ -441,3 +452,14 @@ class TestDeepCopy(unittest.TestCase):
         self.assertEqual(val[2], res[2])
         self.assertFalse(val[2]['z'] is res[2]['z'])
         self.assertEqual(val[2]['z'], res[2]['z'])
+
+        loopobj = []
+        loopobj.append(loopobj)
+        with self.assertRaises(TypeError):
+            deepcopy(loopobj)
+            
+        loopobj = {}
+        loopobj['key'] = loopobj
+        with self.assertRaises(TypeError):
+            deepcopy(loopobj)
+
