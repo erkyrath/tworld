@@ -517,6 +517,8 @@ class RecoverHandler(MyRequestHandler):
         try:
             if not res:
                 raise MessageException('There is no such player.')
+            if res.get('guest', None):
+                raise MessageException('The guest account password cannot be changed.')
        
             uid = res['_id']
             email = res['email']
@@ -770,6 +772,8 @@ class AccountHandler(MyRequestHandler):
                     formerror = 'Your current password does not match what you entered.'
                 elif res['_id'] != self.twsession['uid']:
                     formerror = 'Your account ID did not match.'
+                elif res.get('guest', None):
+                    formerror = 'The guest account password cannot be changed.'
             except MessageException as ex:
                 formerror = str(ex)
             
