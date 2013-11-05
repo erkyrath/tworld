@@ -3,7 +3,7 @@ body {
   bottom: 0px;
   width: 100%;
   margin: 0px;
-  background: #AAA;
+  background: #FFFFF4;
 }
 
 #header {
@@ -60,19 +60,18 @@ body {
   padding: 6px 12px;
 }
 
+.BodyClass #main {
+  padding-top: 80px;
+}
+
 #main {
-  position: absolute;
   width: 100%;
-  top: 80px;
-  bottom: 0px;
   margin: 0px;
   background: #FFFFF4;
 }
 
 #submain {
-  position: relative;
   max-width: 900px;
-  height: 100%;
   margin: 0px auto;
 
   font-family: Palatino, Georgia, serif;
@@ -86,7 +85,11 @@ body {
 }
 
 #localepane > :first-child {
-  margin-top: 1em;
+  margin-top: 20px;
+}
+
+.BodyClass #localepane {
+  margin-bottom: 40px;
 }
 
 #localepane p {
