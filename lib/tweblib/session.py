@@ -304,7 +304,6 @@ class SessionMgr(object):
         if not player:
             raise MessageException('All guest accounts are busy right now! You can still register a permanent account.')
         uid = player['_id']
-        self.app.twlog.debug('### Found guest account: %s', player)
 
         # Generate a random sessionid.
         sessionid = self.random_bytes(24)
