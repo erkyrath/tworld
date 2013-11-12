@@ -855,9 +855,11 @@ class PlayHandler(MyRequestHandler):
                 uiprefs[pref['key']] = pref['val']
             # cursor autoclose
         # We could use the client preferred language here.
+        usessl = (self.request.protocol == 'https')
         localize = self.application.twlocalize.all()
         self.render('play.html',
                     uiprefs=json.dumps(uiprefs),
+                    usessl=usessl,
                     localize=json.dumps(localize))
         
 class TopPageHandler(MyRequestHandler):

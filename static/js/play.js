@@ -219,8 +219,8 @@ function setup_event_handlers() {
 
 function open_websocket() {
     try {
-        var url = 'ws://' + window.location.host + '/websocket';
-        //console.log('### creating websocket ' + url);
+        var url = (use_ssl ? 'wss://' : 'ws://') + window.location.host + '/websocket';
+        console.log('Creating websocket: ' + url);
         websocket = new WebSocket(url);
     }
     catch (ex) {

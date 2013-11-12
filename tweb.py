@@ -78,6 +78,19 @@ tornado.options.define(
     help='log file to write to (default is stdout)')
 
 tornado.options.define(
+    'ssl_port', type=int, default=4003,
+    help='port number to listen on for https connections')
+tornado.options.define(
+    'ssl_cert_path', type=str, default=None,
+    help='path to SSL cert file')
+tornado.options.define(
+    'ssl_key_path', type=str, default=None,
+    help='path to SSL key file')
+tornado.options.define(
+    'ssl_key_password', type=str, default=None,
+    help='passphrase for SSL key file (default is no passphrase)')
+
+tornado.options.define(
     'tworld_port', type=int, default=4001,
     help='port number for communication between tweb and tworld')
 
@@ -108,6 +121,17 @@ if opts.log_file_tweb:
 else:
     logconf['stream'] = sys.stdout
 logging.basicConfig(**logconf)
+
+
+# Set up the SSL configuration.
+sslcontext = None
+if opts.ssl_port:
+    import ssl  # only import if needed
+    if (not opts.ssl_cert_path) or (not opts.ssl_key_path):
+        logging.getLogger("tornado.general").error('Must supply both ssl_cert_path and ssl_key_path')
+    sslcontext = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+    sslcontext.load_cert_chain(opts.ssl_cert_path, opts.ssl_key_path, password=opts.ssl_key_password)
+    logging.getLogger("tornado.general").info('SSL is configured.')
 
 
 # Now that we have a python_path, we can import the tworld-specific modules.
@@ -418,4 +442,6 @@ if opts.debug:
 
 application.init_tworld()
 application.listen(opts.port)
+if sslcontext:
+    application.listen(opts.ssl_port, ssl_options=sslcontext) ### sslport
 tornado.ioloop.IOLoop.instance().start()
