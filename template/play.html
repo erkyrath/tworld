@@ -19,6 +19,10 @@ var db_uiprefs = {% raw uiprefs %};
 /* Localization table, pulled from the localize collection. */
 var db_localize = {% raw localize %};
 
+/* Is this page on an https URL? (We need to know this to determine whether
+   to run the websocket on an wss URL.) */
+var use_ssl = {% if usessl %} true {% else %} false {% end %};
+
 /* All the base fonts that are available in the font preference menu.
    The default entry must describe the CSS font-family for #submain. */
 var template_base_fonts = [
