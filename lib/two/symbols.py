@@ -270,9 +270,9 @@ def define_globals():
             return isinstance(object, dict) and object.get('type', None) == 'code'
         if typ is global_text:
             return isinstance(object, dict) and object.get('type', None) == 'text'
-        if typ is global_gentext_gentext:
+        if typ is gentext_gentext:
             return isinstance(object, dict) and object.get('type', None) == 'gentext'
-        if typ is global_datetime_datetime:
+        if typ is datetime_datetime:
             return isinstance(object, datetime.datetime)
         return isinstance(object, typ)
 
@@ -712,7 +712,7 @@ def define_globals():
         return two.execute.LocationProxy(locid)
 
     @scriptfunc('gentext', group='gentext')
-    def global_gentext_gentext(object=''):
+    def gentext_gentext(object=''):
         """Wrap a string as a {gentext} object.
         """
         if twcommon.misc.is_typed_dict(object, 'gentext'):
@@ -725,7 +725,7 @@ def define_globals():
         return res
 
     @scriptfunc('display', group='gentext', yieldy=True)
-    def global_gentext_display(obj, cooked=None, seed=None):
+    def gentext_display(obj, cooked=None, seed=None):
         ctx = EvalPropContext.get_current_context()
         origseed = ctx.genseed
         if seed is not None:
@@ -746,52 +746,52 @@ def define_globals():
             ctx.genseed = origseed
             
     @scriptfunc('A', group='gentext')
-    def global_gentext_a():
+    def gentext_a():
         ctx = EvalPropContext.get_current_context()
         ctx.accum_append(twcommon.gentext.ANode())
     
     @scriptfunc('An', group='gentext')
-    def global_gentext_an():
+    def gentext_an():
         ctx = EvalPropContext.get_current_context()
         ctx.accum_append(twcommon.gentext.ANode())
     
     @scriptfunc('AForm', group='gentext')
-    def global_gentext_aform():
+    def gentext_aform():
         ctx = EvalPropContext.get_current_context()
         ctx.accum_append(twcommon.gentext.AFormNode())
     
     @scriptfunc('AnForm', group='gentext')
-    def global_gentext_anform():
+    def gentext_anform():
         ctx = EvalPropContext.get_current_context()
         ctx.accum_append(twcommon.gentext.AnFormNode())
     
     @scriptfunc('RunOn', group='gentext')
-    def global_gentext_runon():
+    def gentext_runon():
         ctx = EvalPropContext.get_current_context()
         ctx.accum_append(twcommon.gentext.RunOnExplicitNode())
     
     @scriptfunc('Para', group='gentext')
-    def global_gentext_para():
+    def gentext_para():
         ctx = EvalPropContext.get_current_context()
         ctx.accum_append(twcommon.gentext.ParaNode())
     
     @scriptfunc('Stop', group='gentext')
-    def global_gentext_stop():
+    def gentext_stop():
         ctx = EvalPropContext.get_current_context()
         ctx.accum_append(twcommon.gentext.StopNode())
     
     @scriptfunc('Semi', group='gentext')
-    def global_gentext_semi():
+    def gentext_semi():
         ctx = EvalPropContext.get_current_context()
         ctx.accum_append(twcommon.gentext.SemiNode())
     
     @scriptfunc('Comma', group='gentext')
-    def global_gentext_comma():
+    def gentext_comma():
         ctx = EvalPropContext.get_current_context()
         ctx.accum_append(twcommon.gentext.CommaNode())
     
     @scriptfunc('datetime', group='datetime')
-    def global_datetime_datetime(year, month, day, **kwargs):
+    def datetime_datetime(year, month, day, **kwargs):
         """The native datetime constructor, except that tzinfo is always
         UTC.
         """
@@ -799,7 +799,7 @@ def define_globals():
         return datetime.datetime(year, month, day, **kwargs)
         
     @scriptfunc('now', group='datetime_propmap')
-    def global_datetime_now():
+    def datetime_now():
         """Return the current task's start time.
         This goes in a propmap group, meaning that the user will invoke
         it as a property object: "_.now", no parens.
@@ -808,7 +808,7 @@ def define_globals():
         return ctx.task.starttime
 
     @scriptfunc('player', group='players', yieldy=True)
-    def global_players_player(player=None):
+    def players_player(player=None):
         """Create or find a PlayerProxy.
         - No argument: the current player
         - ObjectId argument: the player with the given identifier
@@ -832,7 +832,7 @@ def define_globals():
             raise TypeError('players.player: must be player, ObjectId, or None')
         
     @scriptfunc('name', group='players', yieldy=True)
-    def global_players_name(player=None):
+    def players_name(player=None):
         ctx = EvalPropContext.get_current_context()
         if player is None:
             if not ctx.uid:
@@ -850,7 +850,7 @@ def define_globals():
         return res.get('name', '???')
 
     @scriptfunc('pronoun', group='players', yieldy=True)
-    def global_players_pronoun(player=None):
+    def players_pronoun(player=None):
         ctx = EvalPropContext.get_current_context()
         if player is None:
             if not ctx.uid:
@@ -869,7 +869,7 @@ def define_globals():
         return res['pronoun']
         
     @scriptfunc('builder', group='players', yieldy=True)
-    def global_players_builder(player=None):
+    def players_builder(player=None):
         ctx = EvalPropContext.get_current_context()
         if player is None:
             if not ctx.uid:
@@ -887,7 +887,7 @@ def define_globals():
         return res.get('build', False)
 
     @scriptfunc('isguest', group='players', yieldy=True)
-    def global_players_isguest(player=None):
+    def players_isguest(player=None):
         ctx = EvalPropContext.get_current_context()
         if player is None:
             if not ctx.uid:
@@ -905,7 +905,7 @@ def define_globals():
         return res.get('guest', False)
 
     @scriptfunc('ishere', group='players', yieldy=True)
-    def global_players_ishere(player=None):
+    def players_ishere(player=None):
         ctx = EvalPropContext.get_current_context()
         if player is None:
             if not ctx.uid:
@@ -926,7 +926,7 @@ def define_globals():
             return False
 
     @scriptfunc('focus', group='players', yieldy=True)
-    def global_players_focus(player=None):
+    def players_focus(player=None):
         ctx = EvalPropContext.get_current_context()
         if player is None:
             if not ctx.uid:
@@ -944,7 +944,7 @@ def define_globals():
         return res.get('focus', None)
         
     @scriptfunc('count', group='players', yieldy=True)
-    def global_players_count(loc):
+    def players_count(loc):
         """Number of players in a location or the instance.
         """
         ctx = EvalPropContext.get_current_context()
@@ -969,7 +969,7 @@ def define_globals():
         return res
 
     @scriptfunc('list', group='players', yieldy=True)
-    def global_players_list(loc):
+    def players_list(loc):
         """List of players in a location or the instance.
         """
         ctx = EvalPropContext.get_current_context()
@@ -997,7 +997,7 @@ def define_globals():
         return res
 
     @scriptfunc('resolve', group='pronoun', yieldy=True)
-    def global_pronoun_resolve(pronoun, player=None):
+    def pronoun_resolve(pronoun, player=None):
         ctx = EvalPropContext.get_current_context()
         if player is None:
             if not ctx.uid:
@@ -1016,88 +1016,88 @@ def define_globals():
         return two.grammar.resolve_pronoun(res, pronoun)
         
     @scriptfunc('We', group='pronoun', yieldy=True)
-    def global_pronoun_We(player=None):
-        res = yield global_pronoun_resolve.yieldfunc('We', player)
+    def pronoun_We(player=None):
+        res = yield pronoun_resolve.yieldfunc('We', player)
         return res
     @scriptfunc('we', group='pronoun', yieldy=True)
-    def global_pronoun_we(player=None):
-        res = yield global_pronoun_resolve.yieldfunc('we', player)
+    def pronoun_we(player=None):
+        res = yield pronoun_resolve.yieldfunc('we', player)
         return res
     @scriptfunc('Us', group='pronoun', yieldy=True)
-    def global_pronoun_Us(player=None):
-        res = yield global_pronoun_resolve.yieldfunc('Us', player)
+    def pronoun_Us(player=None):
+        res = yield pronoun_resolve.yieldfunc('Us', player)
         return res
     @scriptfunc('us', group='pronoun', yieldy=True)
-    def global_pronoun_us(player=None):
-        res = yield global_pronoun_resolve.yieldfunc('us', player)
+    def pronoun_us(player=None):
+        res = yield pronoun_resolve.yieldfunc('us', player)
         return res
     @scriptfunc('Our', group='pronoun', yieldy=True)
-    def global_pronoun_Our(player=None):
-        res = yield global_pronoun_resolve.yieldfunc('Our', player)
+    def pronoun_Our(player=None):
+        res = yield pronoun_resolve.yieldfunc('Our', player)
         return res
     @scriptfunc('our', group='pronoun', yieldy=True)
-    def global_pronoun_our(player=None):
-        res = yield global_pronoun_resolve.yieldfunc('our', player)
+    def pronoun_our(player=None):
+        res = yield pronoun_resolve.yieldfunc('our', player)
         return res
     @scriptfunc('Ours', group='pronoun', yieldy=True)
-    def global_pronoun_Ours(player=None):
-        res = yield global_pronoun_resolve.yieldfunc('Ours', player)
+    def pronoun_Ours(player=None):
+        res = yield pronoun_resolve.yieldfunc('Ours', player)
         return res
     @scriptfunc('ours', group='pronoun', yieldy=True)
-    def global_pronoun_ours(player=None):
-        res = yield global_pronoun_resolve.yieldfunc('ours', player)
+    def pronoun_ours(player=None):
+        res = yield pronoun_resolve.yieldfunc('ours', player)
         return res
     @scriptfunc('Ourself', group='pronoun', yieldy=True)
-    def global_pronoun_Ourself(player=None):
-        res = yield global_pronoun_resolve.yieldfunc('Ourself', player)
+    def pronoun_Ourself(player=None):
+        res = yield pronoun_resolve.yieldfunc('Ourself', player)
         return res
     @scriptfunc('ourself', group='pronoun', yieldy=True)
-    def global_pronoun_ourself(player=None):
-        res = yield global_pronoun_resolve.yieldfunc('ourself', player)
+    def pronoun_ourself(player=None):
+        res = yield pronoun_resolve.yieldfunc('ourself', player)
         return res
     @scriptfunc('They', group='pronoun', yieldy=True)
-    def global_pronoun_They(player=None):
-        res = yield global_pronoun_resolve.yieldfunc('We', player)
+    def pronoun_They(player=None):
+        res = yield pronoun_resolve.yieldfunc('We', player)
         return res
     @scriptfunc('they', group='pronoun', yieldy=True)
-    def global_pronoun_they(player=None):
-        res = yield global_pronoun_resolve.yieldfunc('we', player)
+    def pronoun_they(player=None):
+        res = yield pronoun_resolve.yieldfunc('we', player)
         return res
     @scriptfunc('Them', group='pronoun', yieldy=True)
-    def global_pronoun_Them(player=None):
-        res = yield global_pronoun_resolve.yieldfunc('Us', player)
+    def pronoun_Them(player=None):
+        res = yield pronoun_resolve.yieldfunc('Us', player)
         return res
     @scriptfunc('them', group='pronoun', yieldy=True)
-    def global_pronoun_them(player=None):
-        res = yield global_pronoun_resolve.yieldfunc('us', player)
+    def pronoun_them(player=None):
+        res = yield pronoun_resolve.yieldfunc('us', player)
         return res
     @scriptfunc('Their', group='pronoun', yieldy=True)
-    def global_pronoun_Their(player=None):
-        res = yield global_pronoun_resolve.yieldfunc('Our', player)
+    def pronoun_Their(player=None):
+        res = yield pronoun_resolve.yieldfunc('Our', player)
         return res
     @scriptfunc('their', group='pronoun', yieldy=True)
-    def global_pronoun_their(player=None):
-        res = yield global_pronoun_resolve.yieldfunc('our', player)
+    def pronoun_their(player=None):
+        res = yield pronoun_resolve.yieldfunc('our', player)
         return res
     @scriptfunc('Theirs', group='pronoun', yieldy=True)
-    def global_pronoun_Theirs(player=None):
-        res = yield global_pronoun_resolve.yieldfunc('Ours', player)
+    def pronoun_Theirs(player=None):
+        res = yield pronoun_resolve.yieldfunc('Ours', player)
         return res
     @scriptfunc('theirs', group='pronoun', yieldy=True)
-    def global_pronoun_theirs(player=None):
-        res = yield global_pronoun_resolve.yieldfunc('ours', player)
+    def pronoun_theirs(player=None):
+        res = yield pronoun_resolve.yieldfunc('ours', player)
         return res
     @scriptfunc('Themself', group='pronoun', yieldy=True)
-    def global_pronoun_Themself(player=None):
-        res = yield global_pronoun_resolve.yieldfunc('Ourself', player)
+    def pronoun_Themself(player=None):
+        res = yield pronoun_resolve.yieldfunc('Ourself', player)
         return res
     @scriptfunc('themself', group='pronoun', yieldy=True)
-    def global_pronoun_themself(player=None):
-        res = yield global_pronoun_resolve.yieldfunc('ourself', player)
+    def pronoun_themself(player=None):
+        res = yield pronoun_resolve.yieldfunc('ourself', player)
         return res
     
     @scriptfunc('realm', group='worlds', yieldy=True)
-    def global_worlds_realm(key, index=0):
+    def worlds_realm(key, index=0):
         ctx = EvalPropContext.get_current_context()
         
         origworld = yield motor.Op(ctx.app.mongodb.worlds.find_one,
@@ -1156,26 +1156,26 @@ def define_globals():
         return two.execute.RemoteRealmProxy(newwid, newscid, newiid, perms=perms, worldname=world.get('name', '???'))
         
     @scriptfunc('choice', group='random')
-    def global_random_choice(seq):
+    def random_choice(seq):
         """Choose a random member of a list.
         """
         return random.choice(seq)
 
     @scriptfunc('randint', group='random')
-    def global_random_randint(a, b):
+    def random_randint(a, b):
         """Return a random integer in range [a, b], including both end
         points.
         """
         return random.randint(a, b)
 
     @scriptfunc('randrange', group='random')
-    def global_random_randrange(start, stop=None, step=1):
+    def random_randrange(start, stop=None, step=1):
         """Return a random integer from range(start, stop[, step]).
         """
         return random.randrange(start, stop=stop, step=1)
     
     @scriptfunc('level', group='access', yieldy=True)
-    def global_access_level(player=None, level=None):
+    def access_level(player=None, level=None):
         """Return the access level of the given player (or the current player)
         in the given scope.
         If level is given, returns whether this access level is at least
