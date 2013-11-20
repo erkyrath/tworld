@@ -429,7 +429,10 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         self.assertEqual(res, self.exlocid)
         res = yield ctx.eval('functools.partial(location)(None)', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, self.exlocid)
-        
+
+        with self.assertRaises(TypeError):
+            res = yield ctx.eval('functools.partial(foo)()', locals={'foo':open}, evaltype=EVALTYPE_CODE)
+
         
 from two.evalctx import LEVEL_EXECUTE, LEVEL_DISPSPECIAL, LEVEL_DISPLAY, LEVEL_MESSAGE, LEVEL_FLAT, LEVEL_RAW
 from two.evalctx import EVALTYPE_SYMBOL, EVALTYPE_RAW, EVALTYPE_CODE, EVALTYPE_TEXT
