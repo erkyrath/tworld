@@ -889,7 +889,39 @@ class EvalPropContext(object):
             # Python semantics say we should reject duplicate kwargs here
             kwargs.update(starargs)
             
-        if isinstance(funcval, two.symbols.ScriptFunc):
+        if isinstance(funcval, two.symbols.ScriptCallable):
+            if not funcval.yieldy:
+                return funcval.func(*args, **kwargs)
+            else:
+                res = yield funcval.yieldfunc(*args, **kwargs)
+                return res
+        if funcval and twcommon.misc.is_typed_dict(funcval, 'code'):
+            # {code} dicts are considered callable by courtesy.
+            argspec = funcval.get('args', None)
+            if not argspec:
+                locals = None
+                if args or kwargs:
+                    raise TypeError('code property does not take arguments, but was given %d' % (len(args)+len(kwargs),))
+            else:
+                argspec = parse_argument_spec(argspec)
+                yield self.replace_argspec_defaults(argspec)
+                locals = resolve_argument_spec(argspec, args, kwargs)
+            val = funcval.get('text', None)
+            if not val:
+                return None
+            newval = yield self.evalobj(val, evaltype=EVALTYPE_CODE, locals=locals)
+            return newval
+        if not two.symbols.type_callable(funcval):
+            raise TypeError('%s is not callable' % (type(funcval).__name__))
+        return funcval(*args, **kwargs)
+    
+    @tornado.gen.coroutine
+    def exec_call_object(self, funcval, args, kwargs):
+        # This is the object-calling code above, broken out into a separate
+        # function. Some built-in functions need this.
+        # (We could factor out the above code into a call here, but I
+        # begrudge the minuscule speed cost.)
+        if isinstance(funcval, two.symbols.ScriptCallable):
             if not funcval.yieldy:
                 return funcval.func(*args, **kwargs)
             else:

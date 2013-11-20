@@ -54,7 +54,7 @@ class ScriptNamespace(object):
         """
         if key in self.propmap:
             funcval = self.propmap[key]
-            if isinstance(funcval, ScriptFunc):
+            if isinstance(funcval, ScriptCallable):
                 if not funcval.yieldy:
                     return funcval.func()
                 else:
@@ -73,7 +73,7 @@ class ScriptNamespace(object):
         """
         if key in self.propmap:
             funcval = self.propmap[key]
-            if isinstance(funcval, ScriptFunc):
+            if isinstance(funcval, ScriptCallable):
                 if not funcval.yieldy:
                     return (funcval.func(), False)
                 else:
@@ -84,7 +84,49 @@ class ScriptNamespace(object):
     def has(self, key):
         return (key in self.map) or (key in self.propmap)
 
-class ScriptFunc:
+class ScriptCallable:
+    """Base class for objects callable in the script environment.
+    These generally wrap some native Python callable.
+
+    A ScriptCallable must supply a func (if self.yieldy is False)
+    or a yieldfunc (if self.yieldy is True).
+    """
+    yieldy = False
+
+    def func(self):
+        raise NotImplementedError('ScriptCallable: func')
+    @tornado.gen.coroutine
+    def yieldfunc(self):
+        raise NotImplementedError('ScriptCallable: yieldfunc')
+
+class ScriptPartialFunc(ScriptCallable):
+    """The script equivalent of functools.partial.
+    """
+    def __init__(self, func, args, keywords):
+        self.yieldy = True
+        self.val = func
+        self.args = args
+        self.keywords = keywords
+
+    def __repr__(self):
+        argls = [ str(self.val) ] + [ str(val) for val in self.args ] + [ ('%s=%s' % (key, str(val))) for (key, val) in self.keywords.items() ]
+        argls = ', '.join(argls)
+        return '<ScriptPartialFunc %s>' % (argls,)
+    
+    @tornado.gen.coroutine
+    def yieldfunc(self, *newargs, **newkeywords):
+        args = self.args + newargs
+        kwargs = self.keywords.copy()
+        kwargs.update(newkeywords)
+        ctx = EvalPropContext.get_current_context()
+        res = yield ctx.exec_call_object(self.val, args, kwargs)
+        return res
+
+class ScriptFunc(ScriptCallable):
+    """One of the callable objects that exists in the global namespace.
+    These are always safe to call, because we set them up at init time.
+    """
+    
     # As functions are defined with the @scriptfunc decorator, they are
     # stuffed into a dict in this master dict.
     funcgroups = {}
@@ -1174,6 +1216,13 @@ def define_globals():
         """
         return random.randrange(start, stop=stop, step=1)
     
+    @scriptfunc('partial', group='functools')
+    def functools_partial(func, *args, **keywords):
+        """Return a partial function application. The func must be a
+        {code} object or other callable.
+        """
+        return ScriptPartialFunc(func, args, keywords)
+    
     @scriptfunc('level', group='access', yieldy=True)
     def access_level(player=None, level=None):
         """Return the access level of the given player (or the current player)
@@ -1222,6 +1271,9 @@ def define_globals():
     map = dict(ScriptFunc.funcgroups['pronoun'])
     globmap['pronoun'] = ScriptNamespace(map)
 
+    map = dict(ScriptFunc.funcgroups['functools'])
+    globmap['functools'] = ScriptNamespace(map)
+    
     map = dict(ScriptFunc.funcgroups['access'])
     # Add in all the access level names (as uppercase symbols)
     map.update(twcommon.access.map)

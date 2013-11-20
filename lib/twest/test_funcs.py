@@ -385,6 +385,51 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         res = yield ctx.eval('datetime.timedelta().resolution', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, datetime.timedelta().resolution)
         
+    @tornado.testing.gen_test
+    def test_partial(self):
+        yield self.resetTables()
+        
+        task = two.task.Task(self.app, None, 1, 2, twcommon.misc.now())
+        task.set_writable()
+        ctx = EvalPropContext(task, loctx=self.loctx, level=LEVEL_EXECUTE)
+
+        res = yield ctx.eval('functools.partial(int)()', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 0)
+        res = yield ctx.eval('functools.partial(int, "10")()', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 10)
+        res = yield ctx.eval('functools.partial(int)("11")', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 11)
+        res = yield ctx.eval('functools.partial(int, "10", 4)()', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 4)
+        res = yield ctx.eval('functools.partial(int)("11", 4)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 5)
+        res = yield ctx.eval('functools.partial(int, "12")(4)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 6)
+        res = yield ctx.eval('functools.partial(int, "10", base=5)()', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 5)
+        res = yield ctx.eval('functools.partial(int)("11", base=5)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 6)
+        res = yield ctx.eval('functools.partial(int, "12")(base=5)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 7)
+        
+        res = yield ctx.eval('propint = code("int(x, base=base)", args="x, base=None")', evaltype=EVALTYPE_CODE)
+        res = yield ctx.eval('functools.partial(propint, "10", base=6)()', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 6)
+        res = yield ctx.eval('functools.partial(propint)("11", base=6)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 7)
+        res = yield ctx.eval('functools.partial(propint, "12")(base=6)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, 8)
+
+        res = yield ctx.eval('functools.partial(ObjectId, "528d3862689e9d17a7a96473")()', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, ObjectId('528d3862689e9d17a7a96473'))
+        res = yield ctx.eval('functools.partial(ObjectId)("528d3862689e9d17a7a96474")', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, ObjectId('528d3862689e9d17a7a96474'))
+        
+        res = yield ctx.eval('functools.partial(location)()', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, self.exlocid)
+        res = yield ctx.eval('functools.partial(location)(None)', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, self.exlocid)
+        
         
 from two.evalctx import LEVEL_EXECUTE, LEVEL_DISPSPECIAL, LEVEL_DISPLAY, LEVEL_MESSAGE, LEVEL_FLAT, LEVEL_RAW
 from two.evalctx import EVALTYPE_SYMBOL, EVALTYPE_RAW, EVALTYPE_CODE, EVALTYPE_TEXT
