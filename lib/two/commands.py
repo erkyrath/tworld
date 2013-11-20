@@ -343,14 +343,20 @@ def define_commands():
                                   {'_id':iid})
         loctx = two.task.LocContext(None, wid=instance['wid'], scid=instance['scid'], iid=iid)
         func = cmd.func
-        if twcommon.misc.is_typed_dict(func, 'code'):
+        locals = None
+        if isinstance(func, two.symbols.ScriptCallable):
+            # This is a cheesy way to handle callables. But it works.
+            locals = { '_timerarg': func }
+            func = { 'type':'code', 'text':'_timerarg()' }
+            functype = EVALTYPE_RAW
+        elif func and twcommon.misc.is_typed_dict(func, 'code'):
             functype = EVALTYPE_RAW
         else:
             func = str(func)
             functype = EVALTYPE_CODE
         ctx = two.evalctx.EvalPropContext(task, loctx=loctx, level=LEVEL_EXECUTE)
         try:
-            yield ctx.eval(func, evaltype=functype)
+            yield ctx.eval(func, evaltype=functype, locals=locals)
         except Exception as ex:
             task.log.warning('Caught exception (timer event): %s', ex, exc_info=app.debugstacktraces)
         
@@ -1211,6 +1217,7 @@ def define_commands():
 import two.execute
 import two.evalctx
 import two.task
+import two.symbols
 from two.evalctx import LEVEL_EXECUTE
 from two.evalctx import EVALTYPE_RAW, EVALTYPE_CODE
 from two.task import DIRTY_ALL, DIRTY_WORLD, DIRTY_LOCALE, DIRTY_POPULACE, DIRTY_FOCUS, DIRTY_TOOL

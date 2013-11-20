@@ -109,7 +109,7 @@ class ScriptPartialFunc(ScriptCallable):
         self.keywords = keywords
 
     def __repr__(self):
-        argls = [ str(self.val) ] + [ str(val) for val in self.args ] + [ ('%s=%s' % (key, str(val))) for (key, val) in self.keywords.items() ]
+        argls = [ str(self.val) ] + [ repr(val) for val in self.args ] + [ ('%s=%s' % (key, repr(val))) for (key, val) in self.keywords.items() ]
         argls = ', '.join(argls)
         return '<ScriptPartialFunc %s>' % (argls,)
     
