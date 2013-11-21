@@ -1249,7 +1249,20 @@ def define_globals():
         If key is {code} or a callable, it is applied to each list element
         to produce a sorting key. If reverse is True, the order is reversed.
         """
-        return '#### list_sort(%s, %s, %s)' % (ls, key, reverse)
+        if key is None:
+            # The simple case (no code called, non-yieldy)
+            list.sort(ls, reverse=reverse)
+            return
+        # The code-calling case is ugly and not very efficient. Too bad.
+        ctx = EvalPropContext.get_current_context()
+        tmpls = []
+        nokwargs = {}
+        for val in ls:
+            kval = yield ctx.exec_call_object(key, (val,), nokwargs)
+            tmpls.append( (kval, val) )
+        list.sort(tmpls, key=lambda tup:tup[0], reverse=reverse)
+        ls[:] = [ tup[1] for tup in tmpls ]
+        return
     
     # Copy the collection of top-level functions.
     globmap = dict(ScriptFunc.funcgroups['_'])

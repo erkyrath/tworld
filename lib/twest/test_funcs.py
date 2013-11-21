@@ -194,11 +194,31 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         self.assertEqual(res, [1,3])
         res = yield ctx.eval('_ls=[3,2,1]\n_ls.reverse();_ls', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, [1,2,3])
-        
-        with self.assertRaises(twcommon.excepts.ExecSandboxException):
-            res = yield ctx.eval('list.sort', evaltype=EVALTYPE_CODE)
-        with self.assertRaises(twcommon.excepts.ExecSandboxException):
-            res = yield ctx.eval('[].sort', evaltype=EVALTYPE_CODE)
+
+        res = yield ctx.eval('_ls=[3,1,2]\n_ls.sort();_ls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [1,2,3])
+        res = yield ctx.eval('_ls=[3,1,2]\nlist.sort(_ls);_ls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [1,2,3])
+        res = yield ctx.eval('_ls=[3,1,2]\n_ls.sort(reverse=True);_ls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [3,2,1])
+        res = yield ctx.eval('_ls=[3,1,2]\nlist.sort(_ls,reverse=True);_ls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [3,2,1])
+        res = yield ctx.eval('_ls=[-1,2,-3,4]\n_ls.sort(key=str);_ls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [-1,-3,2,4])
+        res = yield ctx.eval('_ls=[-1,2,-3,4]\nlist.sort(_ls,key=str);_ls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [-1,-3,2,4])
+        res = yield ctx.eval('_ls=[-1,2,-3,4]\n_ls.sort(key=str,reverse=True);_ls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [4,2,-3,-1])
+        res = yield ctx.eval('_ls=[-1,2,-3,4]\nlist.sort(_ls,key=str,reverse=True);_ls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [4,2,-3,-1])
+        res = yield ctx.eval('_ls=[-1,-3,2,4]\n_func=code("x*x",args="x")\n_ls.sort(key=_func);_ls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [-1,2,-3,4])
+        res = yield ctx.eval('_ls=[-1,-3,2,4]\n_func=code("x*x",args="x")\nlist.sort(_ls,key=_func);_ls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [-1,2,-3,4])
+        res = yield ctx.eval('_ls=[-1,-3,2,4]\n_func=code("x*x",args="x")\n_ls.sort(key=_func,reverse=True);_ls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [4,-3,2,-1])
+        res = yield ctx.eval('_ls=[-1,-3,2,4]\n_func=code("x*x",args="x")\nlist.sort(_ls,key=_func,reverse=True);_ls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, [4,-3,2,-1])
         
     @tornado.testing.gen_test
     def test_type_methods_dict(self):
