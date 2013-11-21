@@ -7,8 +7,6 @@ import tornado.gen
 from bson.objectid import ObjectId
 import motor
 
-from twcommon.excepts import SymbolError
-
 class ScriptNamespace(object):
     """A container for user-accessible items in a script. This is basically
     a script-safe equivalent of a module.
@@ -1244,6 +1242,14 @@ def define_globals():
             return acclevel
         else:
             return (acclevel >= level)
+        
+    @scriptfunc('list_sort', group='builtinmethods', yieldy=True)
+    def functools_list_sort(ls, key=None, reverse=False):
+        """Wrapper for list.sort(). Sorts the list in place.
+        If key is {code} or a callable, it is applied to each list element
+        to produce a sorting key. If reverse is True, the order is reversed.
+        """
+        return '#### list_sort(%s, %s, %s)' % (ls, key, reverse)
     
     # Copy the collection of top-level functions.
     globmap = dict(ScriptFunc.funcgroups['_'])
@@ -1291,6 +1297,9 @@ def define_globals():
     propmap = dict(ScriptFunc.funcgroups['datetime_propmap'])
     globmap['datetime'] = ScriptNamespace(map, propmap)
 
+    map = dict(ScriptFunc.funcgroups['builtinmethods'])
+    globmap['builtinmethods'] = ScriptNamespace(map)
+    
     # And a few entries that are generated each time they're fetched.
     propmap = dict(ScriptFunc.funcgroups['_propmap'])
 
@@ -1312,26 +1321,45 @@ callable_ok_set = frozenset([
 # Condensing the above for fast access: the set of id()s of valid callables.
 callable_ok_idset = frozenset({ id(val) for val in callable_ok_set })
 
+# Is this type (the type of built-in methods) named in the standard library?
+# It's not types.BuiltinMethodType, annoyingly.
 MethodDescriptorType = type(str.lower)
 
 # Table of what attributes can be read from what types. Used by
-# type_getattr_allowed().
+# type_getattr_perform().
 #
-# Some type methods are omitted because they invoke arbitrary code without
-# Tworld limitations. For example, list.sort(key=foo) will invoke foo as
-# a Python function. If foo were somehow evil (a native infinite loop),
-# it would hang the interpreter. Contrariwise, if foo were a valid {code}
-# object, it would fail. We want to avoid both of these outcomes.
+# Some type methods are omitted, or wrapped, because they invoke
+# arbitrary code without Tworld limitations. For example,
+# list.sort(key=foo) will invoke foo as a Python function. If foo were
+# somehow evil (a native infinite loop), it would hang the
+# interpreter. Contrariwise, if foo were a valid {code} object, it
+# would fail. We want to avoid both of these outcomes.
 #
-# (We might someday add code to return a usable Tworld wrapper for
-# list.sort.)
+# Therefore, the table contains True for unfettered access (can both
+# get and call the native method). False or a missing entry means no
+# access is allowed. A string means that the getattr returns a
+# ScriptFunction wrapper, from the builtinmethods namespace.
 #
+def type_getattr_construct(ls, **kwargs):
+    """Utility to build a type_getattr_table entry. Used only at module
+    load time.
+    """
+    map = dict.fromkeys(ls, True)
+    map.update(kwargs)
+    return map
+    
 type_getattr_table = {
-    datetime.timedelta: frozenset(['days', 'max', 'microseconds', 'min', 'resolution', 'seconds', 'total_seconds']),
-    datetime.datetime: frozenset(['min', 'max', 'resolution', 'year', 'month', 'day', 'hour', 'minute', 'second', 'microsecond']),
-    str: frozenset(['capitalize', 'casefold', 'center', 'count', 'endswith', 'find', 'index', 'isalnum', 'isalpha', 'isdecimal', 'isdigit', 'isidentifier', 'islower', 'isnumeric', 'isprintable', 'isspace', 'istitle', 'isupper', 'join', 'ljust', 'lower', 'lstrip', 'partition', 'replace', 'rfind', 'rindex', 'rjust', 'rpartition', 'rsplit', 'rstrip', 'split', 'splitlines', 'startswith', 'strip', 'swapcase', 'title', 'upper', 'zfill']),  # omitted for callness: 'format', 'format_map'
-    list: frozenset(['append', 'clear', 'copy', 'count', 'extend', 'index', 'insert', 'pop', 'remove', 'reverse']),  # omitted for callness: 'sort'
-    dict: frozenset(['clear', 'copy', 'fromkeys', 'get', 'items', 'keys', 'pop', 'popitem', 'setdefault', 'update', 'values']),
+    datetime.timedelta: type_getattr_construct(
+        ['days', 'max', 'microseconds', 'min', 'resolution', 'seconds', 'total_seconds']),
+    datetime.datetime: type_getattr_construct(
+        ['min', 'max', 'resolution', 'year', 'month', 'day', 'hour', 'minute', 'second', 'microsecond']),
+    str: type_getattr_construct(
+        ['capitalize', 'casefold', 'center', 'count', 'endswith', 'find', 'index', 'isalnum', 'isalpha', 'isdecimal', 'isdigit', 'isidentifier', 'islower', 'isnumeric', 'isprintable', 'isspace', 'istitle', 'isupper', 'join', 'ljust', 'lower', 'lstrip', 'partition', 'replace', 'rfind', 'rindex', 'rjust', 'rpartition', 'rsplit', 'rstrip', 'split', 'splitlines', 'startswith', 'strip', 'swapcase', 'title', 'upper', 'zfill']),  # omitted for callness: 'format', 'format_map'
+    list: type_getattr_construct(
+        ['append', 'clear', 'copy', 'count', 'extend', 'index', 'insert', 'pop', 'remove', 'reverse'],
+        sort='list_sort'),
+    dict: type_getattr_construct(
+        ['clear', 'copy', 'fromkeys', 'get', 'items', 'keys', 'pop', 'popitem', 'setdefault', 'update', 'values']),
     }
 
 # Condensing the above for fast access: the set of id()s of valid types.
@@ -1342,6 +1370,10 @@ def type_callable(val):
     rely on Python's callable() here; we want to exclude file() and other
     dangerous objects. In fact we want to have a list of *safe* objects
     and exclude everything else.
+    
+    (This only applies to native Python objects, functions, classes, and
+    methods. Script constructs like ScriptCallable and {code} are accepted
+    earlier.)
     """
     if id(val) in callable_ok_idset:
         return True
@@ -1355,33 +1387,45 @@ def type_callable(val):
         res = type_getattr_table.get(basetyp, None)
         if not res:
             return False
-        if val.__name__ not in res:
-            return False
-        return True
+        flag = res.get(val.__name__, False)
+        if flag is True:
+            return True
+        # reject string entries
+        return False
     if typ is MethodDescriptorType:
         res = type_getattr_table.get(val.__objclass__, None)
         if not res:
             return False
-        if val.__name__ not in res:
-            return False
-        return True
+        flag = res.get(val.__name__, False)
+        if flag is True:
+            return True
+        # reject string entries
+        return False
     return False
 
-def type_getattr_allowed(val, key):
-    """Given an object, what attributes do we permit script code to read?
+def type_getattr_perform(app, val, key):
+    """Implement getattr(val, key) with safety checks.
     This is important because unfettered access to foo.__dict__, for
     example, would be catastrophic.
     """
-    if id(val) in type_getattr_idset:
+    isbase = (id(val) in type_getattr_idset)
+    if isbase:
         typ = val
     else:
         typ = type(val)
     res = type_getattr_table.get(typ, None)
     if not res:
-        return False
-    if res is True:
-        return True
-    return (key in res)
+        raise ExecSandboxException('%s.%s: getattr not allowed' % (type(val).__name__, key))
+    flag = res.get(key, False)
+    if flag is True:
+        return getattr(val, key)
+    if flag and isinstance(flag, str):
+        method = app.global_symbol_table.get('builtinmethods').get(flag)
+        if isbase:
+            return method
+        else:
+            return ScriptPartialFunc(method, (val,), {})
+    raise ExecSandboxException('%s.%s: getattr not allowed' % (type(val).__name__, key))
     
 # These symbols are actually keywords (in Python 3), but they come out of
 # ast.parse() as Name nodes. They can never change.
@@ -1460,6 +1504,7 @@ def find_symbol(app, loctx, key, locals=None, dependencies=None):
 
 # Late imports, to avoid circularity
 from twcommon.misc import is_typed_dict
+from twcommon.excepts import SymbolError, ExecSandboxException
 import twcommon.access
 import twcommon.interp
 import twcommon.gentext
