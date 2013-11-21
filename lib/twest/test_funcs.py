@@ -194,6 +194,8 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         self.assertEqual(res, [1,3])
         res = yield ctx.eval('_ls=[3,2,1]\n_ls.reverse();_ls', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, [1,2,3])
+        
+        task.resetticks()
 
         res = yield ctx.eval('_ls=[3,1,2]\n_ls.sort();_ls', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, [1,2,3])
@@ -219,6 +221,16 @@ class TestEvalAsync(twest.mock.MockAppTestCase):
         self.assertEqual(res, [4,-3,2,-1])
         res = yield ctx.eval('_ls=[-1,-3,2,4]\n_func=code("x*x",args="x")\nlist.sort(_ls,key=_func,reverse=True);_ls', evaltype=EVALTYPE_CODE)
         self.assertEqual(res, [4,-3,2,-1])
+        
+        res = yield ctx.eval('_ls=["d","C","b","A"]\n_ls.sort(key=str.upper);_ls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, ['A','b','C','d'])
+        res = yield ctx.eval('_ls=["d","p","q","x","y"]\n_ls.sort(key=functools.partial(str.index,"xyzpdq"));_ls', evaltype=EVALTYPE_CODE)
+        self.assertEqual(res, ['x','y','p','d','q'])
+        
+        with self.assertRaises(TypeError):
+            res = yield ctx.eval('_ls=[1]\n_ls.sort(key=foo);_ls', locals={'foo':open}, evaltype=EVALTYPE_CODE)
+        with self.assertRaises(TypeError):
+            res = yield ctx.eval('_ls=[1]\n_ls.sort(key=foo);_ls', locals={'foo':123}, evaltype=EVALTYPE_CODE)
         
     @tornado.testing.gen_test
     def test_type_methods_dict(self):
