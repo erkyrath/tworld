@@ -13,16 +13,8 @@ var db_propaccess = {% raw propacarray %};
 var db_selfportals = {% raw selfportarray %};
 {% end %}
 
-{% block body %}
 
-<div class="BuildBar">
-<span class="BuildBarItem"><a href="/build">Worlds</a></span>
-<span class="BuildBarSep">&#x2013;</span>
-<span class="BuildBarItem"><a id="build_world_name" href="/build/world/{{wid}}">{{ worldname }}</a></span>
-<span class="BuildBarSep">&#x2013;</span>
-<span class="BuildBarItem"><a id="build_location_menu" href="#"><span style="color: #884">&#x25BE;</span> (select location)</a></span>
-<span class="BuildBarItem BuildBarItemRight"><a href="/doc" target="_blank">Help</a></span>
-</div>
+{% block body_build %}
 
 {% if withblurb %}
 <p>
