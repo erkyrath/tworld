@@ -1,3 +1,8 @@
+body {
+  overflow: scroll;   /* vertical scrollbar is mandatory */
+  overflow-x: hidden; /* but horizontal scrollbar is forbidden */
+}
+
 #localepane > :first-child {
   /* Cancel the top margin which the first locale pane entry usually gets. */
   margin-top: 0px;
