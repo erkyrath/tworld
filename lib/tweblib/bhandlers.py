@@ -495,7 +495,9 @@ class BuildMainHandler(BuildBaseHandler):
             worlds.append({'name':world['name'], 'id':str(world['_id'])})
         # cursor autoclose
         worlds.sort(key=lambda world:world['id']) ### or other criterion?
-        self.render('build_main.html', worlds=worlds)
+        self.render('build_main.html',
+                    worldname=None,
+                    worlds=worlds)
         
 class BuildWorldHandler(BuildBaseHandler):
     @tornado.gen.coroutine
