@@ -1,19 +1,6 @@
-{% extends "base.html" %}
+{% extends "build_base.html" %}
 
-{% block page_title %}
-Building: {{ worldname }}
-{% end %}
-
-{% block head_ext %}
-<link rel="stylesheet" href="{{ static_url('css/build.css') }}" type="text/css">
-<link rel="stylesheet" href="{{ static_url('css/jquery-ui.css') }}" type="text/css">
-<script src="{{ static_url('js/jquery-1.9.1.js') }}" type="text/javascript"></script>
-<script src="{{ static_url('js/ui/1.10.3/jquery-ui.js') }}" type="text/javascript"></script>
-<script src="{{ static_url('js/jquery.contextMenu.js') }}" type="text/javascript"></script>
-<script src="{{ static_url('js/jquery.autosize.js') }}" type="text/javascript"></script>
-<script src="{{ static_url('js/build.js') }}" type="text/javascript"></script>
-
-<script type="text/javascript">
+{% block head_build_script %}
 /* Which page is this? Cheap way of telling build.js. */
 var pageid = 'loc';
 var pageworldid = "{{wid}}";
@@ -24,9 +11,6 @@ var pagelocname = {% raw locnamejs %};
 var db_locations = {% raw locarray %};
 /* List of properties in the location. */
 var db_props = {% raw proparray %};
-/* Form verification token. (Tornado checks this against a cookie.) */
-var xsrf_token = "{{ xsrf_token }}";
-</script>
 {% end %}
 
 {% block body %}
