@@ -717,13 +717,23 @@ def portal_description(app, portal, uid, uidiid=None, location=False, short=Fals
         else:
             creatorname = '???'
 
+        scopename = None
+            
         # This logic is parallel to portal_resolve_scope().
         reqscid = portal['scid']
         if world['instancing'] == 'solo':
             reqscid = 'personal'
+            if short:
+                scopename = 'personal-always'
+            else:
+                scopename = 'Personal instance (always)'
         if world['instancing'] == 'shared':
             reqscid = 'global'
-            
+            if short:
+                scopename = 'global-always'
+            else:
+                scopename = 'Global instance (always)'
+
         if reqscid == 'personal':
             player = yield motor.Op(app.mongodb.players.find_one,
                                     {'_id':uid},
@@ -750,7 +760,9 @@ def portal_description(app, portal, uid, uidiid=None, location=False, short=Fals
             scope = yield motor.Op(app.mongodb.scopes.find_one,
                                    {'_id':reqscid})
 
-        if scope['type'] == 'glob':
+        if scopename is not None:
+            pass  # scopename already set
+        elif scope['type'] == 'glob':
             if short:
                 scopename = 'global'
             else:
