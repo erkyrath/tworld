@@ -25,6 +25,7 @@ var xsrf_token = "{{ xsrf_token }}";
 
 {% block body %}
 
+<div class="BuildBarBox">
 <div class="BuildBar">
 <span class="BuildBarItem"><a href="/build">Worlds</a></span>
 <span class="BuildBarSep">&#x2013;</span>
@@ -32,6 +33,7 @@ var xsrf_token = "{{ xsrf_token }}";
 <span class="BuildBarSep">&#x2013;</span>
 <span class="BuildBarItem"><a id="build_location_menu" href="#"><span style="color: #884">&#x25BE;</span> {% block menulocname %}(select location){% end %}</a></span>
 <span class="BuildBarItem BuildBarItemRight"><a href="/doc" target="_blank">Help</a></span>
+</div>
 </div>
 
 {% block body_build %}{% end %}
