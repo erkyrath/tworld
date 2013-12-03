@@ -68,6 +68,14 @@ function setup_event_handlers() {
 
     initial_setup_done = true;
 
+    /* Give the menubar the magic stick-to-top behavior. */
+    var menubarel = $('.BuildBar');
+    if (menubarel.length) {
+        var menubarmin = menubarel.position().top;
+        $(window).on('resize', evhan_resize);
+        $(document).on('scroll', { min:menubarmin }, evhan_scroll);
+    }
+
     /* Give all the textareas the magic autosizing behavior, and also the
        on-edit trigger. (Not <input> elements; those are handled
        case-by-case.) */
@@ -1750,6 +1758,31 @@ function evhan_button_copyportal(ev) {
             },
             dataType: 'json'
         });
+}
+
+/* This exists only to support the behavior of the menu bar, which goes
+   from position:relative to position:fixed as we scroll. */
+function evhan_resize(ev) {
+    var width = $('.BuildBarBox').width();
+    /* The -40 is because of margins or padding or some such tweak constant
+       in the CSS file. I am a bad person for hardwiring it here. */
+    $('.BuildBar').width(width - 40);
+}
+
+function evhan_scroll(ev) {
+    var pos = $(document).scrollTop();
+
+    if (pos >= ev.data.min) {
+        if ($('.BuildBar').css('position') != 'fixed') {
+            evhan_resize(); /* Make sure the bar width is correct */
+            $('.BuildBar').css({ position:'fixed', top:'0px' });
+        }
+    }
+    else {
+        if ($('.BuildBar').css('position') == 'fixed') {
+            $('.BuildBar').css({ position:'relative', top:'' });
+        }
+    }
 }
 
 function generic_set_dirty(cellel, dirty) {
