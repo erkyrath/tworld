@@ -406,9 +406,24 @@ class SessionMgr(object):
         But we've got nothing to offer except the websocket service, so
         if you're on, you're on that.)
         """
+        now = twcommon.misc.now()
+        
+        # Kick off any guests who have been idle for more than four
+        # hours.
+        fourhoursago = now - datetime.timedelta(hours=4)
+        ls = [ conn for conn in self.app.twconntable.all()
+               if conn.guest and conn.lastmsgtime < fourhoursago ]
+        if ls:
+            killmsg = 'Guest account has been idle too long -- disconnecting.'
+            for conn in ls:
+                self.app.twlog.info('Disconnecting idle guest: %s', conn.email)
+                try:
+                    conn.close(killmsg)
+                except Exception as ex:
+                    self.app.twlog.error('Error disconnecting idle guest: %s', ex)
+        
         # If any live connections are more than seven days old, bump
         # them up.
-        now = twcommon.misc.now()
         sevendays = now - datetime.timedelta(days=7)
         ls = [ conn for conn in self.app.twconntable.all()
                if conn.sessiontime < sevendays ]

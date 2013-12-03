@@ -58,7 +58,9 @@ class ConnectionTable(object):
         """
         assert isinstance(handler, tweblib.handlers.PlayWebSocketHandler)
         assert handler.twconnid, 'handler.twconnid is not positive'
-        conn = Connection(handler, uid, email, session['sid'], session['refreshtime'])
+        conn = Connection(handler, uid, email, session['sid'],
+                          refreshtime=session['refreshtime'],
+                          guest=session.get('guest', False))
         self.table[conn.connid] = conn
         return conn
 
@@ -89,12 +91,14 @@ class Connection(object):
     be on the same session, or different sessions.
     """
     
-    def __init__(self, handler, uid, email, sessionid, refreshtime):
+    def __init__(self, handler, uid, email, sessionid,
+                 refreshtime, guest=False):
         self.handler = handler
         self.connid = handler.twconnid
         self.uid = uid
         self.sessionid = sessionid
         self.email = email
+        self.guest = guest
         self.starttime = twcommon.misc.now() # connection (not session) start
         self.lastmsgtime = self.starttime    # last user activity
         self.sessiontime = refreshtime       # last session refresh
