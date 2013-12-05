@@ -885,7 +885,6 @@ class PlayWebSocketHandler(MyHandlerMixin, tornado.websocket.WebSocketHandler):
         Proceed using a callback, because the open() method cannot be
         made into a coroutine.
         """
-        self.application.twlog.debug('### received a websocket connection...')
         self.twconnid = None
         self.twconn = None
         self.find_current_session(callback=self.open_cont)
