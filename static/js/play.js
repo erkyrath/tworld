@@ -1426,7 +1426,7 @@ function editstr_value_blur() {
 
 function cmd_event(obj) {
     eventpane_add(obj.text);
-    notify('event');
+    notify('event', obj.text);
 }
 
 function cmd_update(obj) {
@@ -1471,7 +1471,7 @@ function cmd_update(obj) {
         toolpane_insttool_set(obj.insttool);
     }
 
-    notify('update');
+    /* Could call notify here, but I think event-pane messages are sufficient. */
 }
 
 function cmd_updateplist(obj) {
@@ -1563,6 +1563,7 @@ function cmd_clearfocus(obj) {
 
 function cmd_message(obj) {
     eventpane_add(obj.text, 'EventMessage');
+    notify('message', obj.text);
 }
 
 function cmd_error(obj) {
@@ -1868,7 +1869,7 @@ var notify_current_notif = null;
 
 /* Display a notification if appropriate.
 */
-function notify(typ) {
+function notify(typ, text) {
     var donote = false;
 
     if (uiprefs.notifications == 'whenidle') {
@@ -1886,6 +1887,12 @@ function notify(typ) {
                 document.title = '*' + notify_orig_title;
                 notify_title_bar_marked = true;
             }
+        }
+        else if (uiprefs.notifyby == 'popup') {
+            var opt = { tag:'tag' };
+            if (text)
+                opt.body = text;
+            notify_current_notif = new window.Notification('Seltani activity', opt);
         }
     }
 }
