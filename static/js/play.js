@@ -162,6 +162,9 @@ function setup_event_handlers() {
     
     $('div.ui-resizable-handle').append('<div class="ResizingThumb">');
 
+    /* Browsers might not support this, but we'll try. */
+    $(document).on('visibilitychange', evhan_visibilitychange);
+
     /* The controls in the prefs pane... */
 
     var seg = toolsegments['prefs'];
@@ -1889,6 +1892,16 @@ function evhan_input_keypress(ev) {
     }
     
     return true;
+}
+
+/* Event handler: the window has been hidden or revealed. (This should
+   include switching tabs, minimizing the window, and hiding the browser
+   app. Maybe even switching virtual desktops.) 
+
+   (But it's not guaranteed to work. This is a recent browser feature.)
+*/
+function evhan_visibilitychange(ev) {
+    var newflag = document.hidden;
 }
 
 function evhan_click_action(ev) {
