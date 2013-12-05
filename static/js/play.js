@@ -12,7 +12,9 @@ var uiprefs = {
     font_family: '', /* default font */
     font_size: 100,
     line_height: 135,
-    smooth_scroll: true
+    smooth_scroll: true,
+    notifications: 'none',
+    notifyby: 'star'
 };
 
 /* Maps font-family names (as seen in the font preference menu) to
