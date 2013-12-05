@@ -233,7 +233,7 @@ function setup_event_handlers() {
             uiprefs.notifications = val;
             note_uipref_changed('notifications');
             if (!val || val == 'none') {
-                /* ### clear notifications */
+                notify_clear();
                 seg.notifybyentry.slideUp(200);
             }
             else {
@@ -1426,6 +1426,7 @@ function editstr_value_blur() {
 
 function cmd_event(obj) {
     eventpane_add(obj.text);
+    notify('event');
 }
 
 function cmd_update(obj) {
@@ -1469,6 +1470,8 @@ function cmd_update(obj) {
     if (obj.insttool !== undefined) {
         toolpane_insttool_set(obj.insttool);
     }
+
+    notify('update');
 }
 
 function cmd_updateplist(obj) {
@@ -1856,6 +1859,63 @@ function send_uipref_changed()
     changed_uiprefs = {};
 }
 
+/* Code to deal with notifications. */
+
+var last_activity = new Date();
+var notify_title_bar_marked = false;
+var notify_orig_title = document.title;
+var notify_current_notif = null;
+
+/* Display a notification if appropriate.
+*/
+function notify(typ) {
+    var donote = false;
+
+    if (uiprefs.notifications == 'whenidle') {
+        /* Mark event if we've been idle for 30 seconds. */
+        donote = (new Date() - last_activity > 30000);
+    }
+    else if (uiprefs.notifications == 'whenhidden') {
+        /* Mark event if we're hidden. */
+        donote = (document.hidden);
+    }
+
+    if (donote) {
+        if (uiprefs.notifyby == 'star') {
+            if (!notify_title_bar_marked) {
+                document.title = '*' + notify_orig_title;
+                notify_title_bar_marked = true;
+            }
+        }
+    }
+}
+
+/* Clear the notification marker (if there is one). We check both of
+   the possible markers, just in case.
+*/
+function notify_clear() {
+    if (notify_title_bar_marked) {
+        document.title = notify_orig_title;
+        notify_title_bar_marked = false;
+    }
+
+    if (notify_current_notif !== null) {
+        notify_current_notif.close();
+        notify_current_notif = null;
+    }
+}
+
+/* Note that the player is not idle. 
+*/
+function notify_deidle() {
+    last_activity = new Date();
+
+    /* If notifications are "when idle", clear them. */
+    if (uiprefs.notifications == 'whenidle') {
+        notify_clear();
+    }
+}
+
 /* Event handler: keydown events on the top-level document.
 
    On Escape, close the focus window (if open).
@@ -1997,6 +2057,13 @@ function evhan_input_keypress(ev) {
 */
 function evhan_visibilitychange(ev) {
     var newflag = document.hidden;
+
+    if (!newflag) {
+        /* We're revealed. If notifications are "when hidden", clear them. */
+        if (uiprefs.notifications == 'whenhidden') {
+            notify_clear();
+        }
+    }
 }
 
 function evhan_click_action(ev) {
@@ -2113,6 +2180,10 @@ function websocket_send_json(obj) {
 
     var val = JSON.stringify(obj);
     websocket.send(val);
+
+    /* Consider this "activity", for the purpose of when-idle notifications.
+       (Perhaps this is the wrong place to do this?) */
+    notify_deidle();
 }
 
 /* Return the localization of a string, as defined in the db_localize table.
