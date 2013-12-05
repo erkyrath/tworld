@@ -218,6 +218,73 @@ function setup_event_handlers() {
             note_uipref_changed('smooth_scroll');
         });
 
+    if (!uiprefs.notifications || uiprefs.notifications == 'none') {
+        seg.notificationselect.prop('value', 'none');
+        seg.notifybyentry.hide();
+    }
+    else {
+        seg.notificationselect.prop('value', uiprefs.notifications);
+    }
+    seg.notificationselect.on('change', function(ev) {
+            var seg = toolsegments['prefs'];
+            var val = seg.notificationselect.prop('value');
+            uiprefs.notifications = val;
+            note_uipref_changed('notifications');
+            if (!val || val == 'none') {
+                /* ### clear notifications */
+                seg.notifybyentry.slideUp(200);
+            }
+            else {
+                seg.notifybyentry.slideDown(200);
+            }
+        });
+
+    if (!uiprefs.notifyby) {
+        uiprefs.notifyby = 'star';
+    }
+    if (uiprefs.notifyby == 'popup') {
+        /* If OS notifications are not available or not (yet) permitted,
+           silently switch off this preference. The player will get feedback
+           when they turn it on. */
+        if (!window.Notification || !window.Notification.permission 
+            || window.Notification.permission != 'granted')
+            uiprefs.notifyby = 'star';
+    }
+    seg.notifybyselect.prop('value', uiprefs.notifyby);
+    seg.notifybyselect.on('change', function(ev) {
+            var seg = toolsegments['prefs'];
+            var val = seg.notifybyselect.prop('value');
+            if (val != 'popup') {
+                uiprefs.notifyby = val;
+                note_uipref_changed('notifyby');
+            }
+            else {
+                /* Must request permission for popups. This call is
+                   idempotent, so we do it every time the preference
+                   is set. 
+                   Note that the callback is not guaranteed on Firefox
+                   (?!) so we reset the menu now, and re-reset it in
+                   the callback.
+                */
+                uiprefs.notifyby = 'star';
+                seg.notifybyselect.prop('value', 'star');
+                var callback = function() {
+                    if (!window.Notification || !window.Notification.permission 
+                        || window.Notification.permission != 'granted') {
+                        eventpane_add('This service does not have permission to display popups.', 'EventError');
+                    }
+                    else {
+                        uiprefs.notifyby = 'popup';
+                        seg.notifybyselect.prop('value', 'popup');
+                        note_uipref_changed('notifyby');
+                    }
+                };
+                if (!window.Notification || !window.Notification.requestPermission)
+                    callback();
+                else
+                    window.Notification.requestPermission(callback);
+            }
+        });
 }
 
 function open_websocket() {
@@ -394,7 +461,7 @@ function toolpane_toggle_min(ev) {
 function toolpane_fill_pane_prefs(seg) {
     seg.titleel.text(localize('client.tool.title.preferences'));
 
-    var listel = $('<ul>', {'class':'ToolList'});
+    var listel = $('<ul>', {'class':'ToolList ToolListSpaced'});
     seg.bodyel.append(listel);
 
     el = $('<li>');
@@ -430,6 +497,32 @@ function toolpane_fill_pane_prefs(seg) {
     var smoothscrollbox = $('<input>', {'class':'CheckboxRight', 'type':'checkbox'});
     el.append(smoothscrollbox);
     seg.smoothscrollbox = smoothscrollbox;
+
+    el = $('<li>');
+    listel.append(el);
+    el.append($('<label>').text('Notifications'));
+    el.append($('<br>'));
+    var selectel = $('<select>', { 'class':'FocusSelect' });
+    el.append(selectel);
+    if (true) {
+        selectel.append($('<option>', {value:'none'}).text('None'));
+        selectel.append($('<option>', {value:'whenidle'}).text('When Idle'));
+        selectel.append($('<option>', {value:'whenhidden'}).text('When Hidden'));
+    }
+    seg.notificationselect = selectel;
+
+    el = $('<li>');
+    listel.append(el);
+    el.append($('<label>').text('Notify By'));
+    el.append($('<br>'));
+    var selectel = $('<select>', { 'class':'FocusSelect' });
+    el.append(selectel);
+    if (true) {
+        selectel.append($('<option>', {value:'star'}).text('Window Title'));
+        selectel.append($('<option>', {value:'popup'}).text('Popup Note'));
+    }
+    seg.notifybyselect = selectel;
+    seg.notifybyentry = el;
 
 }
 

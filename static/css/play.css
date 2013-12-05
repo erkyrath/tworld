@@ -392,6 +392,11 @@ h3.ToolTitle {
   text-indent: -15px;
 }
 
+.ToolListSpaced li {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
 ul.ToolList + ul.ToolList {
   margin-top: 0.5em;
 }
