@@ -68,9 +68,14 @@ function setup_event_handlers() {
 
     initial_setup_done = true;
 
-    /* Give the menubar the magic stick-to-top behavior. */
+    /* Cheap way to check if this is the mobile UI. */
+    var istouchui = ("ontouchstart" in window);
+
+    /* Give the menubar the magic stick-to-top behavior. But not on
+       mobile, because mobile has weird scrolling and it's just not
+       worth it. */
     var menubarel = $('.BuildBar');
-    if (menubarel.length) {
+    if (menubarel.length && !istouchui) {
         var menubarmin = menubarel.position().top;
         $(window).on('resize', evhan_resize);
         $(document).on('scroll', { min:menubarmin }, evhan_scroll);
