@@ -362,6 +362,11 @@ div.ToolText {
   text-decoration: underline;
 }
 
+#rightcol div.ToolText a.ExternalLink {
+  color: #00F;
+  background-color: inherit;
+}
+
 h3.ToolTitle {
   font-family: "Gill Sans", Futura, Helvetica, Arial, sans-serif;
   font-size: 1.0em;
