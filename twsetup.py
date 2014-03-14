@@ -103,7 +103,7 @@ def upgrade_to_v3():
     cursor = db.players.find({}, {'scid':1})
     for player in cursor:
         db.scopeaccess.update({'uid':player['_id'], 'scid':player['scid']},
-                              {'uid':player['_id'], 'scid':player['scid'], 'level':twcommon.access.ACC_CREATOR}, upsert=True)
+                              {'uid':player['_id'], 'scid':player['scid'], 'level':twcommon.access.ACC_FOUNDER}, upsert=True)
 
 def upgrade_to_v4():
     print('Upgrading to v4...')
@@ -282,7 +282,7 @@ else:
     db.players.update({'_id':adminuid},
                       {'$set': {'scid': scid}})
 
-    db.scopeaccess.insert({'uid':adminuid, 'scid':scid, 'level':twcommon.access.ACC_CREATOR})
+    db.scopeaccess.insert({'uid':adminuid, 'scid':scid, 'level':twcommon.access.ACC_FOUNDER})
 
 
 # The starting world (solo).
