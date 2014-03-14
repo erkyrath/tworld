@@ -284,6 +284,15 @@ else:
 
     db.scopeaccess.insert({'uid':adminuid, 'scid':scid, 'level':twcommon.access.ACC_FOUNDER})
 
+    portlist = {
+        'type': 'pers',
+        'uid': adminuid,
+        }
+    
+    plistid = db.portlists.insert(portlist)
+    db.players.update({'_id':adminuid},
+                      {'$set': {'plistid': plistid}})
+
 
 # The starting world (solo).
 
