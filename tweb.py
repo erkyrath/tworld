@@ -78,7 +78,7 @@ tornado.options.define(
     help='log file to write to (default is stdout)')
 
 tornado.options.define(
-    'ssl_port', type=int, default=4003,
+    'ssl_port', type=int,
     help='port number to listen on for https connections')
 tornado.options.define(
     'ssl_cert_path', type=str, default=None,
