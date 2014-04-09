@@ -1441,7 +1441,8 @@ def type_getattr_perform(app, val, key):
     raise ExecSandboxException('%s.%s: getattr not allowed' % (type(val).__name__, key))
     
 # These symbols are actually keywords (in Python 3), but they come out of
-# ast.parse() as Name nodes. They can never change.
+# ast.parse() as NameConstant nodes (or, Python 3.0-3.3, ordinary Name
+# nodes). They can never change.
 immutable_symbol_table = {
     'True': True, 'False': False, 'None': None,
     }

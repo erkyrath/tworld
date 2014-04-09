@@ -952,6 +952,12 @@ class EvalPropContext(object):
         return res
 
     @tornado.gen.coroutine
+    def execcode_nameconstant(self, nod):
+        # Python 3.4 and later
+        symbol = nod.id
+        return two.symbols.immutable_symbol_table[symbol]
+
+    @tornado.gen.coroutine
     def execcode_if(self, nod):
         testval = yield self.execcode_expr(nod.test)
         if testval:
@@ -1060,6 +1066,9 @@ class EvalPropContext(object):
         ast.Subscript: execcode_subscript,
         ast.Call: execcode_call,
         }
+    if (hasattr(ast, 'NameConstant')):
+        # Only exists in Python 3.4 and up
+        execcode_expr_handlers[ast.NameConstant] = execcode_nameconstant
 
     execcode_statement_handlers = {
         ast.Assign: execcode_assign,
