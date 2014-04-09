@@ -954,8 +954,7 @@ class EvalPropContext(object):
     @tornado.gen.coroutine
     def execcode_nameconstant(self, nod):
         # Python 3.4 and later
-        symbol = nod.id
-        return two.symbols.immutable_symbol_table[symbol]
+        return nod.value
 
     @tornado.gen.coroutine
     def execcode_if(self, nod):
