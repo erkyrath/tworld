@@ -434,6 +434,11 @@ call_node_class_map = {
     'SwitchKey': SwitchKeyNode,
     }
 
+ast_NameConstant = object()   # Pre-3.4: create a do-nothing object
+if hasattr(ast, 'NameConstant'):
+    # Python 3.4 and up: we need a reference to this new node type
+    ast_NameConstant = ast.NameConstant
+
 def evalnode(nod, prefix=b''):
     """Convert an ast (syntax tree) node into a GenText node. The result
     may be a native type (int, str, bool, None) or a GenNodeClass object.
@@ -472,6 +477,9 @@ def evalnode(nod, prefix=b''):
         res = AltNode(*ls)
         res.prefix = prefix
         return res
+
+    if nodtyp is ast_NameConstant:
+        return nod.value
 
     if nodtyp is ast.Name:
         symbol = nod.id
