@@ -89,7 +89,6 @@ if not args:
     sys.exit(-1)
 
 class World(object):
-    portlist_define_order = 0    # yes, a hack
     
     def __init__(self):
         self.creator = 'Admin'
@@ -292,10 +291,8 @@ def parse_prop(prop):
         
         if key == 'portlist':
             plistkey, dummy, val = val.partition(' ')
-            order = World.portlist_define_order
-            World.portlist_define_order += 1
             res = {'type':'portlist', 'plistkey':plistkey,
-                   '_templist':[], '_temporder':order}
+                   '_templist':[]}
             if 'single' in val.split():
                 res['focus'] = True
             return res
@@ -386,8 +383,8 @@ def transform_prop(world, db, val):
             val['editaccess'] = twcommon.access.level_named(val['editaccess'])
     
     if key == 'portlist':
-        if val['_temporder'] < len(world.allportlists):
-            plistid = world.allportlists[val['_temporder']]['_id']
+        if val['plistkey'] in world.portlistmap:
+            plistid = world.portlistmap[val['plistkey']]['_id']
         else:
             plistid = db.portlists.insert({'type':'world', 'wid':world.wid, 'key':val['plistkey']})
             print('Created portlist %s (%s)' % (val['plistkey'], plistid,))
@@ -604,6 +601,7 @@ world.wid = wid
 # Check for existing portlists
 world.allportlists = list(db.portlists.find({'type':'world', 'wid':world.wid}))
 world.allportlists.sort(key = lambda x:x['_id'])
+world.portlistmap = { val['key']:val for val in world.allportlists }
 
 if opts.remove:
     if not args:
