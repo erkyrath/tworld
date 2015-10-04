@@ -198,6 +198,10 @@
   font-weight: bold;
 }
 
+#rightcol .Event {
+  font-size: 0.8em;
+}
+
 .Event .TimeStamp {
   position: relative;
   float: right;

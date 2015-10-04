@@ -341,6 +341,7 @@ default_localize_entries = """
 +client.tool.title.this_portal: This Portal
 +client.tool.title.insttool: This Instance
 +client.tool.title.preferences: Preferences
++client.tool.title.eventlog: Logging
 
 +client.tool.menu.return_to_start: Return to Start
 +client.tool.menu.set_panic_portal: Set as Panic Portal

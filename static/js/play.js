@@ -380,6 +380,8 @@ function toolpane_build_segment(key, hasmenu) {
         toolpane_fill_pane_portal(seg);
     else if (key == 'insttool')
         toolpane_fill_pane_insttool(seg);
+    else if (key == 'eventlog')
+        toolpane_fill_pane_eventlog(seg);
     else
         console.log('Unrecognized toolpane segment: ' + key);
 
@@ -388,6 +390,11 @@ function toolpane_build_segment(key, hasmenu) {
     return seg;
 }
 
+/* Add a segment (created by toolpane_build_segment) to the toolpane.
+   If aftersegkey is given, the new segment appears below that one
+   (or above it if aboveflag is true). If aftersegkey is omitted or
+   not found, the new segment appears at the bottom.
+ */
 function toolpane_add_segment(key, aftersegkey, aboveflag) {
     var seg = toolsegments[key];
     var afterseg = toolsegments[aftersegkey];
@@ -933,6 +940,21 @@ function eventpane_add(msg, extraclass) {
     el.prepend(dateel);
     $('.Input').before(el);
 
+    if (eventlogging) {
+        var seg = toolsegments['eventlog'];
+        if (!seg) {
+            /* Make sure it appears closed -- but don't bother notifying the
+               server. */
+            uiprefs['toolseg_min_eventlog'] = true;
+            seg = toolpane_build_segment('eventlog', true);
+            toolpane_add_segment('eventlog');
+        }
+        /* cls is already set */
+        var el = $('<div>', { 'class':cls} );
+        el.text(msg);
+        seg.bodyel.append(el);
+    }
+
     /* If there are too many lines in the event pane, chop out the early
        ones. That's easy. Keeping the apparent scroll position the same --
        that's harder. */
@@ -962,6 +984,10 @@ function eventpane_add(msg, extraclass) {
         else
             frameel.stop().animate({ 'scrollTop': newscrolltop }, 200);
     }
+}
+
+function toolpane_fill_pane_eventlog(seg) {
+    seg.titleel.text(localize('client.tool.title.eventlog'));
 }
 
 function focuspane_clear()
@@ -2012,6 +2038,7 @@ function evhan_doc_keypress(ev) {
 
 var eventhistory = new Array();
 var eventhistorypos = 0;
+var eventlogging = false;
 
 /* Event handler: keydown events on input fields (line input)
 
