@@ -986,8 +986,40 @@ function eventpane_add(msg, extraclass) {
     }
 }
 
-function toolpane_fill_pane_eventlog(seg) {
+function toolpane_fill_pane_eventlog(seg)
+{
     seg.titleel.text(localize('client.tool.title.eventlog'));
+    seg.bodyel.addClass('LimitHeight');
+
+    seg.rightbutel.contextMenu('popup_menu', 
+        [
+            { text:localize('client.tool.menu.select_log'),
+                    enableHook: function() { return !uiprefs['toolseg_min_eventlog']; },
+                    click: function() {
+                    /* Hack to select a range of text; thank you StackOverflow */
+                    if (document.body.createTextRange) {
+                        var range = document.body.createTextRange();
+                        range.moveToElementText(seg.bodyel.get(0));
+                        range.select();
+                    } 
+                    else if (window.getSelection) {
+                        var selection = window.getSelection();        
+                        var range = document.createRange();
+                        range.selectNodeContents(seg.bodyel.get(0));
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                    }
+                } },
+            { text:localize('client.tool.menu.clear_log'),
+                    click: function() {
+                    /* Remove all after the first. */
+                    seg.bodyel.children('div:gt(0)').remove();
+                } }
+         ],
+        { 
+            leftClick: true,
+            position: { my:'right top', at:'right bottom', of:seg.rightbutel }
+        } );
 }
 
 function focuspane_clear()

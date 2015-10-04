@@ -319,6 +319,11 @@
   overflow: hidden;
 }
 
+.ToolSegment .LimitHeight {
+  max-height: 20em;
+  overflow: auto;
+}
+
 .ToolFooter {
   clear: both;
   border-top: 1px solid #FFF;
