@@ -23,10 +23,10 @@ var uiprefs = {
    Constructed in collate_uiprefs(). */
 var template_base_font_map = {};
 
-/* When there are more than 80 lines in the event pane, chop it down to
-   the last 60. */
-var EVENT_TRIM_LIMIT = 80;
-var EVENT_TRIM_KEEP = 60;
+/* When there are more than 200 lines in the event pane, chop it down to
+   the last 160. */
+var EVENT_TRIM_LIMIT = 200;
+var EVENT_TRIM_KEEP = 160;
 
 var KEY_RETURN = 13;
 var KEY_ESC = 27;
