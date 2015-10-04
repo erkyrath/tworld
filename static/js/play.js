@@ -925,6 +925,12 @@ function eventpane_add(msg, extraclass) {
         cls = cls + ' ' + extraclass;
     var el = $('<div>', { 'class':cls} );
     el.text(msg);
+    var dateel = $('<div>', { 'class':'TimeStamp'} );
+    dateel.text('\u00A0\u25C7');
+    var subel = $('<div>', { 'class':'TimeLabel'} );
+    subel.append($('<span>').text(NBSP+current_time_string()));
+    dateel.prepend(subel);
+    el.prepend(dateel);
     $('.Input').before(el);
 
     /* If there are too many lines in the event pane, chop out the early
@@ -2203,6 +2209,41 @@ function localize(key) {
         return res;
     /* Not found. Return a terrible default that people will notice. */
     return '** ' + key + ' **';
+}
+
+/* Get the current time.
+*/
+function current_time_string() {
+    var date = new Date();
+    var res = [];
+
+    res.push(''+date.getFullYear());
+    res.push('/'+(date.getMonth()+1));
+    res.push('/'+date.getDate());
+    res.push(', ');
+
+    var hr = date.getHours();
+    if (hr == 0)
+        res.push('12');
+    else if (hr < 10)
+        res.push('0'+hr);
+    else if (hr <= 12)
+        res.push(''+hr);
+    else
+        res.push(''+(hr-12));
+
+    var min = date.getMinutes();
+    if (min < 10)
+        res.push(':0'+min);
+    else
+        res.push(':'+min);
+
+    if (hr < 12)
+        res.push(' am');
+    else
+        res.push(' pm');
+
+    return res.join('');
 }
 
 /* The page-ready handler. Like onload(), but better, I'm told. */
