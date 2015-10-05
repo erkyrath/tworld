@@ -9,6 +9,7 @@ We only have one.)
 
 from bson.objectid import ObjectId
 
+import twcommon.misc
 from twcommon import wcproto
 
 class PlayerConnectionTable(object):
@@ -28,6 +29,11 @@ class PlayerConnectionTable(object):
         # support a single tweb, so I am ignoring the problem.
 
         self.uidmap = {} # maps uids (ObjectIds) to sets of PlayerConnections.
+
+        # Track recently-disconnected players. This is used by the
+        # checkdisconnected command; an entry is cleared when the player
+        # is punted to the void.
+        self.disconnectedmap = {} # maps uids to disconnect timestamps
 
     def get(self, connid):
         """Look up a player connection by its ID. Returns None if not found.
@@ -73,6 +79,7 @@ class PlayerConnectionTable(object):
             uset.add(conn)
         else:
             self.uidmap[conn.uid] = set( (conn,) )
+        self.disconnectedmap.pop(conn.uid, None)
         return conn
 
     def remove(self, connid):
@@ -80,6 +87,7 @@ class PlayerConnectionTable(object):
         from the "disconnect" and "playerconnect" commands.
         """
         conn = self.map[connid]
+        self.disconnectedmap[conn.uid] = twcommon.misc.now()
         del self.map[connid]
         uset = self.uidmap.get(conn.uid, None)
         if uset:
@@ -88,6 +96,21 @@ class PlayerConnectionTable(object):
                 del self.uidmap[conn.uid]
         conn.close()
 
+    def disconnected_time_uid(self, uid):
+        """How long ago the given uid disconnected. Returns None if there
+        is no disconnect record (or if the uid is still connected).
+        """
+        time = self.disconnectedmap.get(uid)
+        if time is None:
+            return None
+        return twcommon.misc.now() - time
+
+    def clear_disconnected_time_uid(self, uid):
+        """Clear the disconnect record. The uid has been disconnected
+        long enough that we no longer care.
+        """
+        self.disconnectedmap.pop(uid, None)
+        
     def dumplog(self):
         self.log.debug('PlayerConnectionTable has %d entries', len(self.map))
         for (connid, conn) in sorted(self.map.items()):

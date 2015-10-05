@@ -1,4 +1,5 @@
 
+import datetime
 import ast
 
 import tornado.gen
@@ -254,9 +255,12 @@ def define_commands():
     @command('checkdisconnected', isserver=True, doeswrite=True)
     def cmd_checkdisconnected(app, task, cmd, stream):
         # Construct a list of players who are in the world, but
-        # disconnected.
+        # disconnected. (But disconnected more than a minute ago.)
+        app.log.debug('### disconnectedmap: %s', app.playconns.disconnectedmap)
         ls = []
         inworld = 0
+        recentcount = 0
+        limit = datetime.timedelta(minutes=1)
         cursor = app.mongodb.playstate.find({'iid':{'$ne':None}},
                                             {'_id':1})
         while (yield cursor.fetch_next):
@@ -264,13 +268,18 @@ def define_commands():
             conncount = app.playconns.count_for_uid(playstate['_id'])
             inworld += 1
             if not conncount:
-                ls.append(playstate['_id'])
+                discontime = app.playconns.disconnected_time_uid(playstate['_id'])
+                if discontime is None or discontime > limit:
+                    ls.append(playstate['_id'])
+                else:
+                    recentcount += 1
         # cursor autoclose
 
-        app.log.info('checkdisconnected: %d players in world, %d are disconnected', inworld, len(ls))
-        ### Keep a two-strikes list, so that players are knocked out after some minimum interval
+        if inworld or recentcount or ls:
+            app.log.info('checkdisconnected: %d players in world, %d recently disconnected, %d really disconnected', inworld, recentcount, len(ls))
         
         for uid in ls:
+            app.playconns.clear_disconnected_time_uid(uid)
             app.queue_command({'cmd':'tovoid', 'uid':uid, 'portin':False})
 
         # Second task: construct a list of guest accounts which are marked
