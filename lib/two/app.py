@@ -22,6 +22,9 @@ import twcommon.misc
 import twcommon.autoreload
 from twcommon import wcproto
 
+CHECK_DISCONNECTED_INTERVAL = 180  # seconds
+CHECK_UNINHABITED_INTERVAL  =  60  # seconds
+
 class Tworld(object):
     def __init__(self, opts):
         self.opts = opts
@@ -73,10 +76,11 @@ class Tworld(object):
         signal.signal(signal.SIGHUP, self.interrupt_handler)
 
         # This periodic command kicks disconnected players to the void.
+        # Also resets guest accounts.
         # (Every three minutes, plus an uneven fraction of a second.)
         def func():
             self.queue_command({'cmd':'checkdisconnected'})
-        res = tornado.ioloop.PeriodicCallback(func, 180100)
+        res = tornado.ioloop.PeriodicCallback(func, CHECK_DISCONNECTED_INTERVAL * 1000 + 100)
         res.start()
 
         # This periodic command puts uninhabited instances to sleep.
@@ -84,7 +88,7 @@ class Tworld(object):
         # (Every minute, plus an uneven fraction of a second.)
         def func():
             self.queue_command({'cmd':'checkuninhabited'})
-        res = tornado.ioloop.PeriodicCallback(func, 60300)
+        res = tornado.ioloop.PeriodicCallback(func, CHECK_UNINHABITED_INTERVAL * 1000 + 300)
         res.start()
 
     def shutdown(self, reason=None):
