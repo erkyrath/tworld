@@ -46,6 +46,10 @@
 
       var menuItem = $('<li>').append(link);
 
+      var checkmark = $('<div>', {'class':'Checkmark'});
+      checkmark.css({ position:'absolute', left:'0.5em' });
+      menuItem.prepend(checkmark);
+
       if (itemOptions.klass) {
         menuItem.attr("class", itemOptions.klass);
       }
@@ -105,11 +109,28 @@
           var hook = menuItem.data('enableHook');
           if (hook) {
             var res = hook.call(menu, menuItem);
-            menuItem.data('disabled', !res);
-            if (res)
+            var checked = false;
+            var enabled = true;
+            if (res === true || res === false || res === null || res === undefined) {
+                enabled = res;
+            }
+            else {
+                if (res.enabled !== undefined)
+                    enabled = res.enabled;
+                checked = res.checked;
+            }
+            if (enabled) {
+                menuItem.data('disabled', false);
                 menuItem.removeClass('Disabled');
-            else
+            }
+            else {
+                menuItem.data('disabled', true);
                 menuItem.addClass('Disabled');
+            }
+            if (checked)
+                menuItem.children('.Checkmark').text('\u2713');
+            else
+                menuItem.children('.Checkmark').text('');
           }
         });
         

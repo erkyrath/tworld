@@ -346,6 +346,7 @@ default_localize_entries = """
 +client.tool.menu.return_to_start: Return to Start
 +client.tool.menu.set_panic_portal: Set as Panic Portal
 +client.tool.menu.delete_own_portal: Remove Portal from List
++client.tool.menu.enable_log: Log Event Pane
 +client.tool.menu.select_log: Select Logged Text
 +client.tool.menu.clear_log: Clear Log
 

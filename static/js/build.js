@@ -56,7 +56,9 @@ function setup_event_handlers() {
                 };
             });
         if (ls.length == 0) {
-            ls.push({ text:'(no locations)', enableHook: function(){}, click:function(){} });
+            ls.push({ text:'(no locations)', 
+                        enableHook: function(){ return false; }, 
+                        click:function(){} });
         }
         el.contextMenu('popup_menu',
             ls,

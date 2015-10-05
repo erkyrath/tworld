@@ -993,6 +993,14 @@ function toolpane_fill_pane_eventlog(seg)
 
     seg.rightbutel.contextMenu('popup_menu', 
         [
+            { text:localize('client.tool.menu.enable_log'),
+                    enableHook: function() {
+                    return { checked:eventlogging };
+                },
+                    click: function() {
+                    eventlogging = !eventlogging;
+                    /*### report logging on/off */
+                } },
             { text:localize('client.tool.menu.select_log'),
                     enableHook: function() { return !uiprefs['toolseg_min_eventlog']; },
                     click: function() {
