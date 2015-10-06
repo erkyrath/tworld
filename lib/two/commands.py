@@ -356,7 +356,21 @@ def define_commands():
             moretodo = True
 
         # Any already-asleep instances can be wiped.
-        ###
+        for instance in asleepls:
+            app.log.info('cleanupguest: wiping instance %s', instance['_id'])
+            yield motor.Op(app.mongodb.instanceprop.remove,
+                           {'iid':instance['_id']})
+            yield motor.Op(app.mongodb.iplayerprop.remove,
+                           {'iid':instance['_id']})
+            yield motor.Op(app.mongodb.portals.remove,
+                           {'iid':instance['_id']})
+            yield motor.Op(app.mongodb.instances.remove,
+                           {'_id':instance['_id']})
+
+        if moretodo:
+            return
+
+        app.log.info('cleanupguest: ### ready to finish up')
 
     @command('tovoid', isserver=True, doeswrite=True)
     def cmd_tovoid(app, task, cmd, stream):
