@@ -296,7 +296,7 @@ class SessionMgr(object):
         while (yield cursor.fetch_next):
             res = cursor.next_object()
             if res.get('guestsession', None):
-                # This one is busy.
+                # This one is busy (or being cleaned up).
                 continue
             player = res
             break
