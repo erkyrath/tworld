@@ -256,7 +256,6 @@ def define_commands():
     def cmd_checkdisconnected(app, task, cmd, stream):
         # Construct a list of players who are in the world, but
         # disconnected. (But disconnected more than a minute ago.)
-        app.log.debug('### disconnectedmap: %s', app.playconns.disconnectedmap)
         ls = []
         inworld = 0
         recentcount = 0
@@ -283,12 +282,15 @@ def define_commands():
             app.queue_command({'cmd':'tovoid', 'uid':uid, 'portin':False})
 
         # Second task: construct a list of guest accounts which are marked
-        # in-use, but are disconnected.
+        # in-use, but are disconnected. Kill their sessions and give them
+        # the special cleanup flag (guestsession=True).
         ls = []
         cursor = app.mongodb.players.find({'guest':True, 'guestsession':{'$ne':None}},
                                           {'name':1, 'guestsession':1})
         while (yield cursor.fetch_next):
             player = cursor.next_object()
+            if player['guestsession'] is True:
+                continue  # already being cleaned up
             conncount = app.playconns.count_for_uid(player['_id'])
             if not conncount:
                 ls.append(player)
@@ -300,7 +302,61 @@ def define_commands():
                            {'sid':player['guestsession']})
             yield motor.Op(app.mongodb.players.update,
                            {'_id':player['_id']},
-                           {'$set':{'guestsession':None}})
+                           {'$set':{'guestsession':True}})
+
+        # Third task: launch cleanup on guest accounts. Some might be
+        # left over from previous attempts, so we construct a new list.
+        ls = []
+        cursor = app.mongodb.players.find({'guest':True, 'guestsession':True},
+                                          {'name':1})
+        while (yield cursor.fetch_next):
+            player = cursor.next_object()
+            ls.append(player)
+        # cursor autoclose
+        for player in ls:
+            app.queue_command({'cmd':'cleanupguest', 'uid':player['_id']})
+
+    @command('cleanupguest', isserver=True, doeswrite=True)
+    def cmd_cleanupguest(app, task, cmd, stream):
+        # Clean up a guest's instances and personal data.
+        # This is messy because it may have to put instances to sleep,
+        # which is a command in its own right.
+        player = yield motor.Op(app.mongodb.players.find_one,
+                                {'_id':cmd.uid},
+                                {'name':1, 'guest':1, 'guestsession':1,
+                                 'scid':1, 'plistid':1})
+        if not player or not player.get('guest') or player.get('guestsession') is not True:
+            return
+        app.log.info('cleanupguest: cleaning guest %s', player['name'])
+
+        asleepls = []
+        awakels = []
+        cursor = app.mongodb.instances.find({'scid':player['scid']})
+        while (yield cursor.fetch_next):
+            instance = cursor.next_object()
+            if instance.get('lastawake', None) is True:
+                awakels.append(instance)
+            else:
+                asleepls.append(instance)
+        # cursor autoclose
+
+        app.log.info('cleanupguest: %d instances awake, %d asleep', len(awakels), len(asleepls))
+
+        moretodo = False
+
+        for instance in awakels:
+            # This works the same as the bootinstance command.
+            cursor = app.mongodb.playstate.find({'iid':instance['_id']},
+                                                {'_id':1})
+            while (yield cursor.fetch_next):
+                ply = cursor.next_object()
+                app.queue_command({'cmd':'tovoid', 'uid':ply['_id'], 'portin':True})
+            # cursor autoclose
+            app.queue_command({'cmd':'sleepinstance', 'iid':instance['_id']})
+            moretodo = True
+
+        # Any already-asleep instances can be wiped.
+        ###
 
     @command('tovoid', isserver=True, doeswrite=True)
     def cmd_tovoid(app, task, cmd, stream):
