@@ -430,6 +430,7 @@ if opts.localize:
 else:
     locls = parse_localization(default_localize_entries.split('\n'))
 
+loccount = 0
 for (key, lang, client, val) in locls:
     obj = { 'key':key, 'lang':lang, 'val':val }
     if client:
@@ -440,6 +441,10 @@ for (key, lang, client, val) in locls:
             continue
     db.localize.update({ 'key':key, 'lang':lang },
                        obj, upsert=True)
+    loccount += 1
+
+if loccount:
+    print('Updated %d localization entries' % (loccount,))
     
 if opts.resetpw:
     if '@' in opts.resetpw:
