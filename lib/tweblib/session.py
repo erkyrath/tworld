@@ -323,27 +323,12 @@ class SessionMgr(object):
                        { '_id': uid },
                        { '$set': playerfields})
 
-        # Clear out the player's personal portlist, and add back the starting
-        # portal.
-        yield motor.Op(self.app.mongodb.portals.remove,
-                       { 'plistid': player['plistid'] })
-        # Create the first entry for the portlist.
+        # Create the first entry for the player's personal portlist.
         try:
             yield self.create_starting_portal(player['plistid'], player['scid'])
         except Exception as ex:
             self.app.twlog.error('Error creating guest\'s first portal: %s', ex)
         
-        # Clear out instance properties associated with the start world. This
-        # should maybe be in a site-specific hook; it presumes that the
-        # start world has tutorial-like features built on instance props.
-        res = yield motor.Op(self.app.mongodb.config.find_one,
-                             {'key':'startworldid'})
-        startinstance = yield motor.Op(self.app.mongodb.instances.find_one,
-                                       {'wid':res['val'], 'scid':player['scid']})
-        if startinstance:
-            yield motor.Op(self.app.mongodb.instanceprop.remove,
-                           { 'iid': startinstance['_id'] })
-
         # Finally, create the session entry.
         now = twcommon.misc.now()
         sess = {

@@ -327,6 +327,13 @@ def define_commands():
                                  'scid':1, 'plistid':1})
         if not player or not player.get('guest') or player.get('guestsession') is not True:
             return
+        playstate = yield motor.Op(app.mongodb.playstate.find_one,
+                                   {'_id':player['_id']},
+                                   {'iid':1})
+        if playstate['iid']:
+            app.log.warning('cleanupguest: tried to clean guest %s, but they were in instance %s', player['name'], playstate['iid'])
+            return
+        
         app.log.info('cleanupguest: cleaning guest %s', player['name'])
 
         asleepls = []
@@ -368,9 +375,25 @@ def define_commands():
                            {'_id':instance['_id']})
 
         if moretodo:
+            # Some instances are still being put to sleep, so we can't
+            # finish cleaning up.
             return
 
-        app.log.info('cleanupguest: ### ready to finish up')
+        app.log.info('cleanupguest: finishing up guest %s', player['name'])
+        yield motor.Op(app.mongodb.iplayerprop.remove,
+                       {'uid':player['_id']})
+        yield motor.Op(app.mongodb.playprefs.remove,
+                       {'uid':player['_id']})
+        yield motor.Op(app.mongodb.portals.remove,
+                       {'plistid': player['plistid']})
+        # The player's starting portal will be created in create_session_guest.
+        # Don't worry about playstate; we've already established that
+        # the player is out-of-world.
+        
+        yield motor.Op(app.mongodb.players.update,
+                       {'_id':player['_id']},
+                       {'$set':{'guestsession':None}})
+        # Done!
 
     @command('tovoid', isserver=True, doeswrite=True)
     def cmd_tovoid(app, task, cmd, stream):
