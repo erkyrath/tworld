@@ -18,12 +18,23 @@ import urllib.parse
 import urllib.request
 import html.parser
 import http.cookiejar
+import getpass
+import unicodedata
 
-popt = optparse.OptionParser(usage='twcommand.py cmd [args...]')
+popt = optparse.OptionParser(usage='twcommand.py [opts] cmd [args...]')
 
 popt.add_option('-l', '--list',
                 action='store_true', dest='listcmds',
                 help='list the available commands')
+popt.add_option('-n', '--name',
+                action='store', dest='name',
+                help='user name')
+popt.add_option('--password',
+                action='store', dest='password',
+                help='user password')
+popt.add_option('-u', '--url',
+                action='store', dest='url',
+                help='server URL (default: http://localhost)')
 popt.add_option('-s', '--host', '--server',
                 action='store', dest='server', default='localhost',
                 help='server hostname (default: localhost)')
@@ -41,6 +52,13 @@ if opts.listcmds:
 if not args:
     popt.print_help()
     sys.exit(-1)
+
+if not opts.name:
+    raise Exception('You must supply a name (--name)')
+
+if not opts.password:
+    password = getpass.getpass()
+    opts.password = unicodedata.normalize('NFKC', password)
 
 class Tag:
     def __init__(self, tag, attrs=None):
@@ -104,7 +122,7 @@ def login():
 
     xsrf = login['_xsrf'].attrs.get('value')
 
-    map = { '_xsrf':xsrf, 'name':'Belford', 'password':'xxxxxx' } ###
+    map = { '_xsrf':xsrf, 'name':opts.name, 'password':opts.password }
     data = urllib.parse.urlencode(map).encode()
     req = urllib.request.Request(url=baseurl, method='POST', data=data)
     response = urlopener.open(req)
@@ -143,11 +161,14 @@ cmd = args.pop(0)
 if cmd not in cmdlist:
     raise Exception('Unknown command: ' + cmd)
 
-if not opts.port:
-    netloc = opts.server
+if opts.url:
+    baseurl = opts.url
 else:
-    netloc = opts.server + (':%d' % (opts.port,))
-baseurl = urllib.parse.urlunsplit( ('http', netloc, '', '', '') )
+    if not opts.port:
+        netloc = opts.server
+    else:
+        netloc = opts.server + (':%d' % (opts.port,))
+    baseurl = urllib.parse.urlunsplit( ('http', netloc, '', '', '') )
 
 cookiejar = http.cookiejar.CookieJar()
 urlopener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookiejar))
