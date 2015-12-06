@@ -37,7 +37,7 @@ tornado.options.define(
     help='template directory')
 tornado.options.define(
     'static_path', type=str,
-    help='static files directory')
+    help='static files directory (for /static URLs)')
 tornado.options.define(
     'python_path', type=str,
     help='Python modules directory (optional)')
@@ -52,6 +52,12 @@ tornado.options.define(
 tornado.options.define(
     'top_pages', type=str, multiple=True,
     help='additional pages served from templates')
+tornado.options.define(
+    'top_static_regex', type=str, multiple=True,
+    help='additional static files and directories')
+tornado.options.define(
+    'top_static_base_path', type=str,
+    help='directory for top_static_regex files')
 
 tornado.options.define(
     'port', type=int, default=4000,
@@ -197,6 +203,11 @@ handlers = [
 # Add in all the top_pages handlers.
 for val in opts.top_pages:
     handlers.append( ('/'+val, tweblib.handlers.TopPageHandler, {'page': val}) )
+
+# And any top_static_regex files or directories.
+if opts.top_static_regex and opts.top_static_base_path:
+    for val in opts.top_static_regex:
+        handlers.append( ('/('+val+')', tweblib.handlers.MyStaticFileHandler, {'path': opts.top_static_base_path}) )
 
 # Fallback 404 handler for everything else.
 handlers.append( (r'.*', tweblib.handlers.MyNotFoundErrorHandler) )
