@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+
+"""
+twcommand: Copyright (c) 2015, Andrew Plotkin
+(Available under the MIT License; see LICENSE file.)
+
+This script logs into live Tworld server (with regular web authentication)
+and then performs a command. Currently just one command is supported:
+
+    holler msg (requires admin)
+"""
+
+import sys
+import os
+import optparse
+import urllib
+import urllib.parse
+import urllib.request
+import html.parser
+
+popt = optparse.OptionParser(usage='twcommand.py cmd [args...]')
+
+popt.add_option('-l', '--list',
+                action='store_true', dest='listcmds',
+                help='list the available commands')
+popt.add_option('-s', '--host', '--server',
+                action='store', dest='server', default='localhost',
+                help='server hostname (default: localhost)')
+popt.add_option('-p', '--port',
+                action='store', type=int, dest='port',
+                help='server port')
+
+(opts, args) = popt.parse_args()
+
+if opts.listcmds:
+    print('holler msg...: broadcast a line of text to all logged-in players. (requires admin)')
+    sys.exit(0)
+    
+if not args:
+    popt.print_help()
+    sys.exit(-1)
+
+class Tag:
+    def __init__(self, tag, attrs=None):
+        self.tag = tag
+        if attrs is None:
+            self.attrs = {}
+        else:
+            self.attrs = dict(attrs)
+        self.children = []
+
+    def __repr__(self):
+        if not self.attrs:
+            return '<Tag "%s">' % (self.tag,)
+        else:
+            ls = [ '%s="%s"' % (key, val) for (key, val) in self.attrs.items() ]
+            return '<Tag "%s" %s>' % (self.tag, ' '.join(ls))
+
+class ExtractParser(html.parser.HTMLParser):
+    def __init__(self, parent, child):
+        html.parser.HTMLParser.__init__(self)
+        self.parenttag = parent
+        self.childtag = child
+        self.results = []
+        self.current = None
+
+    def handle_starttag(self, tag, attrs):
+        if tag == self.parenttag and self.current is None:
+            self.current = Tag(tag, attrs)
+            self.results.append(self.current)
+        if tag == self.childtag and self.current is not None:
+            child = Tag(tag, attrs)
+            self.current.children.append(child)
+
+    def handle_endtag(self, tag):
+        if tag == self.parenttag and self.current is not None:
+            self.current = None
+    
+def extract(html, parent, child):
+    parser = ExtractParser(parent, child)
+    parser.feed(html)
+    return parser.results
+    
+def login():
+    req = urllib.request.Request(url=baseurl)
+    response = urllib.request.urlopen(req)
+    html = response.read().decode('utf-8')
+    ls = extract(html, 'form', 'input')
+    login = None
+    for form in ls:
+        inputmap = {}
+        for child in form.children:
+            name = child.attrs.get('name')
+            if name:
+                inputmap[name] = child
+            if name == 'commit' and child.attrs.get('type') == 'submit':
+                login = inputmap
+    if not login:
+        raise Exception('No login form on main page')
+    print('### %s' % (login,))
+
+def logout():
+    pass
+
+def cmd_nop(args):
+    pass
+
+def cmd_holler(args):
+    msg = (' '.join(args)).strip()
+    if not msg:
+        raise Exception('holler: no argument')
+    print('### %s' % (msg,))
+    
+cmdlist = {
+    'login': cmd_nop,
+    'holler': cmd_holler
+}
+    
+cmd = args.pop(0)
+
+if cmd not in cmdlist:
+    raise Exception('Unknown command: ' + cmd)
+
+if not opts.port:
+    netloc = opts.server
+else:
+    netloc = opts.server + (':%d' % (opts.port,))
+baseurl = urllib.parse.urlunsplit( ('http', netloc, '', '', '') )
+
+login()
+cmdlist[cmd](args)
+logout()
+
+
+
