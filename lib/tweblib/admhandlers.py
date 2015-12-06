@@ -50,6 +50,14 @@ class AdminMainHandler(AdminBaseHandler):
 
     @tornado.gen.coroutine
     def post(self):
+        if (self.get_argument('holler', None)):
+            val = self.get_argument('message', '')
+            val = val.strip()
+            if val:
+                msg = { 'cmd':'holler', 'text':val }
+                self.application.twservermgr.tworld_write(0, msg)
+            self.redirect('/admin')
+            return
         if (self.get_argument('playerconntable', None)):
             msg = { 'cmd':'logplayerconntable' }
             self.application.twservermgr.tworld_write(0, msg)

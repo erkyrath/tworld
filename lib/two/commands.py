@@ -435,6 +435,12 @@ def define_commands():
     def cmd_logplayerconntable(app, task, cmd, stream):
         app.playconns.dumplog()
         
+    @command('holler', isserver=True)
+    def cmd_holler(app, task, cmd, stream):
+        val = 'Admin broadcast: ' + cmd.text
+        for stream in app.webconns.all():
+            stream.write(wcproto.message(0, {'cmd':'messageall', 'text':val}))
+        
     @command('timerevent', isserver=True, doeswrite=True)
     def cmd_timerevent(app, task, cmd, stream):
         iid = cmd.iid

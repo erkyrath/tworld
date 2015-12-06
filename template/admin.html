@@ -36,6 +36,13 @@ Admin View
 
 <form method="post" action="/admin"><p>
  {% module xsrf_form_html() %}
+ <input style="width:50%;"
+  id="holler_field" name="message" type="text" placeholder="Message">
+ <input name="holler" type="submit" value="Holler Message">
+</p></form>
+
+<form method="post" action="/admin"><p>
+ {% module xsrf_form_html() %}
  <input name="clearcaches" type="submit" value="Clear Web Server Caches">
 </p></form>
 
