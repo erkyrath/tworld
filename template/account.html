@@ -24,6 +24,11 @@ var show_pwchange_initially = {% if formerror %} true {% else %} false {% end %}
  </div>
  <div class="FormDivider">
  </div>
+ {% if isadmin %}
+ <div class="FormSection">
+   You have <a href="/admin">admininstrator access</a>.
+ </div>
+ {% end %}
  <div class="FormSection">
   {% if isbuild %}
    You have <a href="/build">build permission</a>.

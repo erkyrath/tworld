@@ -726,6 +726,7 @@ class AccountHandler(MyRequestHandler):
         self.render('account.html',
                     name=self.twsession.get('name', '???'),
                     email=self.twsession.get('email', '???'),
+                    isadmin=self.twisadmin,
                     isbuild=self.twisbuild)
         
     @tornado.gen.coroutine
