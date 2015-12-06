@@ -107,6 +107,7 @@ def login():
     req = urllib.request.Request(url=baseurl)
     response = urlopener.open(req)
     html = response.read().decode('utf-8')
+    
     ls = extract(html, 'form', 'input')
     login = None
     for form in ls:
@@ -149,8 +150,33 @@ def cmd_holler(args):
     msg = (' '.join(args)).strip()
     if not msg:
         raise Exception('holler: no argument')
-    print('### %s' % (msg,))
+    url = urllib.parse.urljoin(baseurl, '/admin')
     
+    req = urllib.request.Request(url=url)
+    response = urlopener.open(req)
+    html = response.read().decode('utf-8')
+
+    ls = extract(html, 'form', 'input')
+    holler = None
+    for form in ls:
+        inputmap = {}
+        for child in form.children:
+            name = child.attrs.get('name')
+            if name:
+                inputmap[name] = child
+            if name == 'holler' and child.attrs.get('type') == 'submit':
+                holler = inputmap
+    if not holler:
+        raise Exception('No holler form on main page')
+
+    xsrf = holler['_xsrf'].attrs.get('value')
+
+    map = { '_xsrf':xsrf, 'holler':'holler', 'message':msg }
+    data = urllib.parse.urlencode(map).encode()
+    req = urllib.request.Request(url=url, method='POST', data=data)
+    response = urlopener.open(req)
+    html = response.read().decode('utf-8')
+
 cmdlist = {
     'login': cmd_nop,
     'holler': cmd_holler
