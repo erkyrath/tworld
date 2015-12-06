@@ -17,6 +17,7 @@ import urllib
 import urllib.parse
 import urllib.request
 import html.parser
+import http.cookiejar
 
 popt = optparse.OptionParser(usage='twcommand.py cmd [args...]')
 
@@ -33,6 +34,7 @@ popt.add_option('-p', '--port',
 (opts, args) = popt.parse_args()
 
 if opts.listcmds:
+    print('login: just log in, take no other action')
     print('holler msg...: broadcast a line of text to all logged-in players. (requires admin)')
     sys.exit(0)
     
@@ -82,8 +84,10 @@ def extract(html, parent, child):
     return parser.results
     
 def login():
+    print('Logging in to %s' % (baseurl,))
+
     req = urllib.request.Request(url=baseurl)
-    response = urllib.request.urlopen(req)
+    response = urlopener.open(req)
     html = response.read().decode('utf-8')
     ls = extract(html, 'form', 'input')
     login = None
@@ -97,10 +101,28 @@ def login():
                 login = inputmap
     if not login:
         raise Exception('No login form on main page')
-    print('### %s' % (login,))
+
+    xsrf = login['_xsrf'].attrs.get('value')
+
+    map = { '_xsrf':xsrf, 'name':'Belford', 'password':'xxxxxx' } ###
+    data = urllib.parse.urlencode(map).encode()
+    req = urllib.request.Request(url=baseurl, method='POST', data=data)
+    response = urlopener.open(req)
+    html = response.read().decode('utf-8')
+
+    session = None
+    for cookie in cookiejar:
+        if cookie.name == 'sessionid':
+            session = cookie
+            break
+    if session is None:
+        raise Exception('Login failed')
+        
 
 def logout():
-    pass
+    req = urllib.request.Request(url=urllib.parse.urljoin(baseurl, '/logout'))
+    response = urlopener.open(req)
+    html = response.read().decode('utf-8')
 
 def cmd_nop(args):
     pass
@@ -126,6 +148,9 @@ if not opts.port:
 else:
     netloc = opts.server + (':%d' % (opts.port,))
 baseurl = urllib.parse.urlunsplit( ('http', netloc, '', '', '') )
+
+cookiejar = http.cookiejar.CookieJar()
+urlopener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookiejar))
 
 login()
 cmdlist[cmd](args)
