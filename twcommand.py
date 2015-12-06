@@ -4,10 +4,13 @@
 twcommand: Copyright (c) 2015, Andrew Plotkin
 (Available under the MIT License; see LICENSE file.)
 
-This script logs into live Tworld server (with regular web authentication)
-and then performs a command. Currently just one command is supported:
+This script logs into live Tworld server (cookie authentication, same
+as when a player logs in). It then performs a command. Currently just
+two commands are supported:
 
-    holler msg (requires admin)
+    login: just log in, take no other action
+    holler msg...: broadcast a line of text to all logged-in players.
+        (requires admin)
 """
 
 import sys
